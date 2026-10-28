@@ -3,7 +3,7 @@
 import {
   Award01Icon, ChartLineData01Icon, Clock01Icon, Coins01Icon, Cursor01Icon, GridViewIcon, Image01Icon, LockIcon,
   MusicNote01Icon, PaintBucketIcon, SmileIcon, TextFontIcon, TextIcon, Timer01Icon, UserGroupIcon, Video01Icon,
-  ArrowLeft01Icon, Search01Icon, Wallet02Icon, NewTwitterIcon,
+  ArrowLeft01Icon, Search01Icon, Wallet02Icon, NewTwitterIcon, Link01Icon, PieChartIcon,
 } from "@hugeicons/core-free-icons";
 import { useState } from "react";
 import {
@@ -18,6 +18,7 @@ import { inputClass, Segmented } from "./Field";
 const widgetIcons: Record<WidgetType, typeof GridViewIcon> = {
   pnl: Wallet02Icon,
   portfolio: ChartLineData01Icon,
+  holdings: PieChartIcon,
   token: Coins01Icon,
   community: UserGroupIcon,
   followers: NewTwitterIcon,
@@ -27,6 +28,7 @@ const widgetIcons: Record<WidgetType, typeof GridViewIcon> = {
   clock: Clock01Icon,
   countdown: Timer01Icon,
   reactions: SmileIcon,
+  link: Link01Icon,
   text: TextIcon,
 };
 
@@ -134,14 +136,13 @@ export function Library(props: {
               </button>
             ))}
             <div className="col-span-2 mt-2">
-              <PremiumGate locked={!premium} label="Image background">
-                <input
-                  className={inputClass}
-                  placeholder="https://… image or GIF"
-                  value={theme.backgroundUrl ?? ""}
-                  onChange={(e) => props.onTheme({ background: e.target.value ? "image" : "plain", backgroundUrl: e.target.value })}
-                />
-              </PremiumGate>
+              <p className="mb-1.5 text-xs text-fg-2">Background image</p>
+              <input
+                className={inputClass}
+                placeholder="https://… image or GIF"
+                value={theme.backgroundUrl ?? ""}
+                onChange={(e) => props.onTheme({ background: e.target.value ? "image" : "plain", backgroundUrl: e.target.value })}
+              />
             </div>
           </div>
         )}

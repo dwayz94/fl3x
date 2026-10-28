@@ -59,8 +59,8 @@ export interface ProfileTheme {
 
 export const DEFAULT_THEME: ProfileTheme = { accent: "#FF97CB", background: "plain", font: "moga", cursor: "default" };
 
-/** Premium-only customizations. Starter keeps the defaults for these keys. */
-export const PREMIUM_THEME_KEYS = ["font", "cursor", "backgroundUrl"] as const;
+/** Premium-only customizations. Others keep the defaults for these keys; the background image is open to everyone. */
+export const PREMIUM_THEME_KEYS = ["font", "cursor"] as const;
 
 export const TIER_LIMITS: Record<Tier, { widgets: number; links: number }> = {
   none: { widgets: 4, links: 6 },

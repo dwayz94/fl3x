@@ -26,11 +26,12 @@ export function WidgetFrame({
   onLinkClick?: () => void;
 }) {
   const classes = cn(
-    "relative flex h-full w-full overflow-hidden rounded-[24px] p-3 text-left text-fg",
+    "relative flex h-full w-full overflow-hidden rounded-[28px] p-4 text-left text-fg",
     size === "large" ? "flex-col" : "flex-row items-center gap-3",
     className,
   );
-  const s = { background: `rgba(52, 52, 52, ${opacity / 100})`, ...style };
+  // A white veil rather than a flat grey, so widgets read as glass over image backgrounds.
+  const s = { background: `rgba(255, 255, 255, ${(0.1 * opacity) / 100})`, ...style };
   if (href) {
     return (
       <a href={href} target="_blank" rel="noopener noreferrer" className={classes} style={s} onClick={onLinkClick}>

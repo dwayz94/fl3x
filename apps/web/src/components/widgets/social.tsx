@@ -54,7 +54,11 @@ export function CommunityWidget({ w }: { w: Widget }) {
       {data.members != null && <Stat dot="bg-fg-3">{fmtNumber(data.members)} members</Stat>}
     </div>
   );
-  const icon = <Icon icon={platformIcon[data.platform]} size={w.size === "long" ? 44 : 36} className="text-white/35" />;
+  const icon = (
+    <span className={`flex shrink-0 items-center justify-center rounded-full bg-white/15 text-white/45 ${w.size === "long" ? "size-16" : "size-11"}`}>
+      <Icon icon={platformIcon[data.platform]} size={w.size === "long" ? 32 : 24} />
+    </span>
+  );
 
   if (w.size === "long") {
     return (
@@ -89,14 +93,14 @@ export function FollowersWidget({ w }: { w: Widget }) {
   const opacity = num(w.settings.bgOpacity, 100);
   if (!handle) return <WEmpty size={w.size} label="Add your handle" />;
   const href = profileUrl[platform]?.(handle);
-  const icon = <Icon icon={platformIcon[platform]} size={w.size === "long" ? 56 : 44} className="text-white/35" />;
+  const icon = <Icon icon={platformIcon[platform]} size={w.size === "long" ? 60 : 56} className="shrink-0 text-white/35" />;
 
   if (w.size === "long") {
     return (
       <WidgetFrame size="long" opacity={opacity} href={href}>
         <div className="min-w-0 flex-1">
           <p className="font-primary text-[40px] leading-none">{fmtNumber(count)}</p>
-          <WMuted className="mt-1">@{handle} · followers</WMuted>
+          <p className="mt-1 font-primary text-sm text-fg-3 uppercase">Followers · @{handle}</p>
         </div>
         {icon}
       </WidgetFrame>
@@ -104,8 +108,8 @@ export function FollowersWidget({ w }: { w: Widget }) {
   }
   return (
     <WidgetFrame size="large" opacity={opacity} href={href} className="items-center text-center">
-      <p className="mt-2 font-primary text-[34px] leading-none">{fmtCompact(count)}</p>
-      <WMuted className="mt-1">@{handle}</WMuted>
+      <p className="mt-1 font-primary text-[34px] leading-none">{count >= 1_000_000 ? fmtCompact(count) : fmtNumber(count)}</p>
+      <p className="mt-1 font-primary text-base text-fg-3 uppercase">Followers</p>
       <div className="my-auto">{icon}</div>
       <WPill className="w-full">Follow</WPill>
     </WidgetFrame>

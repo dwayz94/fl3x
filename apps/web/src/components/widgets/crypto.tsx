@@ -162,3 +162,66 @@ export function TokenWidget({ w }: { w: Widget }) {
     </WidgetFrame>
   );
 }
+
+const amount = new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 2 });
+
+export function HoldingsWidget({ w }: { w: Widget }) {
+  const wallet = str(w.settings.wallet);
+  const opacity = num(w.settings.bgOpacity, 100);
+  const { data, isLoading } = useData<WalletData>("wallet", { address: wallet, period: "1d" });
+  if (!wallet) return <WEmpty size={w.size} label="Pick a verified wallet" />;
+  if (isLoading || !data) return <WSkeleton size={w.size} />;
+
+  const [whole, cents] = splitUsd(data.valueUsd);
+  const change = data.changeUsd ?? 0;
+  const holdings = (data.holdings ?? []).slice(0, w.size === "long" ? 2 : 3);
+  const total = (
+    <div>
+      <p className="font-primary text-[28px] leading-none">
+        {whole}
+        <span className="text-fg-3">{cents}</span>
+      </p>
+      <p className="mt-1 font-primary text-xs">
+        <span className={change >= 0 ? "text-success" : "text-danger"}>
+          {change >= 0 ? "+" : "−"}
+          {fmtUsd(Math.abs(change))}
+        </span>{" "}
+        <span className="text-fg-2">24H</span>
+      </p>
+    </div>
+  );
+  const list = (
+    <ul className="flex min-w-0 flex-1 flex-col gap-1.5">
+      {holdings.map((h) => (
+        <li key={h.mint} className="flex items-center gap-2">
+          <Avatar src={h.iconUrl} className="size-7 rounded-full" />
+          <div className="min-w-0 flex-1">
+            <p className="truncate font-primary text-sm leading-none uppercase">{h.symbol}</p>
+            <p className="text-[9px] leading-tight text-fg-2">{amount.format(h.amount)}</p>
+          </div>
+          <div className="text-right">
+            <p className="font-primary text-sm leading-none">{fmtUsdCompact(h.valueUsd)}</p>
+            {h.change24h != null && (
+              <p className={`text-[9px] leading-tight ${h.change24h >= 0 ? "text-success" : "text-danger"}`}>{fmtPct(h.change24h)}</p>
+            )}
+          </div>
+        </li>
+      ))}
+    </ul>
+  );
+
+  if (w.size === "long") {
+    return (
+      <WidgetFrame size="long" opacity={opacity} className="gap-4">
+        {total}
+        {list}
+      </WidgetFrame>
+    );
+  }
+  return (
+    <WidgetFrame size="large" opacity={opacity} className="gap-3">
+      {total}
+      {list}
+    </WidgetFrame>
+  );
+}

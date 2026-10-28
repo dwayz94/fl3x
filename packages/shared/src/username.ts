@@ -6,6 +6,7 @@ export const RESERVED_USERNAMES = new Set([
   "moderator", "staff", "team", "official", "root", "system", "null",
   "undefined", "api", "www", "mail", "dashboard", "login", "invite",
   "waitlist", "settings", "onboarding", "terms", "privacy", "about",
+  "widgets", "example", "join",
 ]);
 
 export type UsernameCheck = { valid: true } | { valid: false; message: string };

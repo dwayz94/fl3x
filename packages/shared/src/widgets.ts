@@ -70,6 +70,12 @@ export const WIDGETS = {
       opacity,
     ],
   },
+  holdings: {
+    name: "Holdings",
+    description: "Wallet value and its biggest bags",
+    category: "crypto",
+    fields: [{ key: "wallet", label: "Wallet", kind: "wallet" }, opacity],
+  },
   token: {
     name: "Token",
     description: "Shill a token with live market cap",
@@ -155,6 +161,19 @@ export const WIDGETS = {
     description: "Visitors drop emojis on your profile",
     category: "utility",
     fields: [{ key: "emojis", label: "Emojis", kind: "text", placeholder: "🤑😈💀🤡🤖", max: 40 }],
+  },
+  link: {
+    name: "Link card",
+    description: "An image, a few words and a button to your own thing",
+    category: "utility",
+    fields: [
+      { key: "image", label: "Image URL", kind: "url", placeholder: "https://…/cover.png" },
+      { key: "title", label: "Title", kind: "text", max: 40, required: true },
+      { key: "body", label: "Text", kind: "textarea", max: 280 },
+      { key: "ctaLabel", label: "Button label", kind: "text", placeholder: "Join", max: 20 },
+      { key: "url", label: "Link", kind: "url", placeholder: "https://…" },
+      opacity,
+    ],
   },
   text: {
     name: "Text",

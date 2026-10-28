@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Widget } from "@fl3x/shared";
 import { Flag } from "@/components/ui";
 import { api } from "@/lib/api";
+import { useIsDemo } from "@/lib/use-data";
 import { WEmpty, WidgetFrame, WMuted, WPill, WTitle } from "./WidgetFrame";
 
 const num = (v: unknown, d: number) => (typeof v === "number" ? v : d);
@@ -45,16 +46,16 @@ export function ClockWidget({ w }: { w: Widget }) {
           {city && <WTitle className="text-sm uppercase">{city}</WTitle>}
           <WMuted>{date}</WMuted>
         </div>
-        <Flag country={country} className="ml-auto h-12 w-[72px]" />
+        <Flag country={country} className="ml-auto h-14 w-[30%]" />
       </WidgetFrame>
     );
   }
   return (
-    <WidgetFrame size="large" opacity={opacity}>
-      <p className="font-primary text-[56px] leading-none">{time}</p>
-      {city && <WTitle className="mt-1 text-sm uppercase">{city}</WTitle>}
-      <WMuted>{date}</WMuted>
-      <Flag country={country} className="mt-auto h-10 w-[60px]" />
+    <WidgetFrame size="large" opacity={opacity} className="items-center text-center">
+      <p className="font-primary text-[64px] leading-[0.9]">{time}</p>
+      {city && <WTitle className="mt-1 text-base uppercase">{city}</WTitle>}
+      <WMuted className="uppercase">{date}</WMuted>
+      <Flag country={country} className="mt-auto h-14 w-full" />
     </WidgetFrame>
   );
 }
@@ -98,18 +99,22 @@ export function CountdownWidget({ w }: { w: Widget }) {
           {sub}
         </div>
         <div className="flex flex-col items-end gap-2">
-          <Flag country={country} className="h-10 w-[60px]" />
+          <Flag country={country} className="h-12 w-[84px]" />
           {cta}
         </div>
       </WidgetFrame>
     );
   }
   return (
-    <WidgetFrame size="large" opacity={opacity}>
+    <WidgetFrame size="large" opacity={opacity} className="items-center text-center">
       <p className="font-primary text-[40px] leading-none">{left}</p>
-      {sub}
-      <Flag country={country} className="mt-3 h-10 w-[60px]" />
-      <div className="mt-auto">{cta}</div>
+      <WMuted className="uppercase">Ends {when.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" })}</WMuted>
+      {title ? (
+        <p className="my-auto line-clamp-2 font-primary text-2xl leading-none uppercase">{title}</p>
+      ) : (
+        <Flag country={country} className="my-auto h-12 w-full" />
+      )}
+      <div className="w-full">{cta}</div>
     </WidgetFrame>
   );
 }
@@ -119,11 +124,11 @@ export function ImageWidget({ w }: { w: Widget }) {
   const caption = str(w.settings.caption);
   if (!url) return <WEmpty size={w.size} label="Add an image link" />;
   return (
-    <WidgetFrame size={w.size} className="p-0">
+    <WidgetFrame size={w.size} className="p-3">
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={url} alt={caption} className="absolute inset-0 size-full object-cover" />
+      <img src={url} alt={caption} className="size-full rounded-2xl object-cover" />
       {caption && (
-        <p className="absolute inset-x-2 bottom-2 rounded-xl bg-black/60 px-2 py-1 text-[10px] backdrop-blur">{caption}</p>
+        <p className="absolute inset-x-5 bottom-5 rounded-xl bg-black/60 px-2 py-1 text-[10px] backdrop-blur">{caption}</p>
       )}
     </WidgetFrame>
   );
@@ -147,14 +152,18 @@ const DEFAULT_EMOJIS = "🤑😈💀🤡🤖";
 export function ReactionsWidget({ w, interactive }: { w: Widget; interactive: boolean }) {
   const emojis = [...new Intl.Segmenter().segment(str(w.settings.emojis) || DEFAULT_EMOJIS)].map((s) => s.segment).filter((s) => s.trim());
   const qc = useQueryClient();
+  const demo = useIsDemo();
   const key = ["reactions", w.id];
   const { data: counts = {} } = useQuery({
     queryKey: key,
     queryFn: () => api<Record<string, number>>(`/widgets/${w.id}/reactions`),
-    enabled: interactive,
+    // Showcase pages start from a seeded pile and react locally.
+    initialData: demo ? Object.fromEntries(emojis.map((e, i) => [e, [12, 3, 30, 7, 2, 18][i % 6]])) : undefined,
+    enabled: interactive && !demo,
   });
   const react = useMutation({
-    mutationFn: (emoji: string) => api<{ emoji: string; count: number }>(`/widgets/${w.id}/reactions`, { json: { emoji } }),
+    mutationFn: async (emoji: string) =>
+      demo ? { emoji, count: (counts[emoji] ?? 0) + 1 } : api<{ emoji: string; count: number }>(`/widgets/${w.id}/reactions`, { json: { emoji } }),
     onSuccess: (r) => qc.setQueryData<Record<string, number>>(key, (old) => ({ ...old, [r.emoji]: r.count })),
   });
   // Scatter emojis in proportion to their counts (decorative pile).
@@ -190,6 +199,46 @@ export function ReactionsWidget({ w, interactive }: { w: Widget; interactive: bo
           </button>
         ))}
       </div>
+    </WidgetFrame>
+  );
+}
+
+/** Image + title + text + an optional button to the owner's own thing (drop, shop, newsletter…). */
+export function LinkWidget({ w }: { w: Widget }) {
+  const image = str(w.settings.image);
+  const title = str(w.settings.title);
+  const body = str(w.settings.body);
+  const ctaLabel = str(w.settings.ctaLabel);
+  const url = str(w.settings.url);
+  const opacity = num(w.settings.bgOpacity, 100);
+  if (!title) return <WEmpty size={w.size} label="Give it a title" />;
+
+  const cover = image && (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src={image} alt="" className={w.size === "long" ? "h-full w-auto max-w-[96px] shrink-0 rounded-xl object-cover" : "size-[72px] shrink-0 rounded-xl object-cover"} />
+  );
+  const cta = ctaLabel && url && <WPill className={w.size === "long" ? "shrink-0" : "w-full"}>{ctaLabel}</WPill>;
+
+  if (w.size === "long") {
+    return (
+      <WidgetFrame size="long" opacity={opacity} href={url || undefined}>
+        {cover}
+        <div className="min-w-0 flex-1">
+          <WTitle className="line-clamp-1 whitespace-normal">{title}</WTitle>
+          {body && <p className="line-clamp-3 text-[10px] leading-snug text-fg-2">{body}</p>}
+        </div>
+        {cta}
+      </WidgetFrame>
+    );
+  }
+  return (
+    <WidgetFrame size="large" opacity={opacity} href={url || undefined} className="gap-2">
+      <div className="flex items-start gap-2.5">
+        {cover}
+        <WTitle className="line-clamp-3 whitespace-normal text-xl leading-[1.05]">{title}</WTitle>
+      </div>
+      {body && <p className={`text-[10px] leading-snug text-fg-2 ${cta ? "line-clamp-4" : "line-clamp-[9]"}`}>{body}</p>}
+      {cta && <div className="mt-auto">{cta}</div>}
     </WidgetFrame>
   );
 }

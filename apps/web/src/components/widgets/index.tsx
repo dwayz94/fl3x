@@ -1,9 +1,9 @@
 "use client";
 
 import type { Widget } from "@fl3x/shared";
-import { PnlWidget, PortfolioWidget, TokenWidget } from "./crypto";
+import { HoldingsWidget, PnlWidget, PortfolioWidget, TokenWidget } from "./crypto";
 import { CommunityWidget, FollowersWidget, MusicWidget, VideoWidget } from "./social";
-import { ClockWidget, CountdownWidget, ImageWidget, ReactionsWidget, TextWidget } from "./utility";
+import { ClockWidget, CountdownWidget, ImageWidget, LinkWidget, ReactionsWidget, TextWidget } from "./utility";
 
 export { sizeClass } from "./WidgetFrame";
 
@@ -12,6 +12,7 @@ export function WidgetView({ w, interactive = true }: { w: Widget; interactive?:
   switch (w.type) {
     case "pnl": return <PnlWidget w={w} />;
     case "portfolio": return <PortfolioWidget w={w} />;
+    case "holdings": return <HoldingsWidget w={w} />;
     case "token": return <TokenWidget w={w} />;
     case "community": return <CommunityWidget w={w} />;
     case "followers": return <FollowersWidget w={w} />;
@@ -21,6 +22,7 @@ export function WidgetView({ w, interactive = true }: { w: Widget; interactive?:
     case "clock": return <ClockWidget w={w} />;
     case "countdown": return <CountdownWidget w={w} />;
     case "reactions": return <ReactionsWidget w={w} interactive={interactive} />;
+    case "link": return <LinkWidget w={w} />;
     case "text": return <TextWidget w={w} />;
   }
 }

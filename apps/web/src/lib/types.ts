@@ -37,4 +37,15 @@ export interface WalletData {
   changeUsd: number | null;
   changePct: number | null;
   history: { at: string; valueUsd: number }[];
+  holdings?: Holding[];
+}
+
+export interface Holding {
+  mint: string;
+  symbol: string;
+  name: string;
+  iconUrl: string | null;
+  amount: number;
+  valueUsd: number;
+  change24h: number | null;
 }

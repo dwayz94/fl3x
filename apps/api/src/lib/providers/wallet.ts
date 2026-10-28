@@ -42,8 +42,26 @@ async function prices(mints: string[]): Promise<Record<string, number>> {
   return out;
 }
 
+export interface Holding {
+  mint: string;
+  symbol: string;
+  name: string;
+  iconUrl: string | null;
+  amount: number;
+  valueUsd: number;
+  change24h: number | null;
+}
+
+interface Valuation {
+  total: number;
+  /** Biggest positions by USD value, without metadata. */
+  top: { mint: string; amount: number; valueUsd: number }[];
+}
+
+const TOP_HOLDINGS = 5;
+
 /** USD value of SOL + every priced SPL / Token-2022 balance. */
-async function valueOf(wallet: string): Promise<number> {
+async function valueOf(wallet: string): Promise<Valuation> {
   const [lamports, ...accounts] = await Promise.all([
     rpc<{ value: number }>("getBalance", [wallet]),
     ...TOKEN_PROGRAMS.map((programId) =>
@@ -61,8 +79,38 @@ async function valueOf(wallet: string): Promise<number> {
   const mints = [...balances.entries()].sort((a, b) => (a[0] === SOL_MINT ? -1 : b[0] === SOL_MINT ? 1 : b[1] - a[1])).map(([m]) => m);
   const p = await prices(mints);
   let total = 0;
-  for (const [mint, amount] of balances) total += amount * (p[mint] ?? 0);
-  return Math.round(total * 100) / 100;
+  const positions: Valuation["top"] = [];
+  for (const [mint, amount] of balances) {
+    const valueUsd = amount * (p[mint] ?? 0);
+    total += valueUsd;
+    if (valueUsd >= 1) positions.push({ mint, amount, valueUsd });
+  }
+  positions.sort((a, b) => b.valueUsd - a.valueUsd);
+  return { total: Math.round(total * 100) / 100, top: positions.slice(0, TOP_HOLDINGS) };
+}
+
+// Jupiter Tokens API v2: symbol, icon and 24h change for a list of mints.
+const JUP_TOKENS = env.JUPITER_API_KEY ? "https://api.jup.ag/tokens/v2/search" : "https://lite-api.jup.ag/tokens/v2/search";
+type JupToken = { id: string; symbol: string; name: string; icon?: string; stats24h?: { priceChange?: number } };
+
+async function withMetadata(top: Valuation["top"]): Promise<Holding[]> {
+  if (top.length === 0) return [];
+  const meta = await cached<JupToken[]>(`jup-tokens:${top.map((t) => t.mint).join(",")}`, 600, () =>
+    fetchJson<JupToken[]>(`${JUP_TOKENS}?query=${top.map((t) => t.mint).join(",")}`, {
+      headers: env.JUPITER_API_KEY ? { "x-api-key": env.JUPITER_API_KEY } : {},
+    }),
+  ).catch(() => [] as JupToken[]);
+  const byMint = new Map(meta.map((m) => [m.id, m]));
+  return top.map((t) => {
+    const m = byMint.get(t.mint);
+    return {
+      ...t,
+      symbol: t.mint === SOL_MINT ? "SOL" : (m?.symbol ?? `${t.mint.slice(0, 4)}…`),
+      name: t.mint === SOL_MINT ? "Solana" : (m?.name ?? "Unknown token"),
+      iconUrl: m?.icon ?? null,
+      change24h: m?.stats24h?.priceChange ?? null,
+    };
+  });
 }
 
 const SNAPSHOT_EVERY_MS = 60 * 60 * 1000;
@@ -80,9 +128,9 @@ async function snapshot(wallet: string, valueUsd: number) {
 }
 
 export function currentValue(wallet: string) {
-  return cached<number>(`wallet:${wallet}`, 120, async () => {
+  return cached<Valuation>(`wallet-v2:${wallet}`, 120, async () => {
     const v = await valueOf(wallet);
-    await snapshot(wallet, v);
+    await snapshot(wallet, v.total);
     return v;
   });
 }
@@ -95,6 +143,7 @@ export interface WalletData {
   changeUsd: number | null;
   changePct: number | null;
   history: { at: string; valueUsd: number }[];
+  holdings: Holding[];
 }
 
 /**
@@ -103,7 +152,8 @@ export interface WalletData {
  * on FL3X; until then `start` is the earliest snapshot we have.
  */
 export async function getWallet(wallet: string, period: PeriodId): Promise<WalletData> {
-  const valueUsd = await currentValue(wallet);
+  const { total: valueUsd, top } = await currentValue(wallet);
+  const holdings = await withMetadata(top);
   const days = PERIODS.find((p) => p.id === period)?.days ?? 7;
   const since = new Date(Date.now() - days * 86_400_000);
   const rows = await db
@@ -127,6 +177,7 @@ export async function getWallet(wallet: string, period: PeriodId): Promise<Walle
     changeUsd,
     changePct: first && first.valueUsd > 0 ? (changeUsd! / first.valueUsd) * 100 : null,
     history,
+    holdings,
   };
 }
 
@@ -136,7 +187,7 @@ export async function snapshotTrackedWallets(log: (msg: string) => void) {
   const wallets = new Set(rows.map((r) => r.settings.wallet).filter((w): w is string => typeof w === "string" && w.length > 0));
   for (const w of wallets) {
     try {
-      await snapshot(w, await valueOf(w));
+      await snapshot(w, (await valueOf(w)).total);
     } catch (err) {
       log(`snapshot ${w} failed: ${(err as Error).message}`);
     }
