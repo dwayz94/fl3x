@@ -25,6 +25,9 @@ const premiumPerks = [
   "More invites to hand out",
 ];
 
+export const premiumBackground =
+  "linear-gradient(180deg, rgba(0, 0, 0, 0) 0%, rgba(255, 151, 203, 0.35) 100%), rgba(255, 255, 255, 0.10)";
+
 const fmt = (n: number) => new Intl.NumberFormat("en-US", { notation: "compact" }).format(n);
 
 export function HolderTiers({ config }: { config: PublicConfig }) {
@@ -58,7 +61,8 @@ export function HolderTiers({ config }: { config: PublicConfig }) {
           perks={premiumPerks}
           cta="Go Premium"
           primary
-          className="bg-[linear-gradient(180deg,rgba(0,0,0,0)_0%,rgba(255,151,203,0.35)_100%),rgba(255,255,255,0.10)] lg:min-h-[743px]"
+          className="lg:min-h-[743px]"
+          style={{ background: premiumBackground }}
         />
       </div>
     </section>
@@ -73,9 +77,10 @@ function TierCard(props: {
   cta: string;
   primary?: boolean;
   className?: string;
+  style?: React.CSSProperties;
 }) {
   return (
-    <div className={cn("flex w-full flex-col justify-between gap-8 rounded-[30px] p-8 md:p-[38px] lg:w-[426px]", props.className)}>
+    <div className={cn("flex w-full flex-col justify-between gap-8 rounded-[30px] p-8 md:p-[38px] lg:w-[426px]", props.className)} style={props.style}>
       <div className="flex flex-col items-start gap-4">
         <h3 className="text-[56px] leading-none md:text-[64px]">
           <Brand>{props.title}</Brand>

@@ -86,6 +86,7 @@ export function JoinFlow() {
           Continue with X or wallet
         </Button>
         {!configured && <FieldError>Auth is not configured (NEXT_PUBLIC_PRIVY_APP_ID).</FieldError>}
+        {configured && !process.env.NEXT_PUBLIC_PRIVY_APP_ID && <p className="text-center text-xs text-fg-3">Dev login: Privy is not configured</p>}
       </div>
 
       {inviteOnly && (

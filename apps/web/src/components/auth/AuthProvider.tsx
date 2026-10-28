@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useMemo, useRef, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { PrivyProvider, usePrivy } from "@privy-io/react-auth";
 import { toSolanaWalletConnectors } from "@privy-io/react-auth/solana";
 import { QueryClient, QueryClientProvider, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -34,6 +34,51 @@ const AuthContext = createContext<AuthState>({
   getToken: async () => null,
 });
 
+const DEV_KEY = "fl3x:dev-user";
+
+/**
+ * Local dev without a Privy app id: a prompt asks for a name and the API
+ * accepts "dev:<name>" tokens. The API refuses these in production.
+ */
+function DevAuth({ children }: { children: ReactNode }) {
+  const queryClient = useQueryClient();
+  const [user, setUser] = useState<string | null>(null);
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    setUser(localStorage.getItem(DEV_KEY));
+    setReady(true);
+  }, []);
+  useEffect(() => {
+    if (!user) return;
+    void api<Me>("/session", { method: "POST", token: `dev:${user}` }).then((me) => queryClient.setQueryData(["me"], me));
+  }, [user, queryClient]);
+
+  const value = useMemo<AuthState>(
+    () => ({
+      configured: true,
+      ready,
+      authenticated: Boolean(user),
+      login: () => {
+        const name = window.prompt("Dev login (no Privy configured). Pick a name:", "dev")?.toLowerCase().replace(/[^a-z0-9_]/g, "");
+        if (name && name.length >= 2) {
+          localStorage.setItem(DEV_KEY, name);
+          setUser(name);
+        }
+      },
+      logout: async () => {
+        localStorage.removeItem(DEV_KEY);
+        setUser(null);
+        queryClient.clear();
+      },
+      linkTwitter: noop,
+      linkWallet: noop,
+      getToken: async () => (user ? `dev:${user}` : null),
+    }),
+    [ready, user, queryClient],
+  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
+
 export const useAuth = () => useContext(AuthContext);
 
 const solanaConnectors = toSolanaWalletConnectors();
@@ -61,6 +106,8 @@ export function Providers({ children }: { children: ReactNode }) {
         >
           <PrivyBridge>{children}</PrivyBridge>
         </PrivyProvider>
+      ) : process.env.NODE_ENV !== "production" ? (
+        <DevAuth>{children}</DevAuth>
       ) : (
         children
       )}

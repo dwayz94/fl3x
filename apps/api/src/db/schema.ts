@@ -1,7 +1,8 @@
 import { sql } from "drizzle-orm";
 import {
-  boolean, doublePrecision, index, integer, jsonb, pgTable, text, timestamp, uuid,
+  boolean, doublePrecision, index, integer, jsonb, pgTable, primaryKey, text, timestamp, uuid,
 } from "drizzle-orm/pg-core";
+import type { ProfileTheme, WidgetSettings } from "@fl3x/shared";
 
 export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -47,7 +48,8 @@ export const profiles = pgTable("profiles", {
   displayName: text("display_name"),
   bio: text("bio"),
   avatarUrl: text("avatar_url"),
-  theme: jsonb("theme").$type<Record<string, unknown>>().notNull().default({}),
+  theme: jsonb("theme").$type<Partial<ProfileTheme>>().notNull().default({}),
+  badges: text("badges").array().notNull().default(sql`'{}'::text[]`),
   isPublished: boolean("is_published").notNull().default(true),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
@@ -58,6 +60,49 @@ export const widgets = pgTable("widgets", {
   type: text("type").notNull(),
   size: text("size").notNull(),
   position: integer("position").notNull().default(0),
-  settings: jsonb("settings").$type<Record<string, unknown>>().notNull().default({}),
+  settings: jsonb("settings").$type<WidgetSettings>().notNull().default({}),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [index("widgets_user_idx").on(t.userId, t.position)]);
+
+export const links = pgTable("links", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  kind: text("kind").notNull(),
+  url: text("url").notNull(),
+  label: text("label"),
+  position: integer("position").notNull().default(0),
+}, (t) => [index("links_user_idx").on(t.userId, t.position)]);
+
+/** Profile analytics: one row per view or link click. */
+export const profileEvents = pgTable("profile_events", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  profileUserId: uuid("profile_user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  kind: text("kind", { enum: ["view", "click"] }).notNull(),
+  target: text("target"),
+  visitorHash: text("visitor_hash").notNull(),
+  country: text("country"),
+  device: text("device", { enum: ["desktop", "mobile", "tablet"] }).notNull(),
+  referrer: text("referrer"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [index("profile_events_user_time_idx").on(t.profileUserId, t.createdAt)]);
+
+export const widgetReactions = pgTable("widget_reactions", {
+  widgetId: uuid("widget_id").notNull().references(() => widgets.id, { onDelete: "cascade" }),
+  emoji: text("emoji").notNull(),
+  count: integer("count").notNull().default(0),
+}, (t) => [primaryKey({ columns: [t.widgetId, t.emoji] })]);
+
+/** Wallet USD value over time, used for P&L and portfolio charts. */
+export const walletSnapshots = pgTable("wallet_snapshots", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  wallet: text("wallet").notNull(),
+  valueUsd: doublePrecision("value_usd").notNull(),
+  takenAt: timestamp("taken_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [index("wallet_snapshots_wallet_time_idx").on(t.wallet, t.takenAt)]);
+
+/** Postgres-backed cache for third-party API responses. */
+export const dataCache = pgTable("data_cache", {
+  key: text("key").primaryKey(),
+  value: jsonb("value").notNull(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+});

@@ -3,3 +3,7 @@ export * from "./tiers";
 export * from "./launch";
 export * from "./schemas";
 export * from "./types";
+export * from "./widgets";
+export * from "./profile";
+export * from "./badges";
+export * from "./analytics";

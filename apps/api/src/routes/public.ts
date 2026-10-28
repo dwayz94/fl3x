@@ -1,9 +1,11 @@
 import type { FastifyInstance } from "fastify";
 import { and, eq, sql } from "drizzle-orm";
-import { normalizeUsername, validateUsername, waitlistRequest, type PublicConfig, type PublicProfile } from "@fl3x/shared";
+import { z } from "zod";
+import { normalizeUsername, validateUsername, waitlistRequest, type FullPublicProfile, type PublicConfig } from "@fl3x/shared";
 import { db, schema } from "../db";
 import { env, thresholds } from "../env";
 import { notFound } from "../lib/errors";
+import { loadProfile } from "../lib/profiles";
 import { isUsernameTaken } from "../lib/users";
 
 export async function publicRoutes(app: FastifyInstance) {
@@ -52,21 +54,46 @@ export async function publicRoutes(app: FastifyInstance) {
     return { ok: true, total };
   });
 
-  app.get<{ Params: { username: string } }>("/profiles/:username", async (req): Promise<PublicProfile> => {
+  app.get<{ Params: { username: string } }>("/profiles/:username", async (req): Promise<FullPublicProfile> => {
     const [row] = await db
-      .select({ user: schema.users, profile: schema.profiles })
+      .select({ user: schema.users, published: schema.profiles.isPublished })
       .from(schema.users)
       .innerJoin(schema.profiles, eq(schema.profiles.userId, schema.users.id))
-      .where(and(eq(schema.users.username, normalizeUsername(req.params.username)), eq(schema.profiles.isPublished, true)))
+      .where(eq(schema.users.username, normalizeUsername(req.params.username)))
       .limit(1);
-    if (!row) throw notFound("Profile not found");
-    return {
-      username: row.user.username!,
-      displayName: row.profile.displayName,
-      bio: row.profile.bio,
-      avatarUrl: row.profile.avatarUrl ?? row.user.xAvatarUrl,
-      tier: row.user.tier,
-      xHandle: row.user.xHandle,
-    };
+    if (!row || !row.published) throw notFound("Profile not found");
+    const [{ views } = { views: 0 }] = await db
+      .select({ views: sql<number>`count(*)::int` })
+      .from(schema.profileEvents)
+      .where(and(eq(schema.profileEvents.profileUserId, row.user.id), eq(schema.profileEvents.kind, "view")));
+    return { ...(await loadProfile(row.user)), tier: row.user.tier, xHandle: row.user.xHandle, views };
   });
+
+  app.get<{ Params: { id: string } }>("/widgets/:id/reactions", async (req) => {
+    const id = z.uuid().parse(req.params.id);
+    const rows = await db.select().from(schema.widgetReactions).where(eq(schema.widgetReactions.widgetId, id));
+    return Object.fromEntries(rows.map((r) => [r.emoji, r.count]));
+  });
+
+  app.post<{ Params: { id: string } }>(
+    "/widgets/:id/reactions",
+    { config: { rateLimit: { max: 20, timeWindow: "1 minute" } } },
+    async (req) => {
+      const id = z.uuid().parse(req.params.id);
+      const { emoji } = z.object({ emoji: z.string().min(1).max(16) }).parse(req.body);
+      const [widget] = await db.select().from(schema.widgets).where(and(eq(schema.widgets.id, id), eq(schema.widgets.type, "reactions"))).limit(1);
+      if (!widget) throw notFound();
+      const allowed = [...new Intl.Segmenter().segment(String(widget.settings.emojis || "🤑😈💀🤡🤖"))].map((s) => s.segment);
+      if (!allowed.includes(emoji)) throw notFound("Emoji not allowed here");
+      const [row] = await db
+        .insert(schema.widgetReactions)
+        .values({ widgetId: id, emoji, count: 1 })
+        .onConflictDoUpdate({
+          target: [schema.widgetReactions.widgetId, schema.widgetReactions.emoji],
+          set: { count: sql`${schema.widgetReactions.count} + 1` },
+        })
+        .returning();
+      return { emoji, count: row!.count };
+    },
+  );
 }

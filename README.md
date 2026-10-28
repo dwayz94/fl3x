@@ -18,7 +18,8 @@ packages/shared  Zod schemas, username rules, tier logic, API types used by both
 | --- | --- |
 | Sign-in (X + Solana wallet) | [Privy](https://privy.io): the web app gets an access token, the API verifies it and reads linked accounts from Privy |
 | Database | Render Postgres (managed). Any Postgres URL works (e.g. Neon) |
-| Token balances | Solana RPC (`SOLANA_RPC_URL`, use Helius or Triton in prod) |
+| Token balances, wallet value | Solana RPC (`SOLANA_RPC_URL`, use Helius or Triton in prod) + Jupiter Price v3 (`JUPITER_API_KEY` optional) |
+| Widget data | DexScreener, Discord invites API, t.me public pages, YouTube/Spotify oEmbed, Twitch Helix (optional keys). Cached in Postgres |
 | Hosting | Vercel (web), Render (API) |
 
 ## Local dev
@@ -51,10 +52,18 @@ After a schema change in `apps/api/src/db/schema.ts`: `npm run db:generate -w @f
 
 No invite → waitlist (`POST /waitlist`). Set `LAUNCH_PHASE=public` to open sign-ups.
 
+## Dashboard & widgets
+
+`/dashboard/customize` is the editor: library (left), live profile preview (center, click to select, drag to reorder), inspector (right). Other tabs: Analytics, Badges, Links, Premium, Settings.
+
+Widgets are defined once in `packages/shared/src/widgets.ts` (fields, defaults, validation) and rendered in `apps/web/src/components/widgets`. Each has a `large` (2×2) and `long` (4×1) layout.
+
+Without `NEXT_PUBLIC_PRIVY_APP_ID`, local dev shows a dev login (not available in production builds). Set `DEV_WALLET` in `apps/api/.env` to give dev users a wallet.
+
 ## Deploy
 
 **API → Render**: New → Blueprint → this repo (`render.yaml`). Fill `PRIVY_APP_ID`, `PRIVY_APP_SECRET`, `SOLANA_RPC_URL`, `TOKEN_MINT`. Custom domain `api.fl3x.lol`.
 
-**Web → Vercel**: import the repo, Root Directory `apps/web`. Env: `NEXT_PUBLIC_API_URL=https://api.fl3x.lol`, `NEXT_PUBLIC_SITE_URL=https://fl3x.lol`, `NEXT_PUBLIC_PRIVY_APP_ID`. Domain `fl3x.lol`.
+**Web → Vercel**: import the repo, Root Directory `apps/web`. Env: `NEXT_PUBLIC_API_URL=https://api.fl3x.lol`, `NEXT_PUBLIC_SITE_URL=https://fl3x.lol`, `NEXT_PUBLIC_PRIVY_APP_ID`, `INTERNAL_API_KEY` (same as the API). Domain `fl3x.lol`.
 
 **Privy dashboard**: enable Twitter + Solana external wallets. Allowed origins: `https://fl3x.lol`, `http://localhost:3000`.

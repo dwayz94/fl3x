@@ -4,7 +4,11 @@ import rateLimit from "@fastify/rate-limit";
 import { ZodError } from "zod";
 import { env } from "./env";
 import { HttpError } from "./lib/errors";
+import helmet from "@fastify/helmet";
 import { adminRoutes } from "./routes/admin";
+import { analyticsRoutes } from "./routes/analytics";
+import { dataRoutes } from "./routes/data";
+import { editorRoutes } from "./routes/editor";
 import { meRoutes } from "./routes/me";
 import { publicRoutes } from "./routes/public";
 
@@ -18,6 +22,7 @@ export async function buildApp() {
     origin: env.WEB_ORIGIN.split(",").map((o) => o.trim()),
     credentials: true,
   });
+  await app.register(helmet, { global: true });
   await app.register(rateLimit, { max: 120, timeWindow: "1 minute" });
 
   app.setErrorHandler((err, req, reply) => {
@@ -37,6 +42,9 @@ export async function buildApp() {
 
   await app.register(publicRoutes);
   await app.register(meRoutes);
+  await app.register(editorRoutes);
+  await app.register(analyticsRoutes);
+  await app.register(dataRoutes);
   await app.register(adminRoutes);
   return app;
 }
