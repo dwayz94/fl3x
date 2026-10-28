@@ -18,13 +18,19 @@ const IMG = {
 export const DEMO_WALLET = "DEMO1111111111111111111111111111111111111111";
 
 function history(points: number, start: number, end: number, seed: number) {
+  // Seeded random walk bent toward the end value, so the chart looks like a real wallet.
+  let x = seed;
+  const rand = () => ((x = (x * 16807) % 2147483647) / 2147483647) - 0.5;
   const out: { at: string; valueUsd: number }[] = [];
   const now = Date.UTC(2026, 9, 28);
+  let drift = 0;
   for (let i = 0; i < points; i++) {
     const t = i / (points - 1);
-    // Deterministic wobble around the trend so the chart has character.
-    const wobble = Math.sin(i * 1.7 + seed) * 0.08 + Math.sin(i * 0.6 + seed * 2) * 0.05;
-    out.push({ at: new Date(now - (points - i) * 3_600_000).toISOString(), valueUsd: (start + (end - start) * t) * (1 + wobble) });
+    drift = drift * 0.8 + rand() * 0.03;
+    // A dip in the first third, then the rally: reads like a real month.
+    const shape = t - 0.18 * Math.sin(Math.PI * Math.min(1, t * 1.6));
+    const v = i === points - 1 ? end : (start + (end - start) * shape) * (1 + drift);
+    out.push({ at: new Date(now - (points - i) * 3_600_000).toISOString(), valueUsd: v });
   }
   return out;
 }
@@ -36,7 +42,7 @@ const wallet: WalletData = {
   start: { valueUsd: 91_270.12, at: "2026-09-28T00:00:00.000Z" },
   changeUsd: 12_276.34,
   changePct: 49.4,
-  history: history(24, 91_000, 134_548.73, 3),
+  history: history(40, 91_000, 134_548.73, 7),
   holdings: [
     { mint: "So11111111111111111111111111111111111111112", symbol: "SOL", name: "Solana", iconUrl: "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png", amount: 412.8, valueUsd: 71_100, change24h: 7.3 },
     { mint: "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263", symbol: "BONK", name: "Bonk", iconUrl: "https://arweave.net/hQiPZOsRZXGXBJd_82PhVdlM_hACsT_q6wqwf5cSY7I", amount: 1_118_903_310, valueUsd: 31_420, change24h: 12.1 },
@@ -100,6 +106,15 @@ export const DEMO_WIDGETS: { type: WidgetType; label?: string; settings: WidgetS
   { type: "text", settings: { title: "Gm", body: LOREM } },
 ];
 
+export const DEMO_BACKGROUNDS: { id: string; label: string; url: string | null }[] = [
+  // Moodboard images from the Figma (kept out of git, local preview only).
+  ...[1, 2, 3, 4, 5, 6].map((n) => ({ id: `figma-${n}`, label: `Figma ${n}`, url: `/images/demo-bg/bg-${n}.jpg` })),
+  { id: "hero", label: "FL3X hero", url: IMG.hero },
+  { id: "sign", label: "FL3X money", url: IMG.sign },
+  { id: "footer", label: "FL3X footer", url: "/images/backgrounds/footer-bg.png" },
+  { id: "none", label: "No image", url: null },
+];
+
 export function demoWidget(type: WidgetType, size: WidgetSize, settings: WidgetSettings, id: string): Widget {
   return { id, type, size, settings: { ...defaultSettings(type), ...settings } };
 }
@@ -153,14 +168,14 @@ export const DEMO_LAYOUTS: { id: string; label: string; widgets: Widget[] }[] = 
   { id: "minimal", label: "Minimal", widgets: [pick(byType("community"), "long", "w-tg")] },
 ];
 
-export function demoProfile(widgets: Widget[]): FullPublicProfile {
+export function demoProfile(widgets: Widget[], backgroundUrl: string | null = DEMO_BACKGROUNDS[0]!.url): FullPublicProfile {
   return {
     username: "solamies",
     displayName: "Solamies",
     bio: "FL3X on all screen!",
     avatarUrl: IMG.solamies,
     badges: BADGES.map((b) => b.id),
-    theme: { ...DEFAULT_THEME, background: "image", backgroundUrl: IMG.sign },
+    theme: backgroundUrl ? { ...DEFAULT_THEME, background: "image", backgroundUrl } : { ...DEFAULT_THEME, background: "plain" },
     widgets,
     links: [
       { id: "l1", kind: "website", url: "https://fl3x.lol", label: "fl3x.lol" },

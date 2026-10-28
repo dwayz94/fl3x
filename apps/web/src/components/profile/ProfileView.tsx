@@ -67,7 +67,7 @@ export function ProfileView({
     <article
       style={{ "--cols": cols } as React.CSSProperties}
       className={cn(
-        "w-full rounded-[40px] border border-white/[0.06] bg-[rgba(28,28,28,0.78)] p-5 shadow-[0_30px_80px_rgba(0,0,0,0.45)] backdrop-blur-[40px] md:p-8",
+        "w-full rounded-[40px] border border-white/[0.06] bg-[rgba(28,28,28,0.6)] p-5 shadow-[0_30px_80px_rgba(0,0,0,0.45)] backdrop-blur-[40px] md:p-8",
         // Card hugs the grid: cols × 80px cells + 12px gaps + padding.
         "md:max-w-[calc(var(--cols)*80px+(var(--cols)-1)*12px+66px)]",
       )}

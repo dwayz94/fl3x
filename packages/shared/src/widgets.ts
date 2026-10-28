@@ -46,6 +46,9 @@ export interface WidgetDef {
 }
 
 const accent: FieldDef = { key: "accent", label: "Color", kind: "color", default: "#2FE3AC" };
+/** Design version. V2 renderers sit next to the originals; saved widgets without it stay V1. */
+const style: FieldDef = { key: "style", label: "Style", kind: "segmented", options: [{ id: "v1", label: "V1" }, { id: "v2", label: "V2" }], default: "v1" };
+export const V2_WIDGETS = ["portfolio", "music", "clock", "followers"] as const;
 const opacity: FieldDef = { key: "bgOpacity", label: "Background opacity", kind: "range", min: 20, max: 100, default: 100 };
 
 export const WIDGETS = {
@@ -65,6 +68,7 @@ export const WIDGETS = {
     description: "Live value of a verified wallet with a chart",
     category: "crypto",
     fields: [
+      style,
       { key: "wallet", label: "Wallet", kind: "wallet" },
       { key: "period", label: "Time", kind: "segmented", options: PERIODS, default: "7d" },
       opacity,
@@ -101,6 +105,7 @@ export const WIDGETS = {
     description: "Show off your follower count",
     category: "social",
     fields: [
+      style,
       { key: "platform", label: "Platform", kind: "select", options: [{ id: "x", label: "X" }, { id: "youtube", label: "YouTube" }, { id: "twitch", label: "Twitch" }, { id: "tiktok", label: "TikTok" }, { id: "instagram", label: "Instagram" }], default: "x" },
       { key: "handle", label: "Handle", kind: "text", placeholder: "@you", max: 40, required: true },
       { key: "count", label: "Followers", kind: "number", min: 0, max: 1_000_000_000 },
@@ -121,7 +126,11 @@ export const WIDGETS = {
     name: "Music",
     description: "A Spotify track, album or playlist",
     category: "media",
-    fields: [{ key: "url", label: "Spotify link", kind: "url", placeholder: "https://open.spotify.com/…", required: true }, opacity],
+    fields: [
+      style,
+      { key: "url", label: "Spotify link", kind: "url", placeholder: "https://open.spotify.com/…", required: true },
+      opacity,
+    ],
   },
   image: {
     name: "Image",
@@ -137,6 +146,7 @@ export const WIDGETS = {
     description: "Your local time and flag",
     category: "utility",
     fields: [
+      style,
       { key: "timezone", label: "Time zone", kind: "timezone" },
       { key: "city", label: "City", kind: "text", max: 30 },
       { key: "country", label: "Country code", kind: "text", placeholder: "AE", max: 2 },
