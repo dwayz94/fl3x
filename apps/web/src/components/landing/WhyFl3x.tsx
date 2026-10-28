@@ -13,7 +13,7 @@ const faqs = [
   },
   {
     q: "How do tiers work?",
-    a: "Connect your Solana wallet. The amount of token you hold decides your tier, Starter or Premium, and it refreshes automatically. No subscription.",
+    a: "Every member gets a free profile with a few widgets. Connect your Solana wallet: the token you hold unlocks Starter or Premium, refreshed automatically. No subscription.",
   },
   {
     q: "How do I sign in?",

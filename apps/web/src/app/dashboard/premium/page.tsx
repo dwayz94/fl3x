@@ -12,7 +12,7 @@ import { api } from "@/lib/api";
 import { fmtCompact, fmtNumber } from "@/lib/format";
 import { useConfig } from "@/lib/use-config";
 
-const label: Record<Tier, string> = { none: "NO T[i]eR", starter: "ST[a]RTeR", premium: "PR[e]M[i]UM" };
+const label: Record<Tier, string> = { none: "FR[e]e", starter: "ST[a]RTeR", premium: "PR[e]M[i]UM" };
 
 export default function PremiumPage() {
   const { getToken } = useAuth();
@@ -77,11 +77,12 @@ export default function PremiumPage() {
         <div className="flex flex-col gap-4">
           {(
             [
+              ["Free", 0, ["Up to 4 widgets", "6 links", "Your fl3x.lol/@username"]],
               ["Starter", starter, ["Up to 8 widgets", "12 links", "Holder badge", "Background colors"]],
               ["Premium", premium, ["Up to 60 widgets", "40 links", "Premium badge", "Custom fonts & cursors", "Image backgrounds"]],
             ] as const
           ).map(([name, min, perks]) => (
-            <Panel key={name} label={`Hold ${fmtCompact(min)} $${symbol}`} title={name}>
+            <Panel key={name} label={min ? `Hold ${fmtCompact(min)} $${symbol}` : "No token needed"} title={name}>
               <ul className="flex flex-col gap-1.5 text-sm">
                 {perks.map((p) => (
                   <li key={p} className="flex items-center gap-2">

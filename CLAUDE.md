@@ -3,7 +3,7 @@
 Profiles with live widgets for crypto people. The founder speaks French: reply in French. The product is in English.
 
 ## Product
-- Holding the token gives a tier: `none` / `starter` / `premium`. Thresholds come from the API env and are provisional (100K / 1M for now).
+- Holding the token gives a tier: `none` (free, limited profile: 4 widgets, 6 links) / `starter` / `premium`. Decided on 2026-10-28: free profiles are allowed. Thresholds come from the API env and are provisional (100K / 1M for now).
 - Pre-launch is invite-only: an invite code is required to claim a username. Each member gets their own code (referrals). Everyone else goes to the waitlist.
 - Sign-in uses Privy: X + Solana wallet, no embedded wallet.
 - The landing page keeps the old project's design (`../fl3x-old`). The dashboard follows the Figma prototype (`FL3X.lol`, node 186:1226), which is **not final**. Widgets (node 217:191) are redrawn in the same style, never copied.
@@ -24,7 +24,6 @@ Profiles with live widgets for crypto people. The founder speaks French: reply i
 - After a schema change: `npm run db:generate -w @fl3x/api`.
 
 ## Open decisions
-- Is there a free tier (a profile without holding any token)? Currently `none` = 4 widgets.
 - Token mint, final thresholds, chain(s) beyond Solana (EVM, Robinhood Chain).
 - Image uploads (avatar, backgrounds): storage still to choose (R2 / Vercel Blob).
 - Custom badge (purchase), extra widgets, waitlist with points.

@@ -41,8 +41,8 @@ export function HolderTiers({ config }: { config: PublicConfig }) {
               <Brand>HOLD. FL[3]X.</Brand>
             </h2>
             <p className="max-w-md text-lg text-fg-2">
-              No subscriptions. Your tier is unlocked by the ${symbol} you hold in your verified wallets, and updates
-              automatically.
+              Your profile is free. Holding ${symbol} in your verified wallets unlocks more widgets and customization. No
+              subscriptions, updates automatically.
             </p>
           </div>
           <TierCard
