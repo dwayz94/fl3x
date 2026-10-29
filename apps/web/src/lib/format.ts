@@ -1,3 +1,5 @@
+import { site } from "@/config/site";
+
 const compact = new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 });
 const usd = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 2 });
 const usdCompact = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", notation: "compact", maximumFractionDigits: 1 });
@@ -22,3 +24,6 @@ export function flagUrl(country?: string | number) {
   // flagcdn.com: free flag API, SVG stays sharp at any size.
   return /^[a-z]{2}$/.test(c) ? `https://flagcdn.com/${c}.svg` : null;
 }
+
+/** The referral link carries the member's handle: fl3x.lol/invite/alice */
+export const referralLink = (username: string) => `${site.url}/invite/${username}`;

@@ -6,6 +6,7 @@ import { db, schema } from "../db";
 import { env, thresholds } from "../env";
 import { notFound } from "../lib/errors";
 import { badgesFor, badgeStats, loadProfile } from "../lib/profiles";
+import { resolveInviteCode } from "../lib/invites";
 import { isUsernameTaken } from "../lib/users";
 
 export async function publicRoutes(app: FastifyInstance) {
@@ -25,7 +26,8 @@ export async function publicRoutes(app: FastifyInstance) {
   });
 
   app.get<{ Params: { code: string } }>("/invites/:code", async (req) => {
-    const code = req.params.code.trim().toUpperCase();
+    const code = await resolveInviteCode(req.params.code);
+    if (!code) return { valid: false, inviter: null };
     const [row] = await db
       .select({ invite: schema.inviteCodes, inviter: schema.users.username })
       .from(schema.inviteCodes)

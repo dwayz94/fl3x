@@ -168,7 +168,7 @@ export function Library(props: {
 
         {section === "badges" && (
           <div className="flex flex-col gap-2">
-            {BADGES.map((b) => {
+            {[...BADGES].sort((a, b) => Number(props.ownedBadges.includes(b.id)) - Number(props.ownedBadges.includes(a.id))).map((b) => {
               const owned = props.ownedBadges.includes(b.id);
               const shown = props.draft.badges.includes(b.id);
               return (
@@ -202,7 +202,7 @@ export function Library(props: {
                     <OptionTile active={theme.cursor === c.id} onClick={() => props.onTheme({ cursor: c.id })}>
                       {preview ? (
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img src={`data:image/svg+xml,${encodeURIComponent(preview.svg)}`} alt="" className="size-7" />
+                        <img src={`data:image/svg+xml,${encodeURIComponent(preview.svg)}`} alt="" className="size-9" />
                       ) : (
                         <Icon icon={Cursor01Icon} size={24} />
                       )}

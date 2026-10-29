@@ -59,16 +59,26 @@ export const FONTS = [
 
 export const CURSORS = [
   { id: "default", label: "System" },
-  { id: "arrow", label: "Arrow" },
-  { id: "pixel", label: "Pixel" },
-  { id: "dot", label: "Dot" },
-  { id: "ring", label: "Ring" },
-  { id: "crosshair", label: "Crosshair" },
-  { id: "heart", label: "Heart" },
-  { id: "star", label: "Star" },
-  { id: "coin", label: "Coin" },
-  { id: "sparkle", label: "Sparkle" },
+  { id: "classic", label: "Classic" },
+  { id: "midnight", label: "Midnight" },
+  { id: "pixel", label: "8-bit" },
+  { id: "solana", label: "Solana" },
+  { id: "gold", label: "Gold" },
+  { id: "glitch", label: "Glitch" },
+  { id: "neon", label: "Neon" },
+  { id: "diamond", label: "Diamond" },
+  { id: "rocket", label: "Rocket" },
+  { id: "flame", label: "Flame" },
+  { id: "laser", label: "Laser" },
+  { id: "scope", label: "Scope" },
 ] as const;
+
+/** Cursors from the first version, mapped to their closest new design. */
+const LEGACY_CURSORS: Record<string, (typeof CURSORS)[number]["id"]> = { arrow: "classic", dot: "laser", ring: "scope", crosshair: "scope", coin: "gold", heart: "default", star: "default", sparkle: "default" };
+export function normalizeCursor(id: string | undefined): (typeof CURSORS)[number]["id"] {
+  if (CURSORS.some((c) => c.id === id)) return id as (typeof CURSORS)[number]["id"];
+  return LEGACY_CURSORS[id ?? ""] ?? "default";
+}
 
 export const BACKGROUNDS = [
   { id: "plain", label: "Plain" },

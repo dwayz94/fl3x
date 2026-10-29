@@ -2,12 +2,14 @@
 
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import type { AnalyticsSummary } from "@fl3x/shared";
+import { Cursor01Icon, Link01Icon } from "@hugeicons/core-free-icons";
+import { LINK_KINDS, TRAFFIC_SOURCES, type AnalyticsSummary, type LinkKind } from "@fl3x/shared";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { LineChart } from "@/components/dashboard/LineChart";
 import { Chip, PageHeader, Panel, Spinner } from "@/components/dashboard/Panel";
 import { Segmented } from "@/components/editor/Field";
-import { Flag } from "@/components/ui";
+import { linkIcons } from "@/components/profile/links";
+import { Flag, Icon } from "@/components/ui";
 import { api } from "@/lib/api";
 import { fmtNumber } from "@/lib/format";
 
@@ -40,6 +42,37 @@ function Bars({ items }: { items: { label: string; count: number }[] }) {
   );
 }
 
+/** A clicked target is a link kind ("x", "discord"…) or a custom link label. */
+function linkLabel(target: string) {
+  const kind = LINK_KINDS.find((k) => k.id === target);
+  return { label: kind?.label ?? target, icon: kind ? linkIcons[kind.id as LinkKind] : Link01Icon };
+}
+
+const sourceIcon: Partial<Record<string, typeof Link01Icon>> = {
+  x: linkIcons.x, telegram: linkIcons.telegram, discord: linkIcons.discord, youtube: linkIcons.youtube,
+  tiktok: linkIcons.tiktok, instagram: linkIcons.instagram, twitch: linkIcons.twitch, google: linkIcons.website, other: linkIcons.website,
+};
+
+/** Ranked list with a proportional bar behind each row. */
+function RankList({ items, empty }: { items: { key: string; label: string; icon: typeof Link01Icon; count: number }[]; empty: string }) {
+  const total = items.reduce((a, b) => a + b.count, 0);
+  const max = Math.max(1, ...items.map((i) => i.count));
+  if (!items.length) return <p className="py-10 text-center text-sm text-fg-3">{empty}</p>;
+  return (
+    <ul className="flex flex-col gap-1.5">
+      {items.map((it, i) => (
+        <li key={it.key} className="relative flex h-10 items-center gap-2.5 overflow-hidden rounded-xl bg-white/[0.03] px-3 text-sm">
+          <span className="absolute inset-y-0 left-0 rounded-xl opacity-20" style={{ width: `${(it.count / max) * 100}%`, background: BAR_COLORS[i % BAR_COLORS.length] }} />
+          <Icon icon={it.icon} size={16} className="relative text-fg-2" />
+          <span className="relative min-w-0 flex-1 truncate">{it.label}</span>
+          <span className="relative text-xs text-fg-3">{share(it.count, total)}%</span>
+          <span className="relative w-12 text-right font-primary text-base">{fmtNumber(it.count)}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 export default function AnalyticsPage() {
   const { getToken } = useAuth();
   const [days, setDays] = useState("30");
@@ -62,22 +95,25 @@ export default function AnalyticsPage() {
         <div className="grid gap-4 lg:grid-cols-12">
           <Panel
             className="lg:col-span-5"
-            label="Most clicked"
+            label="Most clicked links"
             title={
               <>
-                {data.clicks[0]?.target ?? "No clicks yet"}
+                {data.clicks[0] ? linkLabel(data.clicks[0].target).label : "No clicks yet"}
                 {data.clicks[0] && <Chip>{share(data.clicks[0].count, data.clicks.reduce((a, b) => a + b.count, 0))}%</Chip>}
               </>
             }
           >
-            <Bars items={data.clicks.slice(0, 5).map((c) => ({ label: c.target, count: c.count }))} />
+            <RankList
+              empty="Clicks on the links under your card show up here."
+              items={data.clicks.slice(0, 6).map((c) => ({ key: c.target, ...linkLabel(c.target), count: c.count }))}
+            />
           </Panel>
 
           <Panel className="lg:col-span-3" label="Real-time visitors" title={<>{fmtNumber(data.realtime)} <Chip tone="success">live</Chip></>}>
             <dl className="mt-auto grid gap-3 text-sm">
               <div className="flex justify-between"><dt className="text-fg-2">Views</dt><dd className="font-primary text-lg">{fmtNumber(data.totalViews)}</dd></div>
               <div className="flex justify-between"><dt className="text-fg-2">Unique visitors</dt><dd className="font-primary text-lg">{fmtNumber(data.uniqueVisitors)}</dd></div>
-              <div className="flex justify-between"><dt className="text-fg-2">Top referrer</dt><dd className="truncate">{data.referrers[0]?.referrer ?? "Direct"}</dd></div>
+              <div className="flex justify-between"><dt className="text-fg-2">Link clicks</dt><dd className="font-primary text-lg">{fmtNumber(data.clicks.reduce((a, b) => a + b.count, 0))}</dd></div>
             </dl>
           </Panel>
 
@@ -106,23 +142,47 @@ export default function AnalyticsPage() {
             </ul>
           </Panel>
 
+          {(() => {
+            // Tablets and anything unusual count as "other".
+            const devices = (["desktop", "mobile", "other"] as const).map((d) => ({
+              label: d,
+              count: data.devices.filter((x) => (d === "other" ? x.device !== "desktop" && x.device !== "mobile" : x.device === d)).reduce((a, b) => a + b.count, 0),
+            }));
+            const total = devices.reduce((a, b) => a + b.count, 0);
+            const top = [...devices].sort((a, b) => b.count - a.count)[0]!;
+            return (
+              <Panel className="lg:col-span-5" label="Visitor devices" title={total ? <>{top.label}<Chip>{share(top.count, total)}%</Chip></> : "No data yet"}>
+                <Bars items={devices} />
+              </Panel>
+            );
+          })()}
+
           <Panel
-            className="lg:col-span-5"
-            label="Visitor devices"
+            className="lg:col-span-7"
+            label="Where visitors come from"
             title={
-              (() => {
-                const top = [...data.devices].sort((a, b) => b.count - a.count)[0];
-                const total = data.devices.reduce((a, b) => a + b.count, 0);
-                return top ? <>{top.device}<Chip>{share(top.count, total)}%</Chip></> : "No data yet";
-              })()
+              data.sources[0] ? (
+                <>
+                  {TRAFFIC_SOURCES.find((t) => t.id === data.sources[0]!.source)?.label}
+                  <Chip>{share(data.sources[0].count, data.totalViews)}%</Chip>
+                </>
+              ) : (
+                "No data yet"
+              )
             }
           >
-            <Bars
-              items={(["desktop", "tablet", "mobile"] as const).map((d) => ({ label: d, count: data.devices.find((x) => x.device === d)?.count ?? 0 }))}
+            <RankList
+              empty="Share your profile: we'll show which site brought each visitor."
+              items={data.sources.map((src) => ({
+                key: src.source,
+                label: TRAFFIC_SOURCES.find((t) => t.id === src.source)?.label ?? src.source,
+                icon: sourceIcon[src.source] ?? Cursor01Icon,
+                count: src.count,
+              }))}
             />
           </Panel>
 
-          <Panel className="lg:col-span-7" label="Total views" title={fmtNumber(data.totalViews)}>
+          <Panel className="lg:col-span-12" label="Total views" title={fmtNumber(data.totalViews)}>
             <LineChart
               points={data.daily.map((d) => ({
                 label: new Date(d.date).toLocaleDateString("en-US", { day: "numeric", month: "short" }),

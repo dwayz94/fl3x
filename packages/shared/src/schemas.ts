@@ -8,11 +8,12 @@ export const usernameSchema = z
     if (!r.valid) ctx.addIssue({ code: "custom", message: r.message });
   });
 
+/** An invite code (FL3X-ABC123) or the inviter's handle, from a referral link. */
 export const inviteCodeSchema = z
   .string()
   .trim()
   .toUpperCase()
-  .regex(/^[A-Z0-9-]{4,24}$/, "Invalid invite code");
+  .regex(/^[A-Z0-9_.-]{2,32}$/, "Invalid invite code");
 
 export const claimRequest = z.object({
   username: usernameSchema,

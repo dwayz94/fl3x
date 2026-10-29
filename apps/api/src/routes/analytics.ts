@@ -2,7 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { createHash, timingSafeEqual } from "node:crypto";
 import { and, count, countDistinct, desc, eq, gte, isNotNull, sql } from "drizzle-orm";
 import { z } from "zod";
-import { normalizeUsername, type AnalyticsSummary } from "@fl3x/shared";
+import { normalizeUsername, sourceOf, type AnalyticsSummary, type TrafficSource } from "@fl3x/shared";
 import { db, schema } from "../db";
 import { env } from "../env";
 import { requireUser } from "../lib/auth";
@@ -92,8 +92,15 @@ export async function analyticsRoutes(app: FastifyInstance) {
       db.select({ target: e.target, count: count() }).from(e).where(and(inRange, eq(e.kind, "click"), isNotNull(e.target))).groupBy(e.target).orderBy(desc(count())).limit(10),
       db.select({ device: e.device, count: count() }).from(e).where(views).groupBy(e.device),
       db.select({ country: e.country, count: count() }).from(e).where(and(views, isNotNull(e.country))).groupBy(e.country).orderBy(desc(count())).limit(20),
-      db.select({ referrer: e.referrer, count: count() }).from(e).where(and(views, isNotNull(e.referrer))).groupBy(e.referrer).orderBy(desc(count())).limit(10),
+      db.select({ referrer: e.referrer, count: count() }).from(e).where(views).groupBy(e.referrer).orderBy(desc(count())),
     ]);
+
+    // Group referrer hosts into sources (t.co and x.com are both X, no referrer is Direct).
+    const bySource = new Map<TrafficSource, number>();
+    for (const r of referrers) {
+      const s = sourceOf(r.referrer);
+      bySource.set(s, (bySource.get(s) ?? 0) + r.count);
+    }
 
     // Fill missing days so the chart has a point per day.
     const byDay = new Map(daily.map((d) => [d.date, d.views]));
@@ -112,7 +119,8 @@ export async function analyticsRoutes(app: FastifyInstance) {
       clicks: clicks.map((c) => ({ target: c.target!, count: c.count })),
       devices,
       countries: countries.map((c) => ({ country: c.country!, count: c.count })),
-      referrers: referrers.map((r) => ({ referrer: r.referrer!, count: r.count })),
+      referrers: referrers.filter((r) => r.referrer).slice(0, 10).map((r) => ({ referrer: r.referrer!, count: r.count })),
+      sources: [...bySource].map(([source, n]) => ({ source, count: n })).sort((a, b) => b.count - a.count),
     };
   });
 }

@@ -24,49 +24,113 @@ export const fontClass: Record<ProfileTheme["font"], string> = {
   serif: "font-serif",
 };
 
-/** SVG of each custom cursor, drawn in the profile accent, with its hotspot. */
+/** Classic pointer, 32px box, tip at (5, 3). */
+const ARROW = "M5 3.6v21c0 .9 1.1 1.3 1.7.7l4.5-4.4 3.3 7.4c.2.5.8.7 1.3.5l2.5-1.1c.5-.2.7-.8.5-1.3l-3.3-7.3h6.3c.9 0 1.3-1.1.7-1.7L6.7 2.9C6.1 2.3 5 2.7 5 3.6z";
+/** The 8-bit pointer as a bitmap: B outline, W fill. */
+const PIXEL_ROWS = [
+  "B", "BB", "BWB", "BWWB", "BWWWB", "BWWWWB", "BWWWWWB", "BWWWWWWB", "BWWWWWWWB", "BWWWWWWWWB",
+  "BWWWWWBBBBB", "BWWBWWB", "BWB BWWB", "BB  BWWB", "B    BWWB", "     BWWB", "      BB",
+];
+const PIXEL_ARROW = PIXEL_ROWS.flatMap((row, y) =>
+  [...row].map((c, x) => (c === " " ? "" : `<rect x="${x}" y="${y}" width="1" height="1" fill="${c === "B" ? "#000" : "#fff"}"/>`)),
+).join("");
+const SHADOW = `<filter id="s" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="1.2" stdDeviation="1.1" flood-opacity=".55"/></filter>`;
+
+/**
+ * SVG of each custom cursor with its hotspot. Each one has its own look;
+ * only Neon follows the profile accent.
+ */
 export function cursorSvg(id: ProfileTheme["cursor"], accent: string): { svg: string; x: number; y: number } | null {
-  const o = `stroke="white" stroke-width="1.5" stroke-linejoin="round"`;
-  const svg = (size: number, body: string) => `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">${body}</svg>`;
+  const svg = (body: string, defs = "") => `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><defs>${SHADOW}${defs}</defs>${body}</svg>`;
+  const arrow = (fill: string, stroke: string, extra = "") => `<path d="${ARROW}" fill="${fill}" stroke="${stroke}" stroke-width="1.6" stroke-linejoin="round" filter="url(#s)"/>${extra}`;
   switch (id) {
-    case "arrow":
-      return { svg: svg(24, `<path d="M3 2l17 8-7 2-3 8z" fill="${accent}" ${o}/>`), x: 3, y: 2 };
+    case "classic":
+      return { svg: svg(arrow("#fff", "#000")), x: 5, y: 3 };
+    case "midnight":
+      return { svg: svg(arrow("#0b0b0b", "#fff")), x: 5, y: 3 };
     case "pixel":
+      return { svg: svg(`<g transform="translate(4 2) scale(1.6)" shape-rendering="crispEdges">${PIXEL_ARROW}</g>`), x: 4, y: 2 };
+    case "solana":
       return {
-        svg: svg(24, `<path d="M2 2h3v3h3v3h3v3h3v3h3v3h-6v3h-3v3H5v-3H2z" fill="${accent}" stroke="black" stroke-width="1.5" shape-rendering="crispEdges"/>`),
-        x: 2,
+        svg: svg(arrow("url(#g)", "#fff"), `<linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#9945FF"/><stop offset=".55" stop-color="#19C3F0"/><stop offset="1" stop-color="#14F195"/></linearGradient>`),
+        x: 5,
+        y: 3,
+      };
+    case "gold":
+      return {
+        svg: svg(
+          arrow("url(#g)", "#5a3b00", `<path d="M7.2 6.5v12.8" stroke="#fff8d6" stroke-width="1.4" stroke-linecap="round" opacity=".85"/>`),
+          `<linearGradient id="g" x1="0" y1="0" x2=".8" y2="1"><stop offset="0" stop-color="#FFF1A8"/><stop offset=".45" stop-color="#F7C431"/><stop offset="1" stop-color="#A86F00"/></linearGradient>`,
+        ),
+        x: 5,
+        y: 3,
+      };
+    case "glitch":
+      return {
+        svg: svg(
+          `<path d="${ARROW}" fill="#FF2A6D" transform="translate(-1.6 .4)"/><path d="${ARROW}" fill="#05D9E8" transform="translate(1.6 -.4)"/><path d="${ARROW}" fill="#fff" stroke="#000" stroke-width="1.2" stroke-linejoin="round"/>`,
+        ),
+        x: 5,
+        y: 3,
+      };
+    case "neon":
+      return {
+        svg: svg(
+          `<path d="${ARROW}" fill="${accent}" fill-opacity=".18" stroke="${accent}" stroke-width="3" stroke-linejoin="round" filter="url(#n)"/><path d="${ARROW}" fill="none" stroke="#fff" stroke-width="1.1" stroke-linejoin="round"/>`,
+          `<filter id="n" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="1.4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>`,
+        ),
+        x: 5,
+        y: 3,
+      };
+    case "diamond":
+      return {
+        svg: svg(
+          `<g filter="url(#s)" stroke="#0b3a4a" stroke-width="1.2" stroke-linejoin="round"><path d="M9 5h14l5 7-12 16L4 12z" fill="#7DF3FF"/><path d="M4 12h24M9 5l3 7 4-7 4 7 3-7M12 12l4 16 4-16" fill="none"/></g><path d="M10.5 7.5l1.5 3" stroke="#fff" stroke-width="1.4" stroke-linecap="round"/>`,
+        ),
+        x: 16,
+        y: 5,
+      };
+    case "rocket":
+      // Drawn pointing up, turned to point at the top-left like a cursor.
+      return {
+        svg: svg(
+          `<g transform="rotate(-45 16 16)" filter="url(#s)" stroke="#111" stroke-width="1.2" stroke-linejoin="round"><path d="M13.2 22h5.6L16 29z" fill="#FFB547"/><path d="M11 16l-4 5v3.5l4-2.5zM21 16l4 5v3.5l-4-2.5z" fill="#FF4D6D"/><path d="M16 2.5c4 3 5.5 8 5.5 13v6.5h-11V15.5c0-5 1.5-10 5.5-13z" fill="#F4F4F4"/><circle cx="16" cy="11.5" r="2.6" fill="#38BDF8"/></g>`,
+        ),
+        x: 7,
+        y: 7,
+      };
+    case "flame":
+      return {
+        svg: svg(
+          `<path d="M16 2c1 5 8 8.5 8 16a8 8 0 0 1-16 0c0-4 2-6.5 4-8.5 0 3 1.5 4.5 3 4.5C15 10 14.5 6 16 2z" fill="url(#g)" stroke="#5c1500" stroke-width="1.2" stroke-linejoin="round" filter="url(#s)"/><path d="M16 15c.5 2.5 4 4 4 7.5a4 4 0 0 1-8 0c0-2.5 2.5-3.5 4-7.5z" fill="#FFE27A"/>`,
+          `<linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FF3D2E"/><stop offset="1" stop-color="#FF9A1F"/></linearGradient>`,
+        ),
+        x: 16,
         y: 2,
       };
-    case "dot":
-      return { svg: svg(16, `<circle cx="8" cy="8" r="5" fill="${accent}" stroke="white" stroke-width="1.5"/>`), x: 8, y: 8 };
-    case "ring":
-      return { svg: svg(28, `<circle cx="14" cy="14" r="10" fill="none" stroke="${accent}" stroke-width="2.5"/><circle cx="14" cy="14" r="2" fill="white"/>`), x: 14, y: 14 };
-    case "crosshair":
+    case "laser":
       return {
-        svg: svg(24, `<g stroke="${accent}" stroke-width="2" stroke-linecap="round"><path d="M12 2v6M12 16v6M2 12h6M16 12h6"/></g><circle cx="12" cy="12" r="1.5" fill="white"/>`),
-        x: 12,
-        y: 12,
+        svg: svg(
+          `<circle cx="16" cy="16" r="9" fill="#FF1F3D" opacity=".18"/><circle cx="16" cy="16" r="5.5" fill="#FF1F3D" opacity=".35"/><circle cx="16" cy="16" r="3" fill="#FF1F3D" stroke="#fff" stroke-width="1"/>`,
+        ),
+        x: 16,
+        y: 16,
       };
-    case "heart":
-      return { svg: svg(24, `<path d="M12 21s-8-5.2-8-11a4.5 4.5 0 0 1 8-2.8A4.5 4.5 0 0 1 20 10c0 5.8-8 11-8 11z" fill="${accent}" ${o}/>`), x: 12, y: 12 };
-    case "star":
-      return { svg: svg(24, `<path d="M12 2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L12 17l-6.1 3.4 1.5-6.8L2.2 9l6.9-.7z" fill="${accent}" ${o}/>`), x: 12, y: 12 };
-    case "coin":
+    case "scope":
       return {
-        svg: svg(24, `<circle cx="12" cy="12" r="9" fill="${accent}" ${o}/><text x="12" y="16.5" font-size="12" font-family="Arial" font-weight="bold" text-anchor="middle" fill="black">$</text>`),
-        x: 12,
-        y: 12,
+        svg: svg(
+          `<g filter="url(#s)" stroke="#fff" stroke-width="1.8" stroke-linecap="round" fill="none"><circle cx="16" cy="16" r="10"/><path d="M16 2v7M16 23v7M2 16h7M23 16h7"/></g><circle cx="16" cy="16" r="1.8" fill="#FF1F3D"/>`,
+        ),
+        x: 16,
+        y: 16,
       };
-    case "sparkle":
-      return { svg: svg(24, `<path d="M12 1l2.5 8.5L23 12l-8.5 2.5L12 23l-2.5-8.5L1 12l8.5-2.5z" fill="${accent}" ${o}/>`), x: 12, y: 12 };
     default:
       return null;
   }
 }
 
 export function cursorStyle(theme: ProfileTheme): string | undefined {
-  if (theme.cursor === "default") return undefined;
   const c = cursorSvg(theme.cursor, theme.accent);
   if (!c) return undefined;
-  return `url("data:image/svg+xml,${encodeURIComponent(c.svg)}") ${c.x} ${c.y}, ${theme.cursor === "crosshair" ? "crosshair" : "auto"}`;
+  return `url("data:image/svg+xml,${encodeURIComponent(c.svg)}") ${c.x} ${c.y}, auto`;
 }

@@ -1,6 +1,7 @@
 "use client";
 
-import { EyeIcon } from "@hugeicons/core-free-icons";
+import { EyeIcon, PencilEdit02Icon } from "@hugeicons/core-free-icons";
+import { useEffect, useRef, useState } from "react";
 import type { EditableProfile, FullPublicProfile, Tier, Widget } from "@fl3x/shared";
 import { Icon, Verified } from "@/components/ui";
 import { WidgetView, sizeClass } from "@/components/widgets";
@@ -56,9 +57,10 @@ export function ProfileView({
 
   return (
     <article
-      style={{ "--cols": cols } as React.CSSProperties}
+      // The accent recolors everything "brand" inside the card, plus a soft rim and glow.
+      style={{ "--cols": cols, "--color-brand": theme.accent, "--accent": theme.accent } as React.CSSProperties}
       className={cn(
-        "w-full rounded-[40px] border border-white/[0.06] bg-[rgba(28,28,28,0.6)] p-5 shadow-[0_30px_80px_rgba(0,0,0,0.45)] backdrop-blur-[40px] md:p-8",
+        "w-full rounded-[40px] border border-[color-mix(in_srgb,var(--accent)_18%,transparent)] bg-[rgba(28,28,28,0.6)] p-5 shadow-[0_30px_80px_rgba(0,0,0,0.45),0_0_120px_-40px_var(--accent)] backdrop-blur-[40px] md:p-8",
         // Card hugs the grid: cols × 80px cells + 12px gaps + padding.
         editor
           ? "md:w-[calc(var(--cols)*80px+(var(--cols)-1)*12px+66px)] md:max-w-none"
@@ -69,11 +71,31 @@ export function ProfileView({
         <Avatar url={profile.avatarUrl} onEdit={editor?.onAvatar} />
         <div className={cn("flex min-w-0 flex-col gap-2", narrow && "items-center")}>
           <h1 className={cn("flex max-w-full items-center gap-2 text-[34px] leading-none uppercase md:text-[44px]", fontClass[theme.font])}>
-            <span className="truncate">{name}</span>
+            {editor?.onIdentity ? (
+              <InlineText
+                value={profile.displayName ?? ""}
+                placeholder={profile.username}
+                maxLength={32}
+                onCommit={(v) => editor.onIdentity!({ displayName: v || null })}
+                className="truncate"
+              />
+            ) : (
+              <span className="truncate">{name}</span>
+            )}
             {verified}
           </h1>
           <BadgeStrip ids={profile.badges} stats={(profile as Partial<FullPublicProfile>).badgeStats} interactive={!editor} />
-          {profile.bio && <p className="text-xs uppercase text-fg-2 md:text-sm">{profile.bio}</p>}
+          {editor?.onIdentity ? (
+            <InlineText
+              value={profile.bio ?? ""}
+              placeholder="Add a bio"
+              maxLength={160}
+              onCommit={(v) => editor.onIdentity!({ bio: v || null })}
+              className="text-xs uppercase text-fg-2 md:text-sm"
+            />
+          ) : (
+            profile.bio && <p className="text-xs uppercase text-fg-2 md:text-sm">{profile.bio}</p>
+          )}
         </div>
       </header>
 
@@ -106,14 +128,14 @@ export function ProfileView({
                 if (editor) e.preventDefault();
                 onLinkClick?.(l.kind === "custom" ? (l.label ?? "custom") : l.kind);
               }}
-              className="text-fg-2 transition-colors hover:text-fg"
+              className="text-[var(--accent)] opacity-80 transition-opacity hover:opacity-100"
             >
               <Icon icon={linkIcons[l.kind]} size={24} />
             </a>
           ))}
         </div>
         {views != null && (
-          <span className="flex items-center gap-1.5 font-primary text-xl text-fg-2">
+          <span className="flex items-center gap-1.5 font-primary text-xl text-[var(--accent)]">
             <Icon icon={EyeIcon} size={22} />
             {fmtNumber(views)}
           </span>
@@ -134,6 +156,61 @@ function Avatar({ url, onEdit }: { url: string | null; onEdit?: () => void }) {
     <button type="button" onClick={onEdit} className={cn(cls, "group")} title="Change your picture">
       {img}
       <span className="absolute inset-0 flex items-center justify-center bg-black/55 text-xs opacity-0 transition-opacity group-hover:opacity-100">Change</span>
+    </button>
+  );
+}
+
+/**
+ * Text edited in place on the card (editor only): a dashed outline and a
+ * pencil on hover show it can be changed, click to type, Enter or click away to keep.
+ */
+function InlineText({ value, placeholder, maxLength, onCommit, className }: { value: string; placeholder: string; maxLength: number; onCommit: (v: string) => void; className?: string }) {
+  const [editing, setEditing] = useState(false);
+  const [text, setText] = useState(value);
+  const input = useRef<HTMLInputElement>(null);
+  useEffect(() => setText(value), [value]);
+  useEffect(() => {
+    if (editing) input.current?.select();
+  }, [editing]);
+
+  const commit = () => {
+    setEditing(false);
+    if (text.trim() !== value) onCommit(text.trim());
+  };
+
+  if (editing) {
+    return (
+      <input
+        ref={input}
+        value={text}
+        maxLength={maxLength}
+        placeholder={placeholder}
+        onChange={(e) => setText(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") commit();
+          if (e.key === "Escape") {
+            setText(value);
+            setEditing(false);
+          }
+        }}
+        style={{ width: `${Math.max(6, text.length + 2)}ch` }}
+        className={cn("min-w-0 max-w-full rounded-lg bg-white/[0.06] px-1.5 uppercase outline-2 outline-[var(--accent)] [font:inherit]", className)}
+      />
+    );
+  }
+  return (
+    <button
+      type="button"
+      onClick={() => setEditing(true)}
+      title="Click to edit"
+      className={cn(
+        "group/edit relative -mx-1.5 flex min-w-0 uppercase items-center gap-1.5 rounded-lg px-1.5 text-left outline-1 outline-transparent transition-[outline-color,background-color] [font:inherit] hover:bg-white/[0.04] hover:outline-dashed hover:outline-white/40",
+        className,
+      )}
+    >
+      <span className={cn("truncate", !value && "opacity-40")}>{value || placeholder}</span>
+      <Icon icon={PencilEdit02Icon} size={14} className="shrink-0 text-fg-2 opacity-0 transition-opacity group-hover/edit:opacity-100" />
     </button>
   );
 }

@@ -1,7 +1,6 @@
 "use client";
 
 import { ArrowDown02Icon, ArrowUp02Icon, Delete02Icon } from "@hugeicons/core-free-icons";
-import Link from "next/link";
 import { WIDGETS, type EditableProfile, type FieldDef, type LinkedWallet, type Widget, type WidgetSize } from "@fl3x/shared";
 import { Brand, Icon } from "@/components/ui";
 import { WidgetView } from "@/components/widgets";
@@ -28,6 +27,7 @@ export function Inspector(props: {
           ["Add", "Pick a widget on the left. It shows up at the end of your card."],
           ["Move", "Drag a widget: the others make room as you go. On a phone, hold it first."],
           ["Edit", "Click a widget to change its content, size and style here."],
+          ["Name & bio", "Click your name or bio on the card and type."],
           ["Picture", "Click your avatar on the card to upload a new one."],
         ].map(([t, d]) => (
           <div key={t} className="rounded-2xl bg-white/[0.04] p-3">
@@ -35,13 +35,6 @@ export function Inspector(props: {
             <p className="mt-1 text-xs text-fg-2">{d}</p>
           </div>
         ))}
-        <p className="text-xs text-fg-3">
-          Name and bio are in{" "}
-          <Link href="/dashboard/settings" className="text-brand hover:underline">
-            Settings
-          </Link>
-          .
-        </p>
       </div>
     );
   }

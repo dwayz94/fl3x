@@ -9,11 +9,12 @@ import { useQueryClient } from "@tanstack/react-query";
 import { defaultSettings, type EditableProfile, type LinkedWallet, type ProfileTheme, type Tier, type Widget, type WidgetSize, type WidgetType } from "@fl3x/shared";
 import { useAuth, useMe } from "@/components/auth/AuthProvider";
 import { Spinner } from "@/components/dashboard/Panel";
+import { UnsavedBar } from "@/components/dashboard/UnsavedBar";
 import { Inspector } from "@/components/editor/Inspector";
 import { Library } from "@/components/editor/Library";
 import { ProfileView } from "@/components/profile/ProfileView";
 import { backdropStyle, cursorStyle } from "@/components/profile/theme";
-import { Button, buttonClass, FieldError, Icon } from "@/components/ui";
+import { buttonClass, FieldError, Icon } from "@/components/ui";
 import { api, ApiRequestError } from "@/lib/api";
 import { cn } from "@/lib/cn";
 import { pickImage, useUpload } from "@/lib/upload";
@@ -39,13 +40,8 @@ function Editor({ initial, tier, wallets }: { initial: EditorPayload; tier: Tier
   const dirty = useMemo(() => JSON.stringify(draft) !== JSON.stringify(saved), [draft, saved]);
   const selected = draft.widgets.find((w) => w.id === selectedId) ?? null;
 
-  // Warn before leaving with unsaved changes.
-  useEffect(() => {
-    if (!dirty) return;
-    const h = (e: BeforeUnloadEvent) => e.preventDefault();
-    window.addEventListener("beforeunload", h);
-    return () => window.removeEventListener("beforeunload", h);
-  }, [dirty]);
+  const [nudge, setNudge] = useState(0);
+  const [savedFlash, setSavedFlash] = useState(false);
 
   const setWidgets = (fn: (ws: Widget[]) => Widget[]) => setDraft((d) => ({ ...d, widgets: fn(d.widgets) }));
 
@@ -90,6 +86,9 @@ function Editor({ initial, tier, wallets }: { initial: EditorPayload; tier: Tier
       const next = { ...profile, widgets };
       setSaved(next);
       setDraft(next);
+      setNudge(0);
+      setSavedFlash(true);
+      setTimeout(() => setSavedFlash(false), 1800);
       qc.setQueryData<EditorPayload>(["profile"], (old) => (old ? { ...old, profile: next } : old));
     } catch (err) {
       setError(err instanceof ApiRequestError ? err.message : "Could not save");
@@ -110,8 +109,15 @@ function Editor({ initial, tier, wallets }: { initial: EditorPayload; tier: Tier
     qc.setQueryData<EditorPayload>(["profile"], (old) => (old ? { ...old, profile: { ...old.profile, avatarUrl: profile.avatarUrl } } : old));
   };
 
+  const discard = () => {
+    setDraft(saved);
+    setError(null);
+    setNudge(0);
+  };
+
+  // Leaving with unsaved changes shakes the bar instead of a browser prompt.
   const back = () => {
-    if (dirty && !window.confirm("Leave without saving your changes?")) return;
+    if (dirty) return setNudge((n) => n + 1);
     router.push("/dashboard/analytics");
   };
 
@@ -126,16 +132,16 @@ function Editor({ initial, tier, wallets }: { initial: EditorPayload; tier: Tier
         <span className="h-5 w-px bg-white/10" />
         <Image src="/images/fl3x-icon.svg" alt="" width={18} height={19} />
         <h1 className="font-primary text-xl leading-none">Customize</h1>
+        <span className="hidden items-center gap-1.5 rounded-full bg-brand/15 px-2.5 py-1 text-[11px] text-brand sm:flex">
+          <span className="size-1.5 animate-pulse rounded-full bg-brand" />
+          Editing @{draft.username}
+        </span>
         <div className="ml-auto flex items-center gap-2">
-          {error && <FieldError>{error}</FieldError>}
-          {(avatar.busy || saving) && <span className="text-xs text-fg-3">Saving…</span>}
-          {dirty && !error && !saving && <span className="hidden text-xs text-fg-2 sm:inline">Unsaved changes</span>}
+          {error && !dirty && <FieldError>{error}</FieldError>}
+          {avatar.busy && <span className="text-xs text-fg-3">Uploading…</span>}
           <Link href={`/@${draft.username}`} target="_blank" className={buttonClass({ variant: "secondary", size: "md" })}>
-            View
+            View profile
           </Link>
-          <Button size="md" onClick={save} loading={saving} disabled={!dirty}>
-            Save
-          </Button>
         </div>
       </header>
 
@@ -156,7 +162,18 @@ function Editor({ initial, tier, wallets }: { initial: EditorPayload; tier: Tier
           <div className="flex flex-1 flex-col items-center overflow-y-auto px-4 py-8" onClick={() => setSelectedId(null)}>
             {/* my-auto centers when it fits, and scrolls from the top when it doesn't */}
             <FitWidth onClick={(e) => e.stopPropagation()} className="my-auto">
-              <ProfileView profile={draft} tier={tier} views={0} editor={{ selectedId, onSelect: setSelectedId, onMove: move, onAvatar: () => void changeAvatar() }} />
+              <ProfileView
+                profile={draft}
+                tier={tier}
+                views={0}
+                editor={{
+                  selectedId,
+                  onSelect: setSelectedId,
+                  onMove: move,
+                  onAvatar: () => void changeAvatar(),
+                  onIdentity: (patch) => setDraft((d) => ({ ...d, ...patch })),
+                }}
+              />
             </FitWidth>
           </div>
         </section>
@@ -175,6 +192,8 @@ function Editor({ initial, tier, wallets }: { initial: EditorPayload; tier: Tier
           />
         </aside>
       </div>
+
+      <UnsavedBar dirty={dirty} saving={saving} savedFlash={savedFlash} error={error} nudge={nudge} onDiscard={discard} onSave={() => void save()} />
     </div>
   );
 }

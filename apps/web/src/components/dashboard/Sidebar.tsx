@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "motion/react";
 import {
-  Analytics02Icon, Award01Icon, Crown02Icon, Link01Icon, PaintBoardIcon, Settings02Icon,
+  Analytics02Icon, Award01Icon, Crown02Icon, Link01Icon, PaintBoardIcon, Settings02Icon, UserAdd01Icon,
 } from "@hugeicons/core-free-icons";
 import type { Me } from "@fl3x/shared";
 import { Icon, Verified } from "@/components/ui";
@@ -16,6 +16,7 @@ export const NAV = [
   { href: "/dashboard/analytics", label: "Analytics", icon: Analytics02Icon },
   { href: "/dashboard/badges", label: "Badges", icon: Award01Icon },
   { href: "/dashboard/links", label: "Links", icon: Link01Icon },
+  { href: "/dashboard/referral", label: "Referral", icon: UserAdd01Icon },
   { href: "/dashboard/premium", label: "Premium", icon: Crown02Icon },
 ];
 

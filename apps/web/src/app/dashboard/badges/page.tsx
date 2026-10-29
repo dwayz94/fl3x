@@ -19,6 +19,8 @@ export default function BadgesPage() {
   const [busy, setBusy] = useState<string | null>(null);
   if (!data) return <Spinner />;
   const { profile, ownedBadges } = data;
+  // Unlocked badges first, the rest keep the catalogue order.
+  const sorted = [...BADGES].sort((a, b) => Number(ownedBadges.includes(b.id)) - Number(ownedBadges.includes(a.id)));
 
   const toggle = async (id: string) => {
     setBusy(id);
@@ -38,8 +40,11 @@ export default function BadgesPage() {
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 md:px-10">
       <PageHeader title="B[a]DG[e]S" subtitle="Badges make your profile shine. Click an owned badge to show or hide it." />
+      <p className="mb-3 text-xs text-fg-3">
+        {ownedBadges.length}/{BADGES.length} unlocked
+      </p>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {BADGES.map((b) => {
+        {sorted.map((b) => {
           const owned = ownedBadges.includes(b.id);
           const shown = profile.badges.includes(b.id);
           return (

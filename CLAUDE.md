@@ -4,7 +4,7 @@ Profiles with live widgets for crypto people. The founder speaks French: reply i
 
 ## Product
 - Holding the token gives a tier: `none` (free, limited profile: 4 widgets, 6 links) / `starter` / `premium`. Decided on 2026-10-28: free profiles are allowed. Thresholds come from the API env and are provisional (100K / 1M for now).
-- Pre-launch is invite-only: an invite code is required to claim a username. Each member gets their own code (referrals). Everyone else goes to the waitlist.
+- Pre-launch is invite-only: an invite code is required to claim a username. Each member gets their own code (referrals); the referral link carries the handle (`/invite/<username>`), resolved to the code by the API (old codes still work). Everyone else goes to the waitlist.
 - Sign-in uses Privy: X + Solana wallet, no embedded wallet.
 - The landing page keeps the old project's design (`../fl3x-old`). Join / waitlist follow the Figma sign screens: no card, centered column on the money-bag background.
 - Customize is a full-screen mode (no sidebar, back button). Drag reorders live (`profile/EditableGrid.tsx`, motion layout animations). Name/bio/avatar live in Settings; clicking the avatar in Customize uploads a new one.
@@ -30,6 +30,8 @@ Profiles with live widgets for crypto people. The founder speaks French: reply i
 - No fake data on the site.
 - Tier limits in `TIER_LIMITS` (shared). Premium-only theme options in `PREMIUM_THEME_KEYS`; the API resets them for non-Premium users.
 - After a schema change: `npm run db:generate -w @fl3x/api`.
+- Logo SVGs (`apps/web/public/brand`, `images/fl3x-*.svg`) and `docs/brand/logo.html` come from `python3 scripts/brand-logo.py`: edit the script, not the files.
+- Editor saves go through the bottom unsaved bar (`UnsavedBar`: Discard / Save changes), never a browser `beforeunload` prompt.
 
 ## Open decisions
 - Token mint, final thresholds, chain(s) beyond Solana (EVM, Robinhood Chain).

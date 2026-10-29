@@ -14,6 +14,7 @@ import { editorRoutes } from "./routes/editor";
 import { mediaRoutes } from "./routes/media";
 import { meRoutes } from "./routes/me";
 import { publicRoutes } from "./routes/public";
+import { referralRoutes } from "./routes/referrals";
 import { walletRoutes } from "./routes/wallets";
 
 export async function buildApp() {
@@ -48,6 +49,7 @@ export async function buildApp() {
 
   await app.register(publicRoutes);
   await app.register(meRoutes);
+  await app.register(referralRoutes);
   await app.register(editorRoutes);
   await app.register(analyticsRoutes);
   await app.register(dataRoutes);

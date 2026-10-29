@@ -5,6 +5,7 @@ import { db, schema } from "../db";
 import { env } from "../env";
 import { requirePrivyId, requireUser } from "../lib/auth";
 import { generateCode } from "../lib/codes";
+import { resolveInviteCode } from "../lib/invites";
 import { badRequest, conflict, forbidden } from "../lib/errors";
 import { isUsernameTaken, notOnboarded, refreshTier, syncUser, toMe } from "../lib/users";
 
@@ -43,7 +44,9 @@ export async function meRoutes(app: FastifyInstance) {
   app.post("/onboarding/claim", async (req) => {
     const user = await requireUser(req);
     if (user.username) throw conflict("You already claimed a username", "already_onboarded");
-    const { username: raw, inviteCode } = claimRequest.parse(req.body);
+    const { username: raw, inviteCode: given } = claimRequest.parse(req.body);
+    // The link may carry the inviter's handle instead of the code.
+    const inviteCode = given ? ((await resolveInviteCode(given)) ?? given) : undefined;
     const username = normalizeUsername(raw);
     if (env.LAUNCH_PHASE === "invite_only" && !inviteCode) throw forbidden("An invite code is required during pre-launch");
     if (await isUsernameTaken(username)) throw conflict("This username is already taken", "username_taken");

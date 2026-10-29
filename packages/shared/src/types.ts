@@ -75,3 +75,19 @@ export interface PortfolioData {
   networks: { id: string; name: string; valueUsd: number }[];
   wallets: number;
 }
+
+export interface ReferralSummary {
+  username: string;
+  /** Legacy invite code, still accepted. The link uses the handle. */
+  code: string | null;
+  invitesLeft: number;
+  referrals: number;
+  /** Your place among members, by referrals. */
+  rank: number;
+  members: number;
+  /** Referrals still needed to pass the next member above you (0 when you're first). */
+  toNextRank: number;
+  nextRank: number | null;
+  invited: { username: string; displayName: string | null; avatarUrl: string | null; joinedAt: string | null }[];
+  leaderboard: { rank: number; username: string; displayName: string | null; avatarUrl: string | null; premium: boolean; referrals: number; you: boolean }[];
+}

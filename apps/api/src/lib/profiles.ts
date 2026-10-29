@@ -1,6 +1,6 @@
 import { and, asc, count, eq, isNotNull, lte } from "drizzle-orm";
 import {
-  DEFAULT_THEME, WIDGETS, ownedBadges,
+  DEFAULT_THEME, WIDGETS, normalizeCursor, ownedBadges,
   type EditableProfile, type LinkKind, type ProfileTheme, type Widget, type WidgetSize, type WidgetType,
 } from "@fl3x/shared";
 import { db, schema } from "../db";
@@ -53,10 +53,14 @@ export async function loadProfile(user: UserRow): Promise<EditableProfile> {
     bio: profile?.bio ?? null,
     avatarUrl: profile?.avatarUrl ?? user.xAvatarUrl,
     badges: profile?.badges ?? [],
-    theme: { ...DEFAULT_THEME, ...(profile?.theme as Partial<ProfileTheme>) },
+    theme: withCursor({ ...DEFAULT_THEME, ...(profile?.theme as Partial<ProfileTheme>) }),
     widgets: widgets
       .filter((w) => w.type in WIDGETS)
       .map((w): Widget => ({ id: w.id, type: w.type as WidgetType, size: w.size as WidgetSize, settings: w.settings })),
     links: links.map((l) => ({ id: l.id, kind: l.kind as LinkKind, url: l.url, label: l.label })),
   };
+}
+
+function withCursor(theme: ProfileTheme): ProfileTheme {
+  return { ...theme, cursor: normalizeCursor(theme.cursor) };
 }
