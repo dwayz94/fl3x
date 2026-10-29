@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { timingSafeEqual } from "node:crypto";
-import { eq, sql } from "drizzle-orm";
+import { arrayContains, eq, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import { BADGES } from "@fl3x/shared";
 import { db, schema } from "../db";
@@ -27,6 +27,48 @@ const grantBadge = z.object({ username: z.string().min(1), badge: z.enum(grantab
 export async function adminRoutes(app: FastifyInstance) {
   app.addHook("onRequest", async (req) => {
     if (!isAdminKey(req.headers["x-admin-key"])) throw forbidden();
+  });
+
+  /**
+   * Find an account from anything we know about it: its permanent internal
+   * ID (UUID, never shown publicly), username, X handle or a wallet address.
+   * The ID never changes, even if the username or the X account does.
+   */
+  app.get("/admin/users/lookup", async (req) => {
+    const { q } = z.object({ q: z.string().trim().min(2).max(100) }).parse(req.query);
+    const term = q.replace(/^@/, "");
+    const isUuid = z.uuid().safeParse(term).success;
+    const linked = await db.select({ userId: schema.wallets.userId }).from(schema.wallets).where(eq(schema.wallets.address, term.startsWith("0x") ? term.toLowerCase() : term));
+    const users = await db
+      .select()
+      .from(schema.users)
+      .where(
+        or(
+          isUuid ? eq(schema.users.id, term) : undefined,
+          eq(schema.users.username, term.toLowerCase()),
+          sql`lower(${schema.users.xHandle}) = ${term.toLowerCase()}`,
+          arrayContains(schema.users.wallets, [term]),
+          ...linked.map((l) => eq(schema.users.id, l.userId)),
+        ),
+      )
+      .limit(10);
+    return Promise.all(
+      users.map(async (u) => {
+        const [profile] = await db.select().from(schema.profiles).where(eq(schema.profiles.userId, u.id)).limit(1);
+        const wallets = await db.select({ chain: schema.wallets.chain, address: schema.wallets.address }).from(schema.wallets).where(eq(schema.wallets.userId, u.id));
+        return {
+          id: u.id,
+          username: u.username,
+          xHandle: u.xHandle,
+          tier: u.tier,
+          createdAt: u.createdAt,
+          onboardedAt: u.onboardedAt,
+          signInWallets: u.wallets,
+          linkedWallets: wallets,
+          profile: profile ? { displayName: profile.displayName, published: profile.isPublished } : null,
+        };
+      }),
+    );
   });
 
   /** Mint genesis invite codes (no owner). */

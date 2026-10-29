@@ -112,7 +112,7 @@ export const PREMIUM_THEME_KEYS = ["font", "cursor", "branding"] as const;
 
 /** analyticsDays: how far back the analytics dashboard goes. */
 export const TIER_LIMITS: Record<Tier, { widgets: number; links: number; analyticsDays: number }> = {
-  none: { widgets: 2, links: 3, analyticsDays: 7 },
+  none: { widgets: 4, links: 2, analyticsDays: 7 },
   starter: { widgets: 4, links: 4, analyticsDays: 30 },
   premium: { widgets: 12, links: 8, analyticsDays: 90 },
 };
