@@ -1,10 +1,7 @@
 "use client";
 
 import type { Widget } from "@fl3x/shared";
-import { PERIODS } from "@fl3x/shared";
-import { Sparkline } from "@/components/ui";
 import { fmtPct, fmtUsd, fmtUsdCompact, splitUsd } from "@/lib/format";
-import type { PortfolioData } from "@fl3x/shared";
 import type { TokenData } from "@/lib/types";
 import { useData } from "@/lib/use-data";
 import { usePortfolio } from "@/lib/use-portfolio";
@@ -72,40 +69,6 @@ export function PnlWidget({ w }: { w: Widget }) {
       <WMuted className="text-xs">{periodLabel(period)}</WMuted>
       {badge}
       <div className="mt-auto w-full px-1">{rows}</div>
-    </WidgetFrame>
-  );
-}
-
-export function PortfolioWidget({ w }: { w: Widget }) {
-  const period = str(w.settings.period) || "7d";
-  const opacity = num(w.settings.bgOpacity, 100);
-  const { data, isLoading } = usePortfolio(w, period);
-  if (isLoading) return <WSkeleton size={w.size} />;
-  if (!data || data.wallets === 0) return <WEmpty size={w.size} label="Link a wallet in Settings" />;
-
-  const [whole, cents] = splitUsd(data.valueUsd);
-  const change = data.changeUsd ?? 0;
-  const label = PERIODS.find((p) => p.id === period)?.label.toUpperCase();
-  const values = data.history.map((h) => h.valueUsd);
-  return (
-    <WidgetFrame size={w.size} opacity={opacity} className={w.size === "long" ? "items-start" : ""}>
-      <div className="relative z-10 flex flex-col">
-        <p className="font-primary text-[28px] leading-none">
-          {whole}
-          <span className="text-fg-3">{cents}</span>
-        </p>
-        <p className="mt-1 text-[10px]">
-          <span className={change >= 0 ? "text-success" : "text-danger"}>
-            {change >= 0 ? "+" : "−"}
-            {fmtUsd(Math.abs(change))}
-          </span>{" "}
-          <span className="font-primary text-fg-2">{label}</span>
-        </p>
-      </div>
-      <Sparkline
-        values={values}
-        className={w.size === "long" ? "absolute right-0 bottom-0 h-2/3 w-1/2" : "absolute inset-x-0 bottom-0 h-1/2 w-full"}
-      />
     </WidgetFrame>
   );
 }

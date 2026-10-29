@@ -3,7 +3,10 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect } from "react";
+import { PencilEdit02Icon } from "@hugeicons/core-free-icons";
 import type { FullPublicProfile } from "@fl3x/shared";
+import { Icon } from "@/components/ui";
+import { useIsOwner } from "@/lib/use-owner";
 import { ProfileView } from "./ProfileView";
 import { backdropStyle, cursorStyle } from "./theme";
 
@@ -14,6 +17,7 @@ function track(username: string, kind: "view" | "click", target?: string) {
 }
 
 export function PublicProfile({ profile }: { profile: FullPublicProfile }) {
+  const owner = useIsOwner(profile.username);
   useEffect(() => {
     // One view per tab session, so refreshes don't inflate the count.
     const key = `fl3x:viewed:${profile.username}`;
@@ -24,6 +28,16 @@ export function PublicProfile({ profile }: { profile: FullPublicProfile }) {
 
   return (
     <main className="flex min-h-svh flex-col items-center px-3 py-10 md:px-6 md:py-20" style={{ ...backdropStyle(profile.theme), cursor: cursorStyle(profile.theme) }}>
+      {/* Only the signed-in owner sees this. */}
+      {owner && (
+        <Link
+          href="/dashboard/customize"
+          className="fixed top-4 right-4 z-20 flex items-center gap-2 rounded-full bg-black/60 px-4 py-2 text-sm backdrop-blur-md transition-colors hover:bg-black/80"
+        >
+          <Icon icon={PencilEdit02Icon} size={16} className="text-brand" />
+          Edit profile
+        </Link>
+      )}
       <ProfileView profile={profile} tier={profile.tier} views={profile.views} onLinkClick={(t) => track(profile.username, "click", t)} />
       {/* Premium can hide the FL3X mark. */}
       {!(profile.tier === "premium" && profile.theme.branding === false) && (

@@ -26,7 +26,8 @@ export default function PrivyAuth({ children }: { children: ReactNode }) {
           accentColor: "#FF97CB",
           logo: `${site.url}/images/fl3x-logo.svg`,
           landingHeader: "Sign in to FL3X",
-          walletChainType: "solana-only",
+          // Any wallet can sign in; the $FL3X token (tiers) lives on Solana.
+          walletChainType: "ethereum-and-solana",
         },
         externalWallets: { solana: { connectors: solanaConnectors } },
         embeddedWallets: { solana: { createOnLogin: "off" }, ethereum: { createOnLogin: "off" } },

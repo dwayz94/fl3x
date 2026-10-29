@@ -3,16 +3,18 @@
 Profiles with live widgets for crypto people. The founder speaks French: reply in French. The product is in English.
 
 ## Product
-- Holding the token gives a tier: `none` (free, limited profile: 4 widgets, 6 links) / `starter` / `premium`. What each tier gets lives in `TIER_LIMITS` + `TIER_PERKS` (shared), shown on the landing and the Premium page: list only features that exist. Premium-only: checkmark, fonts, cursors, hiding the FL3X mark, 90-day analytics (Starter 30, Free 7). Decided on 2026-10-28: free profiles are allowed. Thresholds come from the API env and are provisional (100K / 1M for now).
+- Holding the token gives a tier: `none` (free: 2 widgets, 3 links; Starter 4/4; Premium 12 widgets/8 links) / `starter` / `premium`. What each tier gets lives in `TIER_LIMITS` + `TIER_PERKS` (shared), shown on the landing and the Premium page: list only features that exist. Premium-only: checkmark, fonts, cursors, hiding the FL3X mark, 90-day analytics (Starter 30, Free 7). Decided on 2026-10-28: free profiles are allowed. Thresholds come from the API env and are provisional (100K / 1M for now).
 - Pre-launch is invite-only: an invite code is required to claim a username. Each member gets their own code (referrals); the referral link carries the handle (`/invite/<username>`), resolved to the code by the API (old codes still work). Everyone else goes to the waitlist.
-- Sign-in uses Privy: X + Solana wallet, no embedded wallet.
+- Sign-in uses Privy: X (the join flow), any wallet (EVM or Solana) elsewhere, no embedded wallet. The $FL3X token is on Solana: only Solana wallets count for tiers. Holdings are re-checked at most every 5 min per member and every 5 min for paying members (job in `api/src/index.ts`).
+- Join (`/join`) is a step carousel like getrekt's onboarding: Continue with X → handle (prefilled from X, + invite code while invite-only) → link wallets (optional) → ready (dashboard or profile).
+- The owner sees an "Edit profile" button on their own public profile (`lib/use-owner.ts` reads the stored session token; profiles don't load Privy).
 - The landing page keeps the old project's design (`../fl3x-old`). Join / waitlist follow the Figma sign screens: no card, centered column on the money-bag background.
 - Customize is a full-screen mode (no sidebar, back button). Drag reorders live (`profile/EditableGrid.tsx`, motion layout animations). Name and bio are edited in Settings or in place on the card in Customize; clicking the avatar in Customize uploads a new one.
 - Links and community/video widgets take a handle only; the domain is fixed (`LINK_KINDS`, field kind `handle`). Trading terminal referral links (Axiom, GMGN, Padre, Proxima) use their own one-color marks (`BrandIcon` in `profile/links.ts`).
 - Widgets are added by click or by dragging a library tile onto the card (`dragFromLibrary` in Customize). Profile links are reordered by drag or arrows on the Links page (order = `position`).
 - Music widgets play a 30 s preview from Deezer (`/data/preview`, looked up by title + artist on click; links expire after ~15 min).
 - Reactions widget is hidden from the library (kept for existing profiles).
-- Widgets: V2 designs are the default (decided 2026-10-29). V1 stays selectable through the `style` setting; new designs go in as a new version, never by editing the existing one. The dashboard follows the Figma prototype (`FL3X.lol`, node 186:1226), which is **not final**. Widgets (node 217:191) are redrawn in the same style, never copied.
+- Widgets: only the V2 designs remain for portfolio, music, clock, followers, video and countdown (V1 removed 2026-10-29, no `style` setting). The dashboard follows the Figma prototype (`FL3X.lol`, node 186:1226), which is **not final**. Widgets (node 217:191) are redrawn in the same style, never copied.
 
 ## Architecture
 - `apps/web`: Next.js 16 + Tailwind 4, on Vercel (Root Directory `apps/web`). The `/@username` rewrite points to `/u/[username]`.

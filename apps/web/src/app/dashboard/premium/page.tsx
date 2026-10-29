@@ -63,7 +63,7 @@ export default function PremiumPage() {
               </p>
             </>
           )}
-          {me.wallets.length === 0 && <p className="text-sm text-danger">Link a Solana wallet in Settings so we can see your balance.</p>}
+          {me.wallets.length === 0 && <p className="text-sm text-danger">Link the Solana wallet that holds your $FL3X in Settings so we can see your balance.</p>}
           {config.token.mint && (
             <a
               href={`https://jup.ag/swap/SOL-${config.token.mint}`}

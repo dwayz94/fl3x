@@ -112,9 +112,9 @@ export const PREMIUM_THEME_KEYS = ["font", "cursor", "branding"] as const;
 
 /** analyticsDays: how far back the analytics dashboard goes. */
 export const TIER_LIMITS: Record<Tier, { widgets: number; links: number; analyticsDays: number }> = {
-  none: { widgets: 4, links: 6, analyticsDays: 7 },
-  starter: { widgets: 8, links: 12, analyticsDays: 30 },
-  premium: { widgets: 60, links: 40, analyticsDays: 90 },
+  none: { widgets: 2, links: 3, analyticsDays: 7 },
+  starter: { widgets: 4, links: 4, analyticsDays: 30 },
+  premium: { widgets: 12, links: 8, analyticsDays: 90 },
 };
 
 /**
@@ -138,7 +138,7 @@ export const TIER_PERKS: Record<Tier, string[]> = {
   premium: [
     "Everything in Starter",
     "Premium checkmark next to your name",
-    `Up to ${TIER_LIMITS.premium.widgets} widgets and ${TIER_LIMITS.premium.links} links`,
+    `${TIER_LIMITS.premium.widgets} widgets and ${TIER_LIMITS.premium.links} links`,
     "Custom fonts and cursors",
     "Remove the FL3X mark from your profile",
     `Analytics for the last ${TIER_LIMITS.premium.analyticsDays} days`,

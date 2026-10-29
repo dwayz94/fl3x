@@ -1,124 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Widget } from "@fl3x/shared";
-import { Flag } from "@/components/ui";
 import { api } from "@/lib/api";
 import { useIsDemo } from "@/lib/use-data";
-import { WEmpty, WidgetFrame, WMuted, WPill, WTitle } from "./WidgetFrame";
+import { WEmpty, WidgetFrame, WPill, WTitle } from "./WidgetFrame";
 
 const num = (v: unknown, d: number) => (typeof v === "number" ? v : d);
 const str = (v: unknown) => (typeof v === "string" ? v : "");
-
-function useNow(intervalMs: number) {
-  const [now, setNow] = useState<Date | null>(null);
-  useEffect(() => {
-    setNow(new Date());
-    const t = setInterval(() => setNow(new Date()), intervalMs);
-    return () => clearInterval(t);
-  }, [intervalMs]);
-  return now;
-}
-
-export function ClockWidget({ w }: { w: Widget }) {
-  const tz = str(w.settings.timezone) || "UTC";
-  const city = str(w.settings.city);
-  const country = str(w.settings.country);
-  const opacity = num(w.settings.bgOpacity, 100);
-  const now = useNow(10_000);
-  let time = "--:--";
-  let date = "";
-  try {
-    if (now) {
-      time = new Intl.DateTimeFormat("en-GB", { timeZone: tz, hour: "2-digit", minute: "2-digit" }).format(now);
-      date = new Intl.DateTimeFormat("en-US", { timeZone: tz, month: "short", day: "numeric", year: "numeric" }).format(now);
-    }
-  } catch {
-    time = "--:--";
-  }
-
-  if (w.size === "long") {
-    return (
-      <WidgetFrame size="long" opacity={opacity}>
-        <p className="font-primary text-[56px] leading-none">{time}</p>
-        <div className="min-w-0">
-          {city && <WTitle className="text-sm uppercase">{city}</WTitle>}
-          <WMuted>{date}</WMuted>
-        </div>
-        <Flag country={country} className="ml-auto h-14 w-[30%]" />
-      </WidgetFrame>
-    );
-  }
-  return (
-    <WidgetFrame size="large" opacity={opacity} className="items-center text-center">
-      <p className="font-primary text-[64px] leading-[0.9]">{time}</p>
-      {city && <WTitle className="mt-1 text-base uppercase">{city}</WTitle>}
-      <WMuted className="uppercase">{date}</WMuted>
-      <Flag country={country} className="mt-auto h-14 w-full" />
-    </WidgetFrame>
-  );
-}
-
-function remaining(target: Date, now: Date) {
-  const ms = Math.max(0, target.getTime() - now.getTime());
-  const d = Math.floor(ms / 86_400_000);
-  const h = Math.floor((ms % 86_400_000) / 3_600_000);
-  const m = Math.floor((ms % 3_600_000) / 60_000);
-  return d > 0 ? `${d}D:${String(h).padStart(2, "0")}H` : `${h}H:${String(m).padStart(2, "0")}M`;
-}
-
-export function CountdownWidget({ w }: { w: Widget }) {
-  const target = str(w.settings.target);
-  const title = str(w.settings.title);
-  const country = str(w.settings.country);
-  const ctaLabel = str(w.settings.ctaLabel);
-  const ctaUrl = str(w.settings.ctaUrl);
-  const opacity = num(w.settings.bgOpacity, 100);
-  const now = useNow(30_000);
-  if (!target) return <WEmpty size={w.size} label="Pick a date" />;
-  const when = new Date(target);
-  const left = now ? remaining(when, now) : "--";
-  const sub = (
-    <WMuted className="uppercase">
-      {title ? `${title} · ` : "Ends "}
-      {/* Dates only after mount: the server's timezone isn't the visitor's. */}
-      {now ? when.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : ""}
-    </WMuted>
-  );
-  const cta = ctaLabel && (
-    <a href={ctaUrl || undefined} target="_blank" rel="noopener noreferrer">
-      <WPill className="w-full">{ctaLabel}</WPill>
-    </a>
-  );
-
-  if (w.size === "long") {
-    return (
-      <WidgetFrame size="long" opacity={opacity}>
-        <div className="min-w-0 flex-1">
-          <p className="font-primary text-[48px] leading-none">{left}</p>
-          {sub}
-        </div>
-        <div className="flex flex-col items-end gap-2">
-          <Flag country={country} className="h-12 w-[84px]" />
-          {cta}
-        </div>
-      </WidgetFrame>
-    );
-  }
-  return (
-    <WidgetFrame size="large" opacity={opacity} className="items-center text-center">
-      <p className="font-primary text-[40px] leading-none">{left}</p>
-      <WMuted className="uppercase">Ends {now ? when.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" }) : ""}</WMuted>
-      {title ? (
-        <p className="my-auto line-clamp-2 font-primary text-2xl leading-none uppercase">{title}</p>
-      ) : (
-        <Flag country={country} className="my-auto h-12 w-full" />
-      )}
-      <div className="w-full">{cta}</div>
-    </WidgetFrame>
-  );
-}
 
 export function ImageWidget({ w }: { w: Widget }) {
   const url = str(w.settings.url);

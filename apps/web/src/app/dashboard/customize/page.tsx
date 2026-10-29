@@ -4,11 +4,10 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft01Icon, ViewIcon, ViewOffSlashIcon } from "@hugeicons/core-free-icons";
-import { useQueryClient } from "@tanstack/react-query";
+import { useIsFetching, useQueryClient } from "@tanstack/react-query";
 import { motion } from "motion/react";
 import { defaultSettings, type EditableProfile, type LinkedWallet, type ProfileTheme, type Tier, type Widget, type WidgetSize, type WidgetType } from "@fl3x/shared";
 import { useAuth, useMe } from "@/components/auth/AuthProvider";
-import { Spinner } from "@/components/dashboard/Panel";
 import { UnsavedBar } from "@/components/dashboard/UnsavedBar";
 import { Inspector } from "@/components/editor/Inspector";
 import { Library } from "@/components/editor/Library";
@@ -25,7 +24,7 @@ const EASE = [0.22, 1, 0.36, 1] as const;
 export default function CustomizePage() {
   const { data: me } = useMe();
   const { data, isLoading } = useEditorProfile();
-  if (isLoading || !data || !me) return <Spinner />;
+  if (isLoading || !data || !me) return <CustomizeLoader />;
   return <Editor initial={data} tier={me.tier} wallets={me.linkedWallets} />;
 }
 
@@ -224,6 +223,9 @@ function Editor({ initial, tier, wallets }: { initial: EditorPayload; tier: Tier
   // Leaving with unsaved changes shakes the bar instead of a browser prompt.
   // Entering and leaving Customize animate (panels slide in from their side, the card zooms in).
   const [leaving, setLeaving] = useState(false);
+  // Everything appears together once the widgets' data and the background are in.
+  const ready = useReady(draft.theme.background === "image" ? draft.theme.backgroundUrl : undefined);
+  const shown = ready && !leaving;
   const back = () => {
     if (dirty) return setNudge((n) => n + 1);
     setLeaving(true);
@@ -234,13 +236,13 @@ function Editor({ initial, tier, wallets }: { initial: EditorPayload; tier: Tier
     // Full-screen customize mode: no dashboard sidebar, a back button instead.
     <motion.div
       initial={{ opacity: 0 }}
-      animate={{ opacity: leaving ? 0 : 1 }}
+      animate={{ opacity: shown ? 1 : 0 }}
       transition={{ duration: 0.25, ease: EASE }}
       className="fixed inset-0 z-30 flex flex-col overflow-y-auto bg-[#0b0b0b] lg:overflow-hidden"
     >
       <motion.header
         initial={{ y: -24, opacity: 0 }}
-        animate={leaving ? { y: -24, opacity: 0 } : { y: 0, opacity: 1 }}
+        animate={shown ? { y: 0, opacity: 1 } : { y: -24, opacity: 0 }}
         transition={{ duration: 0.4, ease: EASE }}
         className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-3 border-b border-white/10 bg-[#0b0b0b]/95 px-3 backdrop-blur md:px-4"
       >
@@ -273,8 +275,8 @@ function Editor({ initial, tier, wallets }: { initial: EditorPayload; tier: Tier
         <motion.aside
           data-hidden={preview}
           initial={{ x: -40, opacity: 0 }}
-          animate={leaving ? { x: -40, opacity: 0 } : { x: 0, opacity: 1 }}
-          transition={{ duration: 0.45, ease: EASE, delay: leaving ? 0 : 0.06 }}
+          animate={shown ? { x: 0, opacity: 1 } : { x: -40, opacity: 0 }}
+          transition={{ duration: 0.45, ease: EASE }}
           className="border-white/10 bg-[#0b0b0b] p-4 data-[hidden=true]:hidden lg:w-[300px] lg:shrink-0 lg:overflow-y-auto lg:border-r"
         >
           <Library
@@ -295,8 +297,8 @@ function Editor({ initial, tier, wallets }: { initial: EditorPayload; tier: Tier
             <motion.div
               // No scale: FitWidth measures the card's on-screen width to size the preview.
               initial={{ y: 32, opacity: 0 }}
-              animate={leaving ? { y: 16, opacity: 0 } : { y: 0, opacity: 1 }}
-              transition={leaving ? { duration: 0.22, ease: EASE } : { type: "spring", stiffness: 260, damping: 28, delay: 0.12 }}
+              animate={shown ? { y: 0, opacity: 1 } : { y: 16, opacity: 0 }}
+              transition={leaving ? { duration: 0.22, ease: EASE } : { type: "spring", stiffness: 260, damping: 28 }}
               className="my-auto flex w-full justify-center"
             >
             <FitWidth onClick={(e) => e.stopPropagation()}>
@@ -321,8 +323,8 @@ function Editor({ initial, tier, wallets }: { initial: EditorPayload; tier: Tier
         <motion.aside
           data-hidden={preview}
           initial={{ x: 40, opacity: 0 }}
-          animate={leaving ? { x: 40, opacity: 0 } : { x: 0, opacity: 1 }}
-          transition={{ duration: 0.45, ease: EASE, delay: leaving ? 0 : 0.1 }}
+          animate={shown ? { x: 0, opacity: 1 } : { x: 40, opacity: 0 }}
+          transition={{ duration: 0.45, ease: EASE }}
           className="border-white/10 bg-[#0b0b0b] p-5 data-[hidden=true]:hidden lg:w-[300px] lg:shrink-0 lg:overflow-y-auto lg:border-l"
         >
           <Inspector
@@ -339,8 +341,48 @@ function Editor({ initial, tier, wallets }: { initial: EditorPayload; tier: Tier
         </motion.aside>
       </div>
 
+      {!ready && <CustomizeLoader />}
       <UnsavedBar dirty={dirty} saving={saving} savedFlash={savedFlash} error={error} nudge={nudge} onDiscard={discard} onSave={() => void save()} />
     </motion.div>
+  );
+}
+
+/**
+ * True once nothing is loading anymore (widget data, background image), or
+ * after 4 s at most so a slow source never blocks the editor.
+ */
+function useReady(backgroundUrl?: string) {
+  const fetching = useIsFetching();
+  const [bgDone, setBgDone] = useState(!backgroundUrl);
+  const [timeUp, setTimeUp] = useState(false);
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    if (!backgroundUrl) return;
+    const img = new window.Image();
+    img.onload = img.onerror = () => setBgDone(true);
+    img.src = backgroundUrl;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  useEffect(() => {
+    const t = setTimeout(() => setTimeUp(true), 4000);
+    return () => clearTimeout(t);
+  }, []);
+  useEffect(() => {
+    if (ready || !(timeUp || (fetching === 0 && bgDone))) return;
+    // A short settle so queries that start right after mount are counted.
+    const t = setTimeout(() => setReady(true), 200);
+    return () => clearTimeout(t);
+  }, [fetching, bgDone, timeUp, ready]);
+  return ready;
+}
+
+/** Shown while Customize gets everything ready, instead of pieces popping in one by one. */
+function CustomizeLoader() {
+  return (
+    <div className="fixed inset-0 z-40 flex flex-col items-center justify-center gap-4 bg-[#0b0b0b]">
+      <Image src="/images/fl3x-icon.svg" alt="" width={40} height={43} className="animate-pulse" />
+      <p className="text-xs text-fg-3">Loading your profile…</p>
+    </div>
   );
 }
 

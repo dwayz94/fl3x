@@ -32,9 +32,13 @@ export function Hero() {
       <div className="px-gutter relative grid min-h-[calc(100svh-75px)] items-center gap-12 py-16 xl:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
         <div className="flex flex-col">
         <h1 className="mb-6 text-5xl md:text-6xl lg:text-7xl">PRove eveRythInG.</h1>
-        <p className="mb-8 max-w-xl text-lg text-fg-2">
+        <p className="mb-4 max-w-xl text-lg text-fg-2">
           With fl3x, you can verify on-chain data, display social links, showcase live widgets, personalize your page and
           track visitors.
+        </p>
+        <p className="mb-8 flex items-center gap-2 text-sm text-success">
+          <span className="size-1.5 rounded-full bg-success" />
+          Free to start, no token needed. Holding $FL3X unlocks more.
         </p>
         <form onSubmit={claim} className="mb-8 flex max-w-xl flex-col gap-3 sm:flex-row sm:items-start">
           <Input
@@ -68,8 +72,8 @@ export function Hero() {
         <SocialLinks />
         </div>
         {/* What their profile will look like; follows the name they type. */}
-        {/* Bigger than the text column on purpose; bleeds toward the right edge like the Figma. */}
-        <div className="hidden justify-end xl:flex xl:-mr-[calc(var(--gutter)-40px)]" style={{ zoom: 0.92 }}>
+        {/* Bigger than the text column on purpose; only a slight bleed toward the right edge. */}
+        <div className="hidden justify-center xl:flex xl:-mr-[calc(var(--gutter)/2)]" style={{ zoom: 0.92 }}>
           <HeroPreview username={availability && availability !== "checking" && availability.available ? name : undefined} />
         </div>
       </div>

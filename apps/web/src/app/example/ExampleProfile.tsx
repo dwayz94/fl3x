@@ -4,7 +4,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ArrowLeft01Icon, ArrowRight01Icon, PauseIcon, PlayIcon } from "@hugeicons/core-free-icons";
-import { V2_WIDGETS } from "@fl3x/shared";
 import { ProfileView } from "@/components/profile/ProfileView";
 import { Icon } from "@/components/ui";
 import { DEMO_BACKGROUNDS, DEMO_LAYOUTS, demoProfile, resolveDemo } from "@/lib/demo";
@@ -32,11 +31,10 @@ function Seg<T extends string>({ value, options, onChange }: { value: T; options
 
 /**
  * A sample profile to judge the design for real: flip through the Figma
- * layout variants, V1/V2 widgets and background images (or a slideshow).
+ * layout variants and background images (or a slideshow).
  */
 export function ExampleProfile() {
   const [layout, setLayout] = useState(DEMO_LAYOUTS[0]!.id);
-  const [version, setVersion] = useState<"v1" | "v2">("v2");
   const [bg, setBg] = useState(0);
   const [custom, setCustom] = useState("");
   const [playing, setPlaying] = useState(false);
@@ -47,9 +45,7 @@ export function ExampleProfile() {
     return () => clearInterval(t);
   }, [playing]);
 
-  const widgets = DEMO_LAYOUTS.find((l) => l.id === layout)!.widgets.map((w) =>
-    (V2_WIDGETS as readonly string[]).includes(w.type) ? { ...w, settings: { ...w.settings, style: version } } : w,
-  );
+  const widgets = DEMO_LAYOUTS.find((l) => l.id === layout)!.widgets;
   const current = custom.startsWith("https://") ? null : DEMO_BACKGROUNDS[bg]!;
   const profile = demoProfile(widgets, current ? current.url : custom);
   const step = (d: number) => {
@@ -76,7 +72,6 @@ export function ExampleProfile() {
       <main className="flex min-h-svh flex-col items-center px-3 py-6 md:px-6 md:py-10">
         <div className="mb-8 flex max-w-full flex-wrap items-center justify-center gap-2">
           <Seg value={layout} onChange={setLayout} options={DEMO_LAYOUTS.map((l) => ({ id: l.id, label: `${l.label} · ${l.widgets.length}` }))} />
-          <Seg value={version} onChange={setVersion} options={[{ id: "v1", label: "Widgets V1" }, { id: "v2", label: "Widgets V2" }]} />
           <div className="flex max-w-full flex-wrap items-center justify-center gap-1 rounded-2xl bg-black/55 p-1 backdrop-blur-md">
             <button type="button" onClick={() => step(-1)} className="rounded-xl p-1.5 text-fg-2 hover:text-fg" aria-label="Previous background">
               <Icon icon={ArrowLeft01Icon} size={16} />

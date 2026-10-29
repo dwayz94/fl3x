@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { V2_WIDGETS, WIDGETS, type WidgetSettings, type WidgetType } from "@fl3x/shared";
+import { WIDGETS, type WidgetSettings, type WidgetType } from "@fl3x/shared";
 import { Brand } from "@/components/ui";
 import { WidgetView } from "@/components/widgets";
 import { DEMO_WIDGETS, demoWidget, resolveDemo } from "@/lib/demo";
@@ -14,7 +14,6 @@ const categories = [
   { id: "utility", label: "Utility" },
 ] as const;
 
-const hasV2 = (t: WidgetType) => (V2_WIDGETS as readonly string[]).includes(t);
 
 /** Large + long at the exact footprint of the profile grid: 80px cells, 12px gaps, 96px rows. */
 function Pair({ type, settings, id }: { type: WidgetType; settings: WidgetSettings; id: string }) {
@@ -65,18 +64,7 @@ export function WidgetsGallery() {
                         </h3>
                         <p className="truncate text-xs text-fg-3">{WIDGETS[d.type].description}</p>
                       </div>
-                      {hasV2(d.type) ? (
-                        <div className="flex flex-col gap-4">
-                          {(["v1", "v2"] as const).map((v) => (
-                            <div key={v}>
-                              <p className={`mb-2 font-primary text-xs ${v === "v2" ? "text-brand" : "text-fg-3"}`}>{v.toUpperCase()}{v === "v2" && " · new"}</p>
-                              <Pair type={d.type} settings={{ ...d.settings, style: v }} id={`g-${i}-${v}`} />
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <Pair type={d.type} settings={d.settings} id={`g-${i}`} />
-                      )}
+                      <Pair type={d.type} settings={d.settings} id={`g-${i}`} />
                     </article>
                   ))}
               </div>

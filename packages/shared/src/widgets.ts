@@ -60,8 +60,6 @@ export interface WidgetDef {
 const wallets: FieldDef = { key: "wallets", label: "Wallets", kind: "wallets", default: "all" };
 const accent: FieldDef = { key: "accent", label: "Color", kind: "color", default: "#2FE3AC" };
 /** Design version. V2 is the default (kept on 2026-10-29); V1 stays available for whoever prefers it. */
-const style: FieldDef = { key: "style", label: "Style", kind: "segmented", options: [{ id: "v2", label: "V2" }, { id: "v1", label: "V1" }], default: "v2" };
-export const V2_WIDGETS = ["portfolio", "music", "clock", "followers", "video", "countdown"] as const;
 /** Media widgets: blurred cover colors behind (default), plain glass, or a color. */
 const background: FieldDef = {
   key: "background", label: "Background", kind: "segmented", default: "cover",
@@ -87,7 +85,6 @@ export const WIDGETS = {
     description: "Live value of a verified wallet with a chart",
     category: "crypto",
     fields: [
-      style,
       wallets,
       { key: "period", label: "Time", kind: "segmented", options: PERIODS, default: "7d" },
       opacity,
@@ -125,7 +122,6 @@ export const WIDGETS = {
     description: "Show off your follower count",
     category: "social",
     fields: [
-      style,
       { key: "platform", label: "Platform", kind: "select", options: [{ id: "x", label: "X" }, { id: "youtube", label: "YouTube" }, { id: "twitch", label: "Twitch" }, { id: "tiktok", label: "TikTok" }, { id: "instagram", label: "Instagram" }], default: "x" },
       {
         key: "handle", label: "Handle", kind: "handle", from: "platform", pattern: "[A-Za-z0-9._-]{1,30}", required: true,
@@ -140,7 +136,6 @@ export const WIDGETS = {
     description: "Your latest YouTube video or Twitch stream, automatically",
     category: "media",
     fields: [
-      style,
       { key: "platform", label: "Platform", kind: "segmented", options: [{ id: "youtube", label: "YouTube" }, { id: "twitch", label: "Twitch" }], default: "youtube" },
       { key: "channel", label: "Channel", kind: "handle", from: "platform", prefixes: { youtube: "youtube.com/@", twitch: "twitch.tv/" }, pattern: "[A-Za-z0-9._-]{2,30}" },
       { key: "url", label: "Pin one video instead (optional)", kind: "url", placeholder: "https://youtube.com/watch?v=…" },
@@ -153,7 +148,6 @@ export const WIDGETS = {
     description: "What you're listening to on Spotify, or a track you pick",
     category: "media",
     fields: [
-      style,
       { key: "source", label: "Show", kind: "segmented", options: [{ id: "spotify", label: "My Spotify (live)" }, { id: "link", label: "A track or playlist" }], default: "spotify" },
       { key: "url", label: "Spotify link (when showing a track)", kind: "url", placeholder: "https://open.spotify.com/track/…" },
       background,
@@ -174,7 +168,6 @@ export const WIDGETS = {
     description: "Your local time and flag",
     category: "utility",
     fields: [
-      style,
       { key: "timezone", label: "Time zone", kind: "timezone" },
       { key: "city", label: "City", kind: "text", max: 30 },
       { key: "country", label: "Flag (auto from the time zone)", kind: "text", placeholder: "Auto, or a code like AE", max: 2 },
@@ -186,7 +179,6 @@ export const WIDGETS = {
     description: "Count down to a launch or an event",
     category: "utility",
     fields: [
-      style,
       { key: "title", label: "Title", kind: "text", max: 40 },
       { key: "target", label: "Date", kind: "datetime", required: true },
       { key: "country", label: "Country code", kind: "text", placeholder: "AE", max: 2 },

@@ -14,11 +14,11 @@ const faqs = [
   },
   {
     q: "How do tiers work?",
-    a: "Every member gets a free profile with a few widgets. Connect your Solana wallet: the token you hold unlocks Starter or Premium, refreshed automatically. No subscription.",
+    a: "Every member gets a free profile, no token needed. Link a wallet holding $FL3X (on Solana) to unlock Starter or Premium: checked automatically, no subscription.",
   },
   {
     q: "How do I sign in?",
-    a: "With your X account or your Solana wallet. You can link both to the same profile.",
+    a: "With your X account. Then link any wallets you like (Solana or EVM) to power your wallet widgets.",
   },
   {
     q: "Is my wallet safe?",

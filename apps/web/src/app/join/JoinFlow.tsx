@@ -1,19 +1,22 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { AnimatePresence, motion } from "motion/react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Cancel01Icon, CheckmarkCircle02Icon, NewTwitterIcon, Ticket01Icon } from "@hugeicons/core-free-icons";
 import { validateUsername, type Me } from "@fl3x/shared";
 import { useAuth, useMe } from "@/components/auth/AuthProvider";
-import { AuthHeader } from "@/components/shared";
-import { Button, FieldError, Icon, Input } from "@/components/ui";
+import { WalletsPanel } from "@/components/dashboard/WalletsPanel";
+import { Button, buttonClass, FieldError, Icon, Input } from "@/components/ui";
 import { api, ApiRequestError } from "@/lib/api";
 import { cn } from "@/lib/cn";
 import {
   clearPendingInvite, clearPendingUsername, readPendingInvite, readPendingUsername, savePendingInvite, savePendingUsername,
 } from "@/lib/pending-invite";
 import { useConfig } from "@/lib/use-config";
+import { useEditorProfile } from "@/lib/use-profile";
 import { WaitlistForm, wantsWaitlist } from "./WaitlistForm";
 import { useAvailability } from "@/lib/use-availability";
 
@@ -105,6 +108,26 @@ function InviteField({ code, setCode, invite, optional }: { code: string; setCod
   );
 }
 
+const STEPS = ["Sign in", "Handle", "Wallets", "Ready"] as const;
+type Step = 0 | 1 | 2 | 3;
+const EASE = [0.22, 1, 0.36, 1] as const;
+
+/** X handles can hold characters usernames can't: keep what fits. */
+const fromX = (h: string | null) => (h ?? "").toLowerCase().replace(/[^a-z0-9_]/g, "").slice(0, 20);
+
+function StepTitle({ title, body }: { title: string; body: React.ReactNode }) {
+  return (
+    <div className="flex flex-col gap-3">
+      <h1 className="text-[40px] leading-[0.9] md:text-[52px]">{title}</h1>
+      <p className="text-[15px] leading-relaxed text-fg-2">{body}</p>
+    </div>
+  );
+}
+
+/**
+ * Sign-up carousel, one step at a time: Continue with X → handle (prefilled
+ * from X) → link wallets (optional) → ready. Members landing here go to the dashboard.
+ */
 export function JoinFlow() {
   const params = useSearchParams();
   const router = useRouter();
@@ -113,11 +136,19 @@ export function JoinFlow() {
   const { data: config } = useConfig();
   const inviteOnly = (config?.phase ?? "invite_only") === "invite_only";
 
+  const [step, setStep] = useState<Step>(0);
+  const [direction, setDirection] = useState(1);
   const [code, setCode] = useState("");
   const [username, setUsername] = useState("");
   const [showWaitlist, setShowWaitlist] = useState(false);
+  // Set once this visit claims a name, so the last steps show instead of the redirect.
+  const claimedHere = useRef(false);
   const invite = useInvite(code);
-  const availability = useAvailability(username);
+
+  const go = (next: Step) => {
+    setDirection(next > step ? 1 : -1);
+    setStep(next);
+  };
 
   useEffect(() => {
     const fromUrl = params.get("code");
@@ -127,70 +158,136 @@ export function JoinFlow() {
     if (wantsWaitlist() || params.get("waitlist") !== null) setShowWaitlist(true);
   }, [params]);
 
+  // Where to start: signed out → X, signed in without a name → handle.
   useEffect(() => {
-    if (me?.username) router.replace("/dashboard");
-  }, [me, router]);
+    if (!ready || (authenticated && meLoading)) return;
+    if (me?.username && !claimedHere.current) return router.replace("/dashboard");
+    if (!authenticated) return setStep(0);
+    if (me && !me.username && step === 0) go(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, authenticated, meLoading, me]);
+
+  // Prefill the handle from X once (it stays editable).
+  useEffect(() => {
+    if (me?.xHandle && !username) setUsername(fromX(me.xHandle));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [me?.xHandle]);
 
   if (showWaitlist) return <WaitlistForm desiredUsername={username} onBack={() => setShowWaitlist(false)} />;
-
-  if (authenticated && (meLoading || me?.username)) return <Loading />;
-
-  if (authenticated && me) {
-    return (
-      <ClaimStep
-        me={me}
-        username={username}
-        setUsername={setUsername}
-        code={code}
-        setCode={setCode}
-        inviteOnly={inviteOnly}
-        onWaitlist={() => setShowWaitlist(true)}
-      />
-    );
-  }
-
-  const inviteOk = !inviteOnly || (invite !== "checking" && invite?.valid);
-  const nameOk = availability !== "checking" && availability?.available;
+  if (!ready || (authenticated && meLoading)) return <Loading />;
 
   return (
-    <>
-      <AuthHeader
-        title="Reserve your username"
-        subtitle={inviteOnly ? "FL3X is invite-only until launch. Grab your name with an invite code." : "Grab your name before someone else does."}
-      />
-
-      <div className="flex w-full flex-col gap-1">
-        <UsernameField value={username} onChange={setUsername} availability={availability} />
-        <InviteField code={code} setCode={setCode} invite={invite} optional={!inviteOnly} />
+    <motion.div
+      initial={{ opacity: 0, y: 14 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, ease: EASE }}
+      className="flex w-full max-w-[460px] flex-col gap-8 text-left"
+    >
+      {/* Progress: one bar per step, filled as you go. */}
+      <div className="flex gap-1.5" aria-label={`Step ${step + 1} of ${STEPS.length}`}>
+        {STEPS.map((label, i) => (
+          <div key={label} className="flex flex-1 flex-col gap-2">
+            <span className="relative h-1 overflow-hidden rounded-full bg-white/10">
+              <span
+                className="absolute inset-0 origin-left bg-brand transition-transform duration-500 ease-out"
+                style={{ transform: `scaleX(${i <= step ? 1 : 0})`, transitionDelay: `${i * 60}ms` }}
+              />
+            </span>
+            <span className={cn("text-xs leading-none", i === step ? "text-fg" : "text-fg-3")}>{label}</span>
+          </div>
+        ))}
       </div>
 
-      <Button
-        className="mt-2 w-full"
-        disabled={!ready || !nameOk || !inviteOk}
-        onClick={() => {
-          savePendingUsername(username);
-          if (code) savePendingInvite(code);
-          login();
-        }}
-      >
-        Continue with <Icon icon={NewTwitterIcon} size={18} /> to reserve
-      </Button>
-      <p className="mt-3 text-center text-xs text-fg-3">You can also sign in with a Solana wallet.</p>
-      {!configured && <FieldError>Auth is not configured (NEXT_PUBLIC_PRIVY_APP_ID).</FieldError>}
+      <div className="relative overflow-hidden">
+        <AnimatePresence mode="wait" custom={direction} initial={false}>
+          <motion.div
+            key={step}
+            initial={{ x: direction * 48, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={{ x: direction * -48, opacity: 0 }}
+            transition={{ duration: 0.25, ease: "easeOut" }}
+            className="flex flex-col gap-6"
+          >
+            {step === 0 && (
+              <>
+                <StepTitle
+                  title="Create your FL3X"
+                  body={
+                    invite && invite !== "checking" && invite.valid && invite.inviter ? (
+                      <>
+                        <span className="text-fg">@{invite.inviter}</span> invited you. Sign in with X to claim your name.
+                      </>
+                    ) : (
+                      "Sign in with X to claim your name. No email, no password."
+                    )
+                  }
+                />
+                <Button
+                  size="lg"
+                  className="w-full"
+                  disabled={!ready}
+                  onClick={() => {
+                    if (username) savePendingUsername(username);
+                    if (code) savePendingInvite(code);
+                    login({ xOnly: true });
+                  }}
+                >
+                  Continue with <Icon icon={NewTwitterIcon} size={18} />
+                </Button>
+                {!configured && <FieldError>Auth is not configured (NEXT_PUBLIC_PRIVY_APP_ID).</FieldError>}
+                {inviteOnly && (
+                  <p className="text-sm text-fg-3">
+                    No invite?{" "}
+                    <button className="text-brand hover:underline" onClick={() => setShowWaitlist(true)}>
+                      Join the waitlist →
+                    </button>
+                  </p>
+                )}
+              </>
+            )}
 
-      {inviteOnly && (
-        <p className="mt-10 text-center text-sm text-fg-2">
-          No invite?{" "}
-          <button className="text-brand hover:underline" onClick={() => setShowWaitlist(true)}>
-            Join the waitlist →
-          </button>
-        </p>
-      )}
-    </>
+            {step === 1 && me && (
+              <HandleStep
+                me={me}
+                username={username}
+                setUsername={setUsername}
+                code={code}
+                setCode={setCode}
+                inviteOnly={inviteOnly}
+                onWaitlist={() => setShowWaitlist(true)}
+                onClaimed={() => {
+                  claimedHere.current = true;
+                  go(2);
+                }}
+              />
+            )}
+
+            {step === 2 && me?.username && (
+              <>
+                <StepTitle
+                  title="Link your wallets"
+                  body="Optional. Link as many as you like (Phantom, Solflare, Backpack, MetaMask, Rabby…): your wallet widgets add them up, and $FL3X held on Solana unlocks your tier."
+                />
+                <WalletsPanel me={me} />
+                <div className="flex flex-col gap-2">
+                  <Button size="lg" className="w-full" onClick={() => go(3)}>
+                    {me.linkedWallets.length ? "Continue" : "Skip for now"}
+                  </Button>
+                  <p className="text-xs text-fg-3">You can add or remove wallets anytime in Settings.</p>
+                </div>
+              </>
+            )}
+
+            {step === 3 && me?.username && <ReadyStep username={me.username} />}
+          </motion.div>
+        </AnimatePresence>
+      </div>
+
+    </motion.div>
   );
 }
 
-function ClaimStep(props: {
+function HandleStep(props: {
   me: Me;
   username: string;
   setUsername: (v: string) => void;
@@ -198,6 +295,7 @@ function ClaimStep(props: {
   setCode: (v: string) => void;
   inviteOnly: boolean;
   onWaitlist: () => void;
+  onClaimed: () => void;
 }) {
   const { getToken, logout } = useAuth();
   const queryClient = useQueryClient();
@@ -205,6 +303,7 @@ function ClaimStep(props: {
   const invite = useInvite(props.code);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const prefilled = props.me.xHandle && props.username === fromX(props.me.xHandle);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -217,6 +316,7 @@ function ClaimStep(props: {
       });
       clearPendingInvite();
       clearPendingUsername();
+      props.onClaimed();
       queryClient.setQueryData(["me"], me);
     } catch (err) {
       setError(err instanceof ApiRequestError ? err.message : "Something went wrong");
@@ -225,32 +325,31 @@ function ClaimStep(props: {
     }
   };
 
-  const who = props.me.xHandle ? `@${props.me.xHandle}` : props.me.wallets[0] ? `${props.me.wallets[0].slice(0, 4)}…${props.me.wallets[0].slice(-4)}` : "you";
   const canSubmit = availability !== "checking" && availability?.available && (!props.inviteOnly || (invite !== "checking" && invite?.valid));
 
   return (
-    <form onSubmit={submit} className="flex w-full flex-col items-center">
-      <AuthHeader
-        title="Claim your name"
-        subtitle={
+    <form onSubmit={submit} className="flex flex-col gap-6">
+      <StepTitle
+        title="Pick your handle"
+        body={
           <>
-            Signed in as <span className="text-fg">{who}</span>.{" "}
-            <button type="button" onClick={() => void logout()} className="text-brand hover:underline">
-              Switch account
+            {prefilled ? "We filled in your X handle. Keep it or choose another one." : "Your page will live at fl3x.lol/@handle."}{" "}
+            <button type="button" onClick={() => void logout()} className="text-fg-3 hover:text-brand">
+              Not @{props.me.xHandle ?? "you"}?
             </button>
           </>
         }
       />
-      <div className="flex w-full flex-col gap-1">
+      <div className="flex flex-col gap-1">
         <UsernameField value={props.username} onChange={props.setUsername} availability={availability} />
-        <InviteField code={props.code} setCode={props.setCode} invite={invite} optional={!props.inviteOnly} />
+        {(props.inviteOnly || props.code) && <InviteField code={props.code} setCode={props.setCode} invite={invite} optional={!props.inviteOnly} />}
       </div>
       {error && <FieldError>{error}</FieldError>}
-      <Button type="submit" className="mt-2 w-full" disabled={!canSubmit} loading={submitting}>
-        Claim fl3x.lol/@{props.username || "you"}
+      <Button type="submit" size="lg" className="w-full" disabled={!canSubmit} loading={submitting}>
+        Next
       </Button>
       {props.inviteOnly && (
-        <p className="mt-10 text-center text-sm text-fg-2">
+        <p className="text-sm text-fg-3">
           No invite?{" "}
           <button type="button" className="text-brand hover:underline" onClick={props.onWaitlist}>
             Join the waitlist →
@@ -258,6 +357,34 @@ function ClaimStep(props: {
         </p>
       )}
     </form>
+  );
+}
+
+function ReadyStep({ username }: { username: string }) {
+  const { data } = useEditorProfile();
+  const avatar = data?.profile.avatarUrl;
+  return (
+    <>
+      <div className="flex items-center gap-4">
+        <span className="size-16 shrink-0 overflow-hidden rounded-full bg-white/10">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          {avatar && <img src={avatar} alt="" className="size-full object-cover" />}
+        </span>
+        <div className="min-w-0">
+          <p className="truncate font-primary text-2xl leading-none uppercase">{data?.profile.displayName || username}</p>
+          <p className="mt-1 text-sm text-fg-3">fl3x.lol/@{username}</p>
+        </div>
+      </div>
+      <StepTitle title="You're in" body="Your page is live. Add widgets and links to make it yours." />
+      <div className="flex flex-col gap-2">
+        <Link href="/dashboard/customize" className={buttonClass({ className: "w-full" })}>
+          Open my dashboard
+        </Link>
+        <Link href={`/@${username}`} className={buttonClass({ variant: "secondary", className: "w-full" })}>
+          View my profile
+        </Link>
+      </div>
+    </>
   );
 }
 

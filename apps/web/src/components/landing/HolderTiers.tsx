@@ -17,26 +17,36 @@ export function HolderTiers({ config }: { config: PublicConfig }) {
   const { symbol } = config.token;
   return (
     <section id="tiers" className="px-gutter py-24 md:py-40">
-      <div className="flex flex-col gap-10 lg:flex-row lg:justify-between">
-        <div className="flex flex-col justify-between gap-10">
-          <div>
-            <h2 className="mb-4 text-5xl md:text-6xl">
-              <Brand>HOLD. FL[3]X.</Brand>
-            </h2>
-            <p className="max-w-md text-lg text-fg-2">
-              Your profile is free. Holding ${symbol} in your verified wallets unlocks more widgets and customization. No
-              subscriptions, updates automatically.
-            </p>
-          </div>
-          <TierCard
-            title="ST[a]RTeR"
-            amount={`${fmt(config.thresholds.starter)} $${symbol}`}
-            tagline="Everything you need to begin"
-            perks={starterPerks}
-            cta="Start Building"
-            className="bg-surface"
-          />
+      <div className="mb-12 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+        <div>
+          <h2 className="mb-4 text-5xl md:text-6xl">
+            <Brand>FREE. THEN FL[3]X.</Brand>
+          </h2>
+          <p className="max-w-xl text-lg text-fg-2">
+            Everyone gets a profile, no token needed. Holding ${symbol} in a linked wallet unlocks more: no subscription, it updates on its own.
+          </p>
         </div>
+        <span className="w-fit rounded-full bg-success/15 px-4 py-2 text-sm text-success">No token needed to start</span>
+      </div>
+      <div className="grid gap-4 lg:grid-cols-3">
+        <TierCard
+          title="FR[e]e"
+          amount="No token"
+          free
+          tagline="Your profile, today"
+          perks={TIER_PERKS.none}
+          cta="Create my profile"
+          primary
+          className="bg-surface"
+        />
+        <TierCard
+          title="ST[a]RTeR"
+          amount={`${fmt(config.thresholds.starter)} $${symbol}`}
+          tagline="More widgets and links"
+          perks={starterPerks}
+          cta="Start Building"
+          className="bg-surface"
+        />
         <TierCard
           title="PR[e]M[i]UM"
           amount={`${fmt(config.thresholds.premium)} $${symbol}`}
@@ -44,7 +54,6 @@ export function HolderTiers({ config }: { config: PublicConfig }) {
           perks={premiumPerks}
           cta="Go Premium"
           primary
-          className="lg:min-h-[743px]"
           style={{ background: premiumBackground }}
         />
       </div>
@@ -58,18 +67,20 @@ function TierCard(props: {
   tagline: string;
   perks: string[];
   cta: string;
+  /** Free tier: no "HOLD" label. */
+  free?: boolean;
   primary?: boolean;
   className?: string;
   style?: React.CSSProperties;
 }) {
   return (
-    <div className={cn("flex w-full flex-col justify-between gap-8 rounded-[30px] p-8 md:p-[38px] lg:w-[426px]", props.className)} style={props.style}>
+    <div className={cn("flex w-full flex-col justify-between gap-8 rounded-[30px] p-8 md:p-[38px]", props.className)} style={props.style}>
       <div className="flex flex-col items-start gap-4">
         <h3 className="text-[56px] leading-none md:text-[64px]">
           <Brand>{props.title}</Brand>
         </h3>
         <div className="flex items-baseline gap-2 font-primary">
-          <span className="text-fg-2 text-2xl">HOLD</span>
+          {!props.free && <span className="text-fg-2 text-2xl">HOLD</span>}
           <span className="text-[40px] leading-none">{props.amount}</span>
         </div>
         <p className="text-fg-2">{props.tagline}</p>

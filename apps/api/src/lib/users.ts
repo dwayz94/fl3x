@@ -8,7 +8,8 @@ import { verifiedWallets } from "./wallets";
 
 export type UserRow = typeof schema.users.$inferSelect;
 
-const TIER_TTL_MS = 10 * 60 * 1000;
+// Token holdings are re-read at most every 5 minutes per member (on any action, and by the job in index.ts).
+export const TIER_TTL_MS = 5 * 60 * 1000;
 
 /** Create or refresh the local user from Privy's linked accounts. */
 export async function syncUser(privyId: string): Promise<UserRow> {
@@ -30,7 +31,9 @@ export async function refreshTier(user: UserRow, force = false): Promise<UserRow
   }
   try {
     const linked = await db.select({ address: schema.wallets.address }).from(schema.wallets).where(and(eq(schema.wallets.userId, user.id), eq(schema.wallets.chain, "solana")));
-    const balance = await totalTokenBalance([...new Set([...user.wallets, ...linked.map((l) => l.address)])]);
+    // $FL3X is a Solana token: only Solana addresses count (sign-in wallets can be EVM too).
+    const solana = [...user.wallets, ...linked.map((l) => l.address)].filter((a) => !a.startsWith("0x"));
+    const balance = await totalTokenBalance([...new Set(solana)]);
     const [row] = await db
       .update(schema.users)
       .set({ tokenBalance: balance, tier: tierForBalance(balance, thresholds), tierCheckedAt: new Date() })
