@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { defaultSettings, type EditableProfile, type ProfileTheme, type Tier, type Widget, type WidgetSize, type WidgetType } from "@fl3x/shared";
 import { useAuth, useMe } from "@/components/auth/AuthProvider";
@@ -12,6 +12,7 @@ import { ProfileView } from "@/components/profile/ProfileView";
 import { backdropStyle } from "@/components/profile/theme";
 import { Button, buttonClass, FieldError } from "@/components/ui";
 import { api, ApiRequestError } from "@/lib/api";
+import { cn } from "@/lib/cn";
 import { useEditorProfile, type EditorPayload } from "@/lib/use-profile";
 
 export default function CustomizePage() {
@@ -119,9 +120,9 @@ function Editor({ initial, tier, wallets }: { initial: EditorPayload; tier: Tier
         </div>
         <div className="flex flex-1 flex-col items-center overflow-y-auto px-4 pt-2 pb-16" onClick={() => setSelectedId(null)}>
           {/* my-auto centers when it fits, and scrolls from the top when it doesn't */}
-          <div onClick={(e) => e.stopPropagation()} className="my-auto w-full max-w-[760px]">
+          <FitWidth onClick={(e) => e.stopPropagation()} className="my-auto">
             <ProfileView profile={draft} tier={tier} views={0} editor={{ selectedId, onSelect: setSelectedId, onMove: move }} />
-          </div>
+          </FitWidth>
         </div>
       </section>
 
@@ -139,6 +140,40 @@ function Editor({ initial, tier, wallets }: { initial: EditorPayload; tier: Tier
           onProfile={(patch) => setDraft((d) => ({ ...d, ...patch }))}
         />
       </aside>
+    </div>
+  );
+}
+
+/**
+ * Shrinks its child (CSS zoom) when it is wider than the available space,
+ * so the preview keeps the real profile proportions instead of squeezing widgets.
+ */
+function FitWidth({ children, className, onClick }: { children: React.ReactNode; className?: string; onClick?: React.MouseEventHandler }) {
+  const outer = useRef<HTMLDivElement>(null);
+  const inner = useRef<HTMLDivElement>(null);
+  const [zoom, setZoom] = useState(1);
+  const current = useRef(1);
+  useEffect(() => {
+    const o = outer.current;
+    const i = inner.current;
+    if (!o || !i) return;
+    const fit = () => {
+      // The rendered width already includes the zoom: divide it back out to get the natural width.
+      const natural = i.getBoundingClientRect().width / current.current;
+      const next = Math.min(1, o.clientWidth / Math.max(1, natural));
+      if (Math.abs(next - current.current) > 0.005) setZoom((current.current = next));
+    };
+    const ro = new ResizeObserver(fit);
+    ro.observe(o);
+    ro.observe(i);
+    fit();
+    return () => ro.disconnect();
+  }, []);
+  return (
+    <div ref={outer} className={cn("flex w-full justify-center", className)} onClick={onClick}>
+      <div ref={inner} className="w-full md:w-auto" style={{ zoom }}>
+        {children}
+      </div>
     </div>
   );
 }

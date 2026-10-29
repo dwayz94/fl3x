@@ -2,7 +2,7 @@ import { and, count, eq, isNull } from "drizzle-orm";
 import { tierForBalance, type Me } from "@fl3x/shared";
 import { db, schema } from "../db";
 import { env, thresholds } from "../env";
-import { fetchIdentity } from "./privy";
+import { devAuth, fetchIdentity } from "./privy";
 import { totalTokenBalance } from "./solana";
 
 export type UserRow = typeof schema.users.$inferSelect;
@@ -23,6 +23,10 @@ export async function syncUser(privyId: string): Promise<UserRow> {
 export async function refreshTier(user: UserRow, force = false): Promise<UserRow> {
   const fresh = user.tierCheckedAt && Date.now() - user.tierCheckedAt.getTime() < TIER_TTL_MS;
   if (fresh && !force) return user;
+  if (devAuth && env.DEV_TIER && user.privyId.startsWith("did:dev:")) {
+    const [row] = await db.update(schema.users).set({ tier: env.DEV_TIER, tierCheckedAt: new Date() }).where(eq(schema.users.id, user.id)).returning();
+    return row!;
+  }
   try {
     const balance = await totalTokenBalance(user.wallets);
     const [row] = await db

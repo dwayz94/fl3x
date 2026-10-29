@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
-import { and, eq, gt, isNull, lt, or, sql } from "drizzle-orm";
-import { claimRequest, normalizeUsername } from "@fl3x/shared";
+import { and, eq, gt, isNull, lt, lte, or, sql } from "drizzle-orm";
+import { claimRequest, normalizeUsername, waitlistRequest, type WaitlistStatus } from "@fl3x/shared";
 import { db, schema } from "../db";
 import { env } from "../env";
 import { requirePrivyId, requireUser } from "../lib/auth";
@@ -17,6 +17,24 @@ export async function meRoutes(app: FastifyInstance) {
   app.post("/me/refresh-tier", { config: { rateLimit: { max: 6, timeWindow: "1 minute" } } }, async (req) =>
     toMe(await refreshTier(await requireUser(req), true)),
   );
+
+  app.get("/me/waitlist", async (req) => waitlistStatus((await requireUser(req)).xHandle));
+
+  /** Join the waitlist with the signed-in X account: no form, the handle comes from Privy. */
+  app.post("/me/waitlist", { config: { rateLimit: { max: 10, timeWindow: "1 minute" } } }, async (req) => {
+    const user = await requireUser(req);
+    if (!user.xHandle) throw badRequest("Sign in with X to join the waitlist", "x_required");
+    const body = waitlistRequest.parse(req.body ?? {});
+    await db
+      .insert(schema.waitlist)
+      .values({
+        xHandle: user.xHandle.toLowerCase(),
+        desiredUsername: body.desiredUsername && normalizeUsername(body.desiredUsername),
+        refCode: body.ref,
+      })
+      .onConflictDoNothing();
+    return waitlistStatus(user.xHandle);
+  });
 
   /**
    * Claim a username and join. During invite_only an invite code is
@@ -66,4 +84,17 @@ export async function meRoutes(app: FastifyInstance) {
 
     return toMe(updated);
   });
+}
+
+async function waitlistStatus(xHandle: string | null): Promise<WaitlistStatus> {
+  const [{ total } = { total: 0 }] = await db.select({ total: sql<number>`count(*)::int` }).from(schema.waitlist);
+  const [entry] = xHandle
+    ? await db.select({ createdAt: schema.waitlist.createdAt }).from(schema.waitlist).where(eq(schema.waitlist.xHandle, xHandle.toLowerCase())).limit(1)
+    : [];
+  if (!entry) return { joined: false, xHandle, position: null, total };
+  const [{ position } = { position: total }] = await db
+    .select({ position: sql<number>`count(*)::int` })
+    .from(schema.waitlist)
+    .where(lte(schema.waitlist.createdAt, entry.createdAt));
+  return { joined: true, xHandle, position, total };
 }

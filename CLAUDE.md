@@ -17,7 +17,8 @@ Profiles with live widgets for crypto people. The founder speaks French: reply i
 - Data sources: DexScreener (tokens), Jupiter Price v3 + Solana RPC (wallet value), Discord invites API, public t.me pages, YouTube/Spotify oEmbed, Twitch Helix (optional).
 - P&L / portfolio: built from our own hourly snapshots (`wallet_snapshots`). History starts when the wallet is first shown.
 - Analytics: the browser calls `/api/track` (Next, reads Vercel geo), which forwards to `/internal/track` with `INTERNAL_API_KEY`. IPs are hashed with a daily salt and never stored.
-- Local dev without Privy: a "dev login" (`dev:<name>` tokens) is accepted by the API only outside production.
+- Local dev without Privy: a "dev login" (`dev:<name>` tokens) is accepted by the API only outside production. `/dev` gives one-click test sessions: "Test member" (@tester, seeded profile + analytics, tier from `DEV_TIER`) or a fresh account for the join/waitlist flow.
+- Waitlist = sign in with X (no form). `POST /me/waitlist` uses the X handle from Privy.
 
 ## Conventions
 - No fake data on the site.

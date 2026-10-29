@@ -1,88 +1,111 @@
 "use client";
 
-import { useState } from "react";
-import { Mail01Icon } from "@hugeicons/core-free-icons";
+import { useEffect, useRef } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { NewTwitterIcon } from "@hugeicons/core-free-icons";
+import type { WaitlistStatus } from "@fl3x/shared";
+import { useAuth, useMe } from "@/components/auth/AuthProvider";
 import { AuthHeader } from "@/components/shared";
-import { Button, FieldError, Icon, Input } from "@/components/ui";
+import { Button, FieldError, Icon } from "@/components/ui";
 import { api, ApiRequestError } from "@/lib/api";
 
-type Result = { total: number; position: number };
+// Survives the X OAuth round-trip so we land back on the waitlist step.
+const INTENT_KEY = "fl3x:intent";
+export const wantsWaitlist = () => {
+  try { return localStorage.getItem(INTENT_KEY) === "waitlist"; } catch { return false; }
+};
+const setIntent = (on: boolean) => {
+  try { if (on) localStorage.setItem(INTENT_KEY, "waitlist"); else localStorage.removeItem(INTENT_KEY); } catch {}
+};
 
+/** Waitlist = sign in with X. No form: the handle comes from the linked account. */
 export function WaitlistForm({ desiredUsername, onBack }: { desiredUsername: string; onBack: () => void }) {
-  const [xHandle, setXHandle] = useState("");
-  const [email, setEmail] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [done, setDone] = useState<Result | null>(null);
-  const [submitting, setSubmitting] = useState(false);
+  const { authenticated, login, linkTwitter, getToken } = useAuth();
+  const { data: me } = useMe();
+  const qc = useQueryClient();
+  const status = useQuery({
+    queryKey: ["waitlist"],
+    enabled: authenticated,
+    queryFn: async () => api<WaitlistStatus>("/me/waitlist", { token: await getToken() }),
+  });
+  const join = useMutation({
+    mutationFn: async () =>
+      api<WaitlistStatus>("/me/waitlist", { token: await getToken(), json: { desiredUsername: desiredUsername || undefined } }),
+    onSuccess: (s) => {
+      setIntent(false);
+      qc.setQueryData(["waitlist"], s);
+    },
+  });
 
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    setSubmitting(true);
-    try {
-      setDone(
-        await api<Result>("/waitlist", {
-          json: {
-            xHandle: xHandle || undefined,
-            email: email || undefined,
-            desiredUsername: desiredUsername || undefined,
-          },
-        }),
-      );
-    } catch (err) {
-      setError(err instanceof ApiRequestError ? err.message : "Something went wrong");
-    } finally {
-      setSubmitting(false);
-    }
+  // Back from X: join right away, once.
+  const tried = useRef(false);
+  useEffect(() => {
+    if (tried.current || !status.data || status.data.joined || !me?.xHandle) return;
+    tried.current = true;
+    join.mutate();
+  }, [status.data, me?.xHandle, join]);
+
+  const back = () => {
+    setIntent(false);
+    onBack();
   };
 
-  if (done) {
+  if (status.data?.joined) {
+    const s = status.data;
     return (
       <>
-        <AuthHeader title="You're in line" subtitle="We'll reach out on X or by email as soon as a spot opens." />
+        <AuthHeader title="You're in line" subtitle="We'll DM you on X as soon as a spot opens." />
         <div className="w-full rounded-[24px] bg-[#121212] p-5">
           <div className="flex items-end justify-between gap-4">
             <div className="min-w-0">
-              <p className="truncate font-primary text-2xl leading-none">{xHandle ? `@${xHandle.replace(/^@/, "")}` : email}</p>
+              <p className="truncate font-primary text-2xl leading-none">@{s.xHandle}</p>
               {desiredUsername && <p className="mt-1 truncate text-xs text-fg-3">wants fl3x.lol/@{desiredUsername}</p>}
             </div>
             <p className="shrink-0 font-primary text-4xl leading-none">
-              #{done.position.toLocaleString("en-US")}
-              <span className="text-base text-fg-3">/{done.total.toLocaleString("en-US")}</span>
+              #{s.position?.toLocaleString("en-US")}
+              <span className="text-base text-fg-3">/{s.total.toLocaleString("en-US")}</span>
             </p>
           </div>
           <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-white/10">
-            <div className="h-full rounded-full bg-brand" style={{ width: `${Math.max(4, 100 - (done.position / Math.max(1, done.total)) * 100)}%` }} />
+            <div className="h-full rounded-full bg-brand" style={{ width: `${Math.max(4, 100 - ((s.position ?? s.total) / Math.max(1, s.total)) * 100)}%` }} />
           </div>
           <p className="mt-3 text-xs text-fg-2">Got an invite from a friend? You can skip the line.</p>
         </div>
-        <Button variant="secondary" className="mt-4 w-full" onClick={onBack}>
+        <Button variant="secondary" className="mt-4 w-full" onClick={back}>
           I have an invite code
         </Button>
       </>
     );
   }
 
+  const signedInWithoutX = authenticated && me && !me.xHandle;
+  const error = join.error ?? status.error;
+
   return (
-    <form onSubmit={submit} className="flex w-full flex-col items-center">
-      <AuthHeader title="Join the waitlist" subtitle="Leave your X handle or email. We'll send you an invite before launch." />
-      <div className="flex w-full flex-col gap-3">
-        <Input placeholder="X handle" value={xHandle} onChange={(e) => setXHandle(e.target.value.trim())} leftElement={<span className="text-fg-2">@</span>} />
-        <Input
-          placeholder="Email"
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value.trim())}
-          leftElement={<Icon icon={Mail01Icon} size={18} className="text-fg-2" />}
-        />
-      </div>
-      {error && <div className="mt-3 w-full"><FieldError>{error}</FieldError></div>}
-      <Button type="submit" className="mt-6 w-full" loading={submitting} disabled={!xHandle && !email}>
-        Join the waitlist
+    <>
+      <AuthHeader
+        title="Join the waitlist"
+        subtitle={signedInWithoutX ? "The waitlist works with X. Link your account to get in line." : "Sign in with X and you're in line. We'll DM you when a spot opens."}
+      />
+      <Button
+        className="w-full"
+        loading={join.isPending || (authenticated && status.isLoading)}
+        onClick={() => {
+          setIntent(true);
+          if (signedInWithoutX) linkTwitter();
+          else login({ xOnly: true });
+        }}
+      >
+        {signedInWithoutX ? "Link" : "Continue with"} <Icon icon={NewTwitterIcon} size={18} />
       </Button>
-      <button type="button" onClick={onBack} className="mt-6 text-sm text-fg-2 hover:text-fg">
+      {error && (
+        <div className="mt-3 w-full">
+          <FieldError>{error instanceof ApiRequestError ? error.message : "Something went wrong"}</FieldError>
+        </div>
+      )}
+      <button type="button" onClick={back} className="mt-8 text-sm text-fg-2 hover:text-fg">
         ← I have an invite code
       </button>
-    </form>
+    </>
   );
 }

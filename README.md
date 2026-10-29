@@ -58,7 +58,7 @@ No invite → waitlist (`POST /waitlist`). Set `LAUNCH_PHASE=public` to open sig
 
 Widgets are defined once in `packages/shared/src/widgets.ts` (fields, defaults, validation) and rendered in `apps/web/src/components/widgets`. Each has a `large` (2×2) and `long` (4×1) layout.
 
-Without `NEXT_PUBLIC_PRIVY_APP_ID`, local dev shows a dev login (not available in production builds). Set `DEV_WALLET` in `apps/api/.env` to give dev users a wallet.
+Without `NEXT_PUBLIC_PRIVY_APP_ID`, local dev uses test sessions instead of Privy (not available in production builds): open http://localhost:3000/dev and pick **Test member** (seeded profile, straight to the dashboard) or **New account** (goes through join / waitlist). `DEV_WALLET` gives dev users a wallet, `DEV_TIER` forces their tier.
 
 ## Deploy
 

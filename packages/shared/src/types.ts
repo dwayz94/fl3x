@@ -5,8 +5,6 @@ export interface PublicConfig {
   phase: LaunchPhase;
   token: { symbol: string; mint: string | null };
   thresholds: { starter: number; premium: number };
-  /** Claimed profiles, shown on the join page. */
-  members: number;
 }
 
 export interface Me {
@@ -34,4 +32,11 @@ export interface PublicProfile {
 export interface ApiError {
   error: string;
   message: string;
+}
+
+export interface WaitlistStatus {
+  joined: boolean;
+  xHandle: string | null;
+  position: number | null;
+  total: number;
 }

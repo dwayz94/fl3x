@@ -19,12 +19,11 @@ export const claimRequest = z.object({
   inviteCode: inviteCodeSchema.optional(),
 });
 
+/** Joining the waitlist needs no form: the X account comes from the session. */
 export const waitlistRequest = z.object({
-  email: z.email().optional(),
-  xHandle: z.string().trim().regex(/^@?[A-Za-z0-9_]{1,15}$/, "Invalid X handle").optional(),
   desiredUsername: usernameSchema.optional(),
   ref: inviteCodeSchema.optional(),
-}).refine((v) => v.email || v.xHandle, { message: "Email or X handle required" });
+});
 
 export type ClaimRequest = z.infer<typeof claimRequest>;
 export type WaitlistRequest = z.infer<typeof waitlistRequest>;

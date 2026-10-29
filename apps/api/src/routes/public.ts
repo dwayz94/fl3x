@@ -1,7 +1,7 @@
 import type { FastifyInstance } from "fastify";
-import { and, eq, isNotNull, lte, or, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { z } from "zod";
-import { normalizeUsername, validateUsername, waitlistRequest, type FullPublicProfile, type PublicConfig } from "@fl3x/shared";
+import { normalizeUsername, validateUsername, type FullPublicProfile, type PublicConfig } from "@fl3x/shared";
 import { db, schema } from "../db";
 import { env, thresholds } from "../env";
 import { notFound } from "../lib/errors";
@@ -11,13 +11,11 @@ import { isUsernameTaken } from "../lib/users";
 export async function publicRoutes(app: FastifyInstance) {
   app.get("/health", async () => ({ ok: true }));
 
-  app.get("/config", async (): Promise<PublicConfig> => {
-    const [{ members } = { members: 0 }] = await db
-      .select({ members: sql<number>`count(*)::int` })
-      .from(schema.users)
-      .where(isNotNull(schema.users.username));
-    return { phase: env.LAUNCH_PHASE, token: { symbol: env.TOKEN_SYMBOL, mint: env.TOKEN_MINT }, thresholds, members };
-  });
+  app.get("/config", async (): Promise<PublicConfig> => ({
+    phase: env.LAUNCH_PHASE,
+    token: { symbol: env.TOKEN_SYMBOL, mint: env.TOKEN_MINT },
+    thresholds,
+  }));
 
   app.get<{ Params: { username: string } }>("/usernames/:username", async (req) => {
     const check = validateUsername(req.params.username);
@@ -38,31 +36,6 @@ export async function publicRoutes(app: FastifyInstance) {
     const { invite } = row;
     const expired = invite.expiresAt && invite.expiresAt < new Date();
     return { valid: !expired && invite.uses < invite.maxUses, inviter: row.inviter };
-  });
-
-  app.post("/waitlist", { config: { rateLimit: { max: 5, timeWindow: "1 minute" } } }, async (req) => {
-    const body = waitlistRequest.parse(req.body);
-    const xHandle = body.xHandle?.replace(/^@/, "").toLowerCase();
-    await db
-      .insert(schema.waitlist)
-      .values({
-        email: body.email?.toLowerCase(),
-        xHandle,
-        desiredUsername: body.desiredUsername && normalizeUsername(body.desiredUsername),
-        refCode: body.ref,
-      })
-      .onConflictDoNothing();
-    const [{ total } = { total: 0 }] = await db.select({ total: sql<number>`count(*)::int` }).from(schema.waitlist);
-    // Position of this entry (or of the existing one when the handle/email was already in line).
-    const mine = or(
-      body.email ? eq(schema.waitlist.email, body.email.toLowerCase()) : undefined,
-      xHandle ? eq(schema.waitlist.xHandle, xHandle) : undefined,
-    );
-    const [entry] = await db.select({ createdAt: schema.waitlist.createdAt }).from(schema.waitlist).where(mine).limit(1);
-    const [{ position } = { position: total }] = entry
-      ? await db.select({ position: sql<number>`count(*)::int` }).from(schema.waitlist).where(lte(schema.waitlist.createdAt, entry.createdAt))
-      : [];
-    return { ok: true, total, position };
   });
 
   app.get<{ Params: { username: string } }>("/profiles/:username", async (req): Promise<FullPublicProfile> => {

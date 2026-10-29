@@ -9,7 +9,7 @@ export const privy = env.PRIVY_APP_ID
  * Local dev without Privy: tokens look like "dev:<name>". Never active in
  * production or when Privy is configured.
  */
-const devAuth = !privy && env.NODE_ENV !== "production";
+export const devAuth = !privy && env.NODE_ENV !== "production";
 
 /** Returns the Privy user id for a valid access token, or null. */
 export async function verifyAccessToken(token: string): Promise<string | null> {

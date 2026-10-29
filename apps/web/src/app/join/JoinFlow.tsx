@@ -1,11 +1,9 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import {
-  Award01Icon, Cancel01Icon, CheckmarkCircle02Icon, NewTwitterIcon, Ticket01Icon, UserGroupIcon,
-} from "@hugeicons/core-free-icons";
+import { Cancel01Icon, CheckmarkCircle02Icon, NewTwitterIcon, Ticket01Icon } from "@hugeicons/core-free-icons";
 import { validateUsername, type Me } from "@fl3x/shared";
 import { useAuth, useMe } from "@/components/auth/AuthProvider";
 import { AuthHeader } from "@/components/shared";
@@ -16,7 +14,7 @@ import {
   clearPendingInvite, clearPendingUsername, readPendingInvite, readPendingUsername, savePendingInvite, savePendingUsername,
 } from "@/lib/pending-invite";
 import { useConfig } from "@/lib/use-config";
-import { WaitlistForm } from "./WaitlistForm";
+import { WaitlistForm, wantsWaitlist } from "./WaitlistForm";
 
 type InviteCheck = { valid: boolean; inviter: string | null };
 type Availability = { available: boolean; reason: string | null };
@@ -124,17 +122,6 @@ function InviteField({ code, setCode, invite, optional }: { code: string; setCod
   );
 }
 
-function Fact({ icon, children }: { icon: typeof UserGroupIcon; children: ReactNode }) {
-  return (
-    <li className="flex items-center justify-between gap-4">
-      <span className="flex size-7 items-center justify-center rounded-full bg-white text-bg">
-        <Icon icon={icon} size={16} />
-      </span>
-      <span className="font-primary text-lg leading-none">{children}</span>
-    </li>
-  );
-}
-
 export function JoinFlow() {
   const params = useSearchParams();
   const router = useRouter();
@@ -154,6 +141,7 @@ export function JoinFlow() {
     if (fromUrl) savePendingInvite(fromUrl);
     setCode(fromUrl?.toUpperCase() ?? readPendingInvite());
     setUsername(params.get("username")?.toLowerCase() ?? readPendingUsername());
+    if (wantsWaitlist() || params.get("waitlist") !== null) setShowWaitlist(true);
   }, [params]);
 
   useEffect(() => {
@@ -165,7 +153,17 @@ export function JoinFlow() {
   if (authenticated && (meLoading || me?.username)) return <Loading />;
 
   if (authenticated && me) {
-    return <ClaimStep me={me} username={username} setUsername={setUsername} code={code} setCode={setCode} inviteOnly={inviteOnly} />;
+    return (
+      <ClaimStep
+        me={me}
+        username={username}
+        setUsername={setUsername}
+        code={code}
+        setCode={setCode}
+        inviteOnly={inviteOnly}
+        onWaitlist={() => setShowWaitlist(true)}
+      />
+    );
   }
 
   const inviteOk = !inviteOnly || (invite !== "checking" && invite?.valid);
@@ -197,13 +195,6 @@ export function JoinFlow() {
       <p className="mt-3 text-center text-xs text-fg-3">You can also sign in with a Solana wallet.</p>
       {!configured && <FieldError>Auth is not configured (NEXT_PUBLIC_PRIVY_APP_ID).</FieldError>}
 
-      <ul className="mt-10 flex w-full flex-col gap-3">
-        <Fact icon={UserGroupIcon}>
-          {(config?.members ?? 0).toLocaleString("en-US")} {config?.members === 1 ? "username" : "usernames"} reserved
-        </Fact>
-        <Fact icon={Award01Icon}>Invite 3 friends → Recruiter badge</Fact>
-      </ul>
-
       {inviteOnly && (
         <p className="mt-10 text-center text-sm text-fg-2">
           No invite?{" "}
@@ -223,6 +214,7 @@ function ClaimStep(props: {
   code: string;
   setCode: (v: string) => void;
   inviteOnly: boolean;
+  onWaitlist: () => void;
 }) {
   const { getToken, logout } = useAuth();
   const queryClient = useQueryClient();
@@ -274,6 +266,14 @@ function ClaimStep(props: {
       <Button type="submit" className="mt-2 w-full" disabled={!canSubmit} loading={submitting}>
         Claim fl3x.lol/@{props.username || "you"}
       </Button>
+      {props.inviteOnly && (
+        <p className="mt-10 text-center text-sm text-fg-2">
+          No invite?{" "}
+          <button type="button" className="text-brand hover:underline" onClick={props.onWaitlist}>
+            Join the waitlist →
+          </button>
+        </p>
+      )}
     </form>
   );
 }

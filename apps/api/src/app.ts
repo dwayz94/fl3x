@@ -8,6 +8,7 @@ import helmet from "@fastify/helmet";
 import { adminRoutes } from "./routes/admin";
 import { analyticsRoutes } from "./routes/analytics";
 import { dataRoutes } from "./routes/data";
+import { devRoutes } from "./routes/dev";
 import { editorRoutes } from "./routes/editor";
 import { meRoutes } from "./routes/me";
 import { publicRoutes } from "./routes/public";
@@ -46,5 +47,6 @@ export async function buildApp() {
   await app.register(analyticsRoutes);
   await app.register(dataRoutes);
   await app.register(adminRoutes);
+  await app.register(devRoutes);
   return app;
 }

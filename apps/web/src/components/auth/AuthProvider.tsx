@@ -7,12 +7,14 @@ import { QueryClient, QueryClientProvider, useQuery, useQueryClient } from "@tan
 import type { Me } from "@fl3x/shared";
 import { site } from "@/config/site";
 import { api } from "@/lib/api";
+import { DEV_KEY } from "@/lib/dev-session";
 
 interface AuthState {
   configured: boolean;
   ready: boolean;
   authenticated: boolean;
-  login: () => void;
+  /** `xOnly` hides the wallet option (the waitlist needs an X account). */
+  login: (opts?: { xOnly?: boolean }) => void;
   logout: () => Promise<void>;
   linkTwitter: () => void;
   linkWallet: () => void;
@@ -34,11 +36,10 @@ const AuthContext = createContext<AuthState>({
   getToken: async () => null,
 });
 
-const DEV_KEY = "fl3x:dev-user";
 
 /**
- * Local dev without a Privy app id: a prompt asks for a name and the API
- * accepts "dev:<name>" tokens. The API refuses these in production.
+ * Local dev without a Privy app id: /dev hands out test sessions and the
+ * API accepts "dev:<name>" tokens. The API refuses these in production.
  */
 function DevAuth({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
@@ -59,11 +60,7 @@ function DevAuth({ children }: { children: ReactNode }) {
       ready,
       authenticated: Boolean(user),
       login: () => {
-        const name = window.prompt("Dev login (no Privy configured). Pick a name:", "dev")?.toLowerCase().replace(/[^a-z0-9_]/g, "");
-        if (name && name.length >= 2) {
-          localStorage.setItem(DEV_KEY, name);
-          setUser(name);
-        }
+        window.location.href = `/dev?next=${encodeURIComponent(window.location.pathname)}`;
       },
       logout: async () => {
         localStorage.removeItem(DEV_KEY);
@@ -136,7 +133,7 @@ function PrivyBridge({ children }: { children: ReactNode }) {
       configured: true,
       ready: privy.ready,
       authenticated: privy.authenticated,
-      login: () => privy.login(),
+      login: (opts) => privy.login(opts?.xOnly ? { loginMethods: ["twitter"] } : undefined),
       logout: async () => {
         await privy.logout();
         synced.current = null;

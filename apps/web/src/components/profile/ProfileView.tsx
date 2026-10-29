@@ -46,6 +46,7 @@ export function ProfileView({
   editor?: EditorHooks;
   onLinkClick?: (target: string) => void;
 }) {
+  // In the editor the card keeps its real desktop width and the preview scales it down.
   const { theme } = profile;
   const badges = BADGES.filter((b) => profile.badges.includes(b.id));
   const name = profile.displayName || profile.username;
@@ -69,7 +70,9 @@ export function ProfileView({
       className={cn(
         "w-full rounded-[40px] border border-white/[0.06] bg-[rgba(28,28,28,0.6)] p-5 shadow-[0_30px_80px_rgba(0,0,0,0.45)] backdrop-blur-[40px] md:p-8",
         // Card hugs the grid: cols × 80px cells + 12px gaps + padding.
-        "md:max-w-[calc(var(--cols)*80px+(var(--cols)-1)*12px+66px)]",
+        editor
+          ? "md:w-[calc(var(--cols)*80px+(var(--cols)-1)*12px+66px)] md:max-w-none"
+          : "md:max-w-[calc(var(--cols)*80px+(var(--cols)-1)*12px+66px)]",
       )}
     >
       <header className={cn("flex gap-4 md:gap-6", narrow ? "flex-col items-center text-center" : "items-center")}>
