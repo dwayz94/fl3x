@@ -58,6 +58,9 @@ body {
   font-weight: 300;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* Moga's ligatures turn OU, CH… into odd glyphs ("COMMXNITY"): off everywhere. */
+  font-variant-ligatures: none;
+  font-feature-settings: "liga" 0, "clig" 0, "dlig" 0;
 }
 
 /* In the base layer so utilities (font-mono, font-serif…) can override them. */

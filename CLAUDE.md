@@ -7,7 +7,7 @@ Profiles with live widgets for crypto people. The founder speaks French: reply i
 - Pre-launch is invite-only: an invite code is required to claim a username. Each member gets their own code (referrals); the referral link carries the handle (`/invite/<username>`), resolved to the code by the API (old codes still work). Everyone else goes to the waitlist.
 - Sign-in uses Privy: X + Solana wallet, no embedded wallet.
 - The landing page keeps the old project's design (`../fl3x-old`). Join / waitlist follow the Figma sign screens: no card, centered column on the money-bag background.
-- Customize is a full-screen mode (no sidebar, back button). Drag reorders live (`profile/EditableGrid.tsx`, motion layout animations). Name/bio/avatar live in Settings; clicking the avatar in Customize uploads a new one.
+- Customize is a full-screen mode (no sidebar, back button). Drag reorders live (`profile/EditableGrid.tsx`, motion layout animations). Name and bio are edited in Settings or in place on the card in Customize; clicking the avatar in Customize uploads a new one.
 - Links and community/video widgets take a handle only; the domain is fixed (`LINK_KINDS`, field kind `handle`).
 - Reactions widget is hidden from the library (kept for existing profiles).
 - Widgets: V2 designs are the default (decided 2026-10-29). V1 stays selectable through the `style` setting; new designs go in as a new version, never by editing the existing one. The dashboard follows the Figma prototype (`FL3X.lol`, node 186:1226), which is **not final**. Widgets (node 217:191) are redrawn in the same style, never copied.

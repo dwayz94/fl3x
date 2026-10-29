@@ -1,0 +1,444 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FL3X X kit</title>
+<style>
+@font-face { font-family: Display; src: url(../../apps/web/public/fonts/primary/moga.otf); }
+@font-face { font-family: Body; src: url(../../apps/web/public/fonts/secondary/Outfit-Light.ttf); }
+@font-face { font-family: Button; src: url(../../apps/web/public/fonts/secondary/Outfit-Regular.ttf); }
+:root { --bg:#000; --surface:#111; --surface2:#1a1a1a; --line:#222; --muted:rgba(255,255,255,.45); --accent:#FF97CB; --win:#2FE3AC; --paper:#FF97CB; }
+* { box-sizing: border-box; }
+body { margin:0; background:var(--bg); color:#fff; font-family:Body, system-ui, sans-serif; }
+main { max-width:1080px; margin:0 auto; padding:40px 16px 80px; display:flex; flex-direction:column; gap:48px; }
+header h1 { font-variant-ligatures:none; font-family:Display; text-transform:uppercase; font-size:clamp(44px,8vw,80px); line-height:.82; margin:0 0 12px; }
+header p { color:var(--muted); margin:0; }
+nav { display:flex; flex-wrap:wrap; gap:8px; margin-top:20px; }
+nav a { color:#fff; text-decoration:none; background:var(--surface2); padding:8px 12px; border-radius:8px; font-family:Button; font-size:14px; }
+h2.group { font-variant-ligatures:none; font-family:Display; text-transform:uppercase; font-size:40px; line-height:.85; margin:0; }
+.hint { color:var(--muted); margin:8px 0 16px; }
+section { display:flex; flex-direction:column; gap:12px; }
+.tweet { display:grid; grid-template-columns:280px 1fr; gap:16px; background:var(--surface); border-radius:16px; padding:12px; }
+.thumb { display:flex; flex-direction:column; gap:6px; color:var(--muted); text-decoration:none; font-size:12px; }
+.thumb img { width:100%; border-radius:10px; display:block; }
+.thumb.none { align-items:center; justify-content:center; background:var(--surface2); border-radius:10px; min-height:120px; }
+.body { display:flex; flex-direction:column; gap:10px; min-width:0; }
+.row { display:flex; align-items:center; gap:8px; }
+.label { font-family:Button; color:#000; background:var(--accent); padding:4px 8px; border-radius:6px; font-size:13px; }
+.note { color:var(--muted); font-size:13px; }
+.count { margin-left:auto; color:var(--muted); font-size:12px; }
+pre { margin:0; white-space:pre-wrap; font-family:Body, system-ui, sans-serif; font-size:16px; line-height:1.45; background:var(--surface2); padding:14px; border-radius:10px; }
+button.copy { align-self:flex-start; font-family:Button; font-size:14px; background:var(--paper); color:var(--bg); border:0; border-radius:8px; padding:10px 16px; cursor:pointer; }
+button.copy.done { background:var(--win); }
+.assets { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.asset { display:flex; flex-direction:column; gap:6px; background:var(--surface); padding:12px; border-radius:16px; color:var(--muted); text-decoration:none; font-size:13px; }
+.asset img { width:100%; border-radius:10px; }
+.asset.wide { grid-column:1 / -1; }
+.article { background:#f3eef1; color:#000; border-radius:16px; padding:28px; }
+.article h1 { font-family:Display; text-transform:uppercase; font-size:48px; line-height:.85; margin:0 0 16px; }
+.article h2 { font-family:Button; font-size:24px; margin:28px 0 8px; }
+.article p, .article li { font-size:17px; line-height:1.55; }
+.article figure { margin:16px 0; }
+.article figure img { width:100%; border-radius:10px; }
+.article figcaption { font-size:13px; color:#555; margin-top:6px; }
+.steps { display:flex; flex-direction:column; gap:8px; }
+.step { display:grid; grid-template-columns:28px 110px 1fr auto; align-items:start; gap:12px; background:var(--surface); border-radius:12px; padding:14px; }
+.step-n { color:var(--muted); font-size:13px; padding-top:4px; }
+.tag { font-family:Button; font-size:12px; border-radius:6px; padding:5px 8px; text-align:center; letter-spacing:.04em; }
+.tag-title { background:var(--accent); color:#000; } .tag-heading { background:var(--paper); color:var(--bg); } .tag-body { background:var(--surface2); color:#ccc; }
+.tag-media, .tag-cover { background:rgba(46,224,127,.15); color:var(--win); } .tag-divider { border:1px solid var(--line); color:var(--muted); } .tag-link { background:#1d2a44; color:#8ab4ff; }
+.step-body { display:flex; flex-direction:column; gap:8px; font-size:16px; line-height:1.5; min-width:0; }
+.step-body .big { font-size:22px; }
+.step-body hr { border:0; border-top:2px solid var(--line); width:100%; margin:10px 0; }
+.step-img { width:100%; max-width:520px; border-radius:10px; display:block; }
+.step-note { color:var(--muted); font-size:13px; }
+@media (max-width:700px) { .step { grid-template-columns:1fr; } }
+@media (max-width:700px) { .tweet { grid-template-columns:1fr; } .assets { grid-template-columns:1fr; } }
+</style>
+</head>
+<body>
+<main>
+<header>
+  <h1><img src="../../apps/web/public/brand/fl3x-logo.svg" alt="FL3X" style="height:.8em;vertical-align:baseline;margin-right:.25em">X kit</h1>
+  <p>Click Copy, paste into X, attach the image shown next to the text. Images download on click.</p>
+  <nav><a href="#profile">Profile</a><a href="#tweets">Tweets</a><a href="#article">Article</a></nav>
+</header>
+
+<section id="profile"><h2 class="group">Profile</h2><p class="hint">Banner: the bottom corners stay empty (profile picture on the left, buttons on mobile on the right).</p><div class="assets"><a class="asset " href="images/avatar.png" download><img src="images/avatar.png" alt=""><span>Profile picture (black) · Download</span></a>
+<a class="asset " href="images/avatar-pink.png" download><img src="images/avatar-pink.png" alt=""><span>Profile picture (pink) · Download</span></a>
+<a class="asset wide" href="images/banner.png" download><img src="images/banner.png" alt=""><span>Banner 1500×500 · Download</span></a></div></section>
+
+<div id="tweets" style="display:flex;flex-direction:column;gap:48px"><section><h2 class="group">Pinned tweet</h2><p class="hint">Pin it on the profile.</p><article class="tweet">
+  <a class="thumb" href="images/launch.png" download><img src="images/launch.png" alt=""><span>launch.png · Download</span></a>
+  <div class="body">
+    <div class="row"><span class="label">Main</span><span class="count">132 chars</span></div>
+    <pre>FL3X is open.
+
+Your crypto profile, live.
+P&amp;L, wallets, token, community, stream, music. All on one link.
+
+Claim your name: fl3x.lol</pre>
+    <button class="copy" data-text="FL3X is open.
+
+Your crypto profile, live.
+P&amp;L, wallets, token, community, stream, music. All on one link.
+
+Claim your name: fl3x.lol">Copy</button>
+  </div>
+</article>
+<article class="tweet">
+  <a class="thumb" href="images/launch.png" download><img src="images/launch.png" alt=""><span>launch.png · Download</span></a>
+  <div class="body">
+    <div class="row"><span class="label">Variant</span><span class="count">55 chars</span></div>
+    <pre>One link for everything you are onchain.
+
+fl3x.lol/@you</pre>
+    <button class="copy" data-text="One link for everything you are onchain.
+
+fl3x.lol/@you">Copy</button>
+  </div>
+</article></section><section><h2 class="group">Invite-only pre-launch</h2><p class="hint">2 to 3 a day, a few hours apart.</p><article class="tweet">
+  <a class="thumb" href="images/invite-only.png" download><img src="images/invite-only.png" alt=""><span>invite-only.png · Download</span></a>
+  <div class="body">
+    <div class="row"><span class="label">#1</span><span class="count">115 chars</span></div>
+    <pre>FL3X is invite-only for now.
+
+Got an invite? Claim your name.
+No invite? Sign in with X and you&#x27;re on the waitlist.</pre>
+    <button class="copy" data-text="FL3X is invite-only for now.
+
+Got an invite? Claim your name.
+No invite? Sign in with X and you&#x27;re on the waitlist.">Copy</button>
+  </div>
+</article>
+<article class="tweet">
+  <a class="thumb" href="images/widgets.png" download><img src="images/widgets.png" alt=""><span>widgets.png · Download</span></a>
+  <div class="body">
+    <div class="row"><span class="label">#2</span><span class="count">109 chars</span></div>
+    <pre>Your bio link, but it moves.
+
+P&amp;L, token, Telegram, Twitch live, local time.
+Every widget updates on its own.</pre>
+    <button class="copy" data-text="Your bio link, but it moves.
+
+P&amp;L, token, Telegram, Twitch live, local time.
+Every widget updates on its own.">Copy</button>
+  </div>
+</article>
+<article class="tweet">
+  <div class="thumb none">No image</div>
+  <div class="body">
+    <div class="row"><span class="label">#3</span><span class="note">réponses</span><span class="count">86 chars</span></div>
+    <pre>What would you put on your profile first?
+
+P&amp;L, your token, your Discord, your stream?</pre>
+    <button class="copy" data-text="What would you put on your profile first?
+
+P&amp;L, your token, your Discord, your stream?">Copy</button>
+  </div>
+</article>
+<article class="tweet">
+  <a class="thumb" href="images/wallets.png" download><img src="images/wallets.png" alt=""><span>wallets.png · Download</span></a>
+  <div class="body">
+    <div class="row"><span class="label">#4</span><span class="count">161 chars</span></div>
+    <pre>Linking a wallet on FL3X = one free signature.
+
+No transaction. No approval. No connect kit.
+Solana and EVM, as many wallets as you want, added up in one widget.</pre>
+    <button class="copy" data-text="Linking a wallet on FL3X = one free signature.
+
+No transaction. No approval. No connect kit.
+Solana and EVM, as many wallets as you want, added up in one widget.">Copy</button>
+  </div>
+</article>
+<article class="tweet">
+  <a class="thumb" href="images/customize.png" download><img src="images/customize.png" alt=""><span>customize.png · Download</span></a>
+  <div class="body">
+    <div class="row"><span class="label">#5</span><span class="count">106 chars</span></div>
+    <pre>Drag a widget. The others make room.
+
+Building your profile should feel like your home screen, not a form.</pre>
+    <button class="copy" data-text="Drag a widget. The others make room.
+
+Building your profile should feel like your home screen, not a form.">Copy</button>
+  </div>
+</article>
+<article class="tweet">
+  <a class="thumb" href="images/badges.png" download><img src="images/badges.png" alt=""><span>badges.png · Download</span></a>
+  <div class="body">
+    <div class="row"><span class="label">#6</span><span class="count">132 chars</span></div>
+    <pre>Badges live under your name.
+
+Early Adopter if you joined before launch. OG for the first 100. Contributor if you brought 3 friends.</pre>
+    <button class="copy" data-text="Badges live under your name.
+
+Early Adopter if you joined before launch. OG for the first 100. Contributor if you brought 3 friends.">Copy</button>
+  </div>
+</article>
+<article class="tweet">
+  <div class="thumb none">No image</div>
+  <div class="body">
+    <div class="row"><span class="label">#7</span><span class="note">citations</span><span class="count">63 chars</span></div>
+    <pre>Quote this with your handle. We&#x27;ll tell you if it&#x27;s still free.</pre>
+    <button class="copy" data-text="Quote this with your handle. We&#x27;ll tell you if it&#x27;s still free.">Copy</button>
+  </div>
+</article>
+<article class="tweet">
+  <a class="thumb" href="images/spotify.png" download><img src="images/spotify.png" alt=""><span>spotify.png · Download</span></a>
+  <div class="body">
+    <div class="row"><span class="label">#8</span><span class="count">105 chars</span></div>
+    <pre>Your card can show what you&#x27;re listening to.
+
+Connect Spotify once. Not playing? It shows the last track.</pre>
+    <button class="copy" data-text="Your card can show what you&#x27;re listening to.
+
+Connect Spotify once. Not playing? It shows the last track.">Copy</button>
+  </div>
+</article></section><section><h2 class="group">Opening (after the pinned tweet)</h2><p class="hint"></p><article class="tweet">
+  <a class="thumb" href="images/referral.png" download><img src="images/referral.png" alt=""><span>referral.png · Download</span></a>
+  <div class="body">
+    <div class="row"><span class="label">#9</span><span class="count">130 chars</span></div>
+    <pre>Your handle is your invite link.
+
+fl3x.lol/invite/yourname
+No code to remember. The leaderboard shows who brought the most people.</pre>
+    <button class="copy" data-text="Your handle is your invite link.
+
+fl3x.lol/invite/yourname
+No code to remember. The leaderboard shows who brought the most people.">Copy</button>
+  </div>
+</article>
+<article class="tweet">
+  <a class="thumb" href="images/verified.png" download><img src="images/verified.png" alt=""><span>verified.png · Download</span></a>
+  <div class="body">
+    <div class="row"><span class="label">#10</span><span class="count">87 chars</span></div>
+    <pre>The FL3X checkmark is for Premium holders.
+
+It follows your wallet, not a subscription.</pre>
+    <button class="copy" data-text="The FL3X checkmark is for Premium holders.
+
+It follows your wallet, not a subscription.">Copy</button>
+  </div>
+</article>
+<article class="tweet">
+  <a class="thumb" href="images/analytics.png" download><img src="images/analytics.png" alt=""><span>analytics.png · Download</span></a>
+  <div class="body">
+    <div class="row"><span class="label">#11</span><span class="count">112 chars</span></div>
+    <pre>Your profile comes with analytics.
+
+Views, link clicks, countries, devices, and the site each visitor came from.</pre>
+    <button class="copy" data-text="Your profile comes with analytics.
+
+Views, link clicks, countries, devices, and the site each visitor came from.">Copy</button>
+  </div>
+</article>
+<article class="tweet">
+  <div class="thumb none">No image</div>
+  <div class="body">
+    <div class="row"><span class="label">#12</span><span class="count">54 chars</span></div>
+    <pre>Send this to the friend whose bio is still a Linktree.</pre>
+    <button class="copy" data-text="Send this to the friend whose bio is still a Linktree.">Copy</button>
+  </div>
+</article></section><section><h2 class="group">After opening</h2><p class="hint">Never post the same text twice.</p><article class="tweet">
+  <a class="thumb" href="images/widgets.png" download><img src="images/widgets.png" alt=""><span>widgets.png · Download</span></a>
+  <div class="body">
+    <div class="row"><span class="label">#13</span><span class="note">puis de vrais profils de membres, avec leur accord</span><span class="count">65 chars</span></div>
+    <pre>Profile of the day.
+
+Reply with yours, we&#x27;ll quote the best ones.</pre>
+    <button class="copy" data-text="Profile of the day.
+
+Reply with yours, we&#x27;ll quote the best ones.">Copy</button>
+  </div>
+</article>
+<article class="tweet">
+  <div class="thumb none">No image</div>
+  <div class="body">
+    <div class="row"><span class="label">#14</span><span class="count">99 chars</span></div>
+    <pre>Your P&amp;L widget is built from snapshots we take ourselves, every hour.
+
+No screenshots. No editing.</pre>
+    <button class="copy" data-text="Your P&amp;L widget is built from snapshots we take ourselves, every hour.
+
+No screenshots. No editing.">Copy</button>
+  </div>
+</article>
+<article class="tweet">
+  <div class="thumb none">No image</div>
+  <div class="body">
+    <div class="row"><span class="label">#15</span><span class="count">118 chars</span></div>
+    <pre>Twitch or YouTube on your profile?
+
+Put your channel in once. Live now? It shows the live. Offline? Your latest video.</pre>
+    <button class="copy" data-text="Twitch or YouTube on your profile?
+
+Put your channel in once. Live now? It shows the live. Offline? Your latest video.">Copy</button>
+  </div>
+</article>
+<article class="tweet">
+  <div class="thumb none">No image</div>
+  <div class="body">
+    <div class="row"><span class="label">#16</span><span class="count">36 chars</span></div>
+    <pre>Reply with the widget you want next.</pre>
+    <button class="copy" data-text="Reply with the widget you want next.">Copy</button>
+  </div>
+</article>
+<article class="tweet">
+  <div class="thumb none">No image</div>
+  <div class="body">
+    <div class="row"><span class="label">#17</span><span class="count">102 chars</span></div>
+    <pre>Wallet addresses never reach your public profile.
+
+Visitors see the numbers, not where they come from.</pre>
+    <button class="copy" data-text="Wallet addresses never reach your public profile.
+
+Visitors see the numbers, not where they come from.">Copy</button>
+  </div>
+</article></section></div>
+
+<section id="article">
+  <h2 class="group">Article</h2>
+  <p class="hint">Build it block by block, top to bottom. Each block says which style to pick in the X editor: Title, Heading, Body, Media, Divider, Link. Copy its text with the button.</p>
+  <div class="steps"><div class="step">
+  <span class="step-n">1</span>
+  <span class="tag tag-cover">COVER</span>
+  <div class="step-body"><div><a href="images/article-cover.png" download><img class="step-img" src="images/article-cover.png" alt=""></a></div><span class="step-note">article-cover.png, 5:2 (1500×600). Click to download, then upload it as the article cover.</span></div>
+  
+</div>
+<div class="step">
+  <span class="step-n">2</span>
+  <span class="tag tag-title">TITLE</span>
+  <div class="step-body"><div><strong class="big">Your crypto profile, live</strong></div><span class="step-note">Goes in the Title field at the top, not in the body.</span></div>
+  <button class="copy" data-text="Your crypto profile, live">Copy</button>
+</div>
+<div class="step">
+  <span class="step-n">3</span>
+  <span class="tag tag-body">BODY</span>
+  <div class="step-body"><div>Your bio link says who you are. It doesn&#x27;t show what you do. FL3X is a profile made for crypto people: one link, and widgets that update on their own.</div></div>
+  <button class="copy" data-text="Your bio link says who you are. It doesn&#x27;t show what you do. FL3X is a profile made for crypto people: one link, and widgets that update on their own.">Copy</button>
+</div>
+<div class="step">
+  <span class="step-n">4</span>
+  <span class="tag tag-body">BODY</span>
+  <div class="step-body"><div>Here is what goes on it.</div></div>
+  <button class="copy" data-text="Here is what goes on it.">Copy</button>
+</div>
+<div class="step">
+  <span class="step-n">5</span>
+  <span class="tag tag-heading">HEADING</span>
+  <div class="step-body"><div><strong>Widgets that move</strong></div></div>
+  <button class="copy" data-text="Widgets that move">Copy</button>
+</div>
+<div class="step">
+  <span class="step-n">6</span>
+  <span class="tag tag-media">MEDIA</span>
+  <div class="step-body"><div><a href="images/widgets.png" download><img class="step-img" src="images/widgets.png" alt=""></a></div><span class="step-note">Insert → Media → widgets.png. Click the image to download it.</span></div>
+  
+</div>
+<div class="step">
+  <span class="step-n">7</span>
+  <span class="tag tag-body">BODY</span>
+  <div class="step-body"><div>Your P&amp;L for the month, a token you follow, your Telegram or Discord with its member count, your Twitch live or your latest YouTube video, the track you&#x27;re playing on Spotify, your local time, a countdown, a link card. You drag them where you want on your card; the others make room.</div></div>
+  <button class="copy" data-text="Your P&amp;L for the month, a token you follow, your Telegram or Discord with its member count, your Twitch live or your latest YouTube video, the track you&#x27;re playing on Spotify, your local time, a countdown, a link card. You drag them where you want on your card; the others make room.">Copy</button>
+</div>
+<div class="step">
+  <span class="step-n">8</span>
+  <span class="tag tag-divider">DIVIDER</span>
+  <div class="step-body"><div><hr></div><span class="step-note">Insert → Divider.</span></div>
+  
+</div>
+<div class="step">
+  <span class="step-n">9</span>
+  <span class="tag tag-heading">HEADING</span>
+  <div class="step-body"><div><strong>Wallets, without the connect kit</strong></div></div>
+  <button class="copy" data-text="Wallets, without the connect kit">Copy</button>
+</div>
+<div class="step">
+  <span class="step-n">10</span>
+  <span class="tag tag-media">MEDIA</span>
+  <div class="step-body"><div><a href="images/wallets.png" download><img class="step-img" src="images/wallets.png" alt=""></a></div><span class="step-note">Insert → Media → wallets.png. Click the image to download it.</span></div>
+  
+</div>
+<div class="step">
+  <span class="step-n">11</span>
+  <span class="tag tag-body">BODY</span>
+  <div class="step-body"><div>You link a wallet with one free signature. No transaction, nothing to approve. Solana and EVM wallets work, as many as you want, and wallet widgets add them up into one total.</div></div>
+  <button class="copy" data-text="You link a wallet with one free signature. No transaction, nothing to approve. Solana and EVM wallets work, as many as you want, and wallet widgets add them up into one total.">Copy</button>
+</div>
+<div class="step">
+  <span class="step-n">12</span>
+  <span class="tag tag-body">BODY</span>
+  <div class="step-body"><div>Your addresses never reach the public page: visitors see the numbers, not the wallets.</div></div>
+  <button class="copy" data-text="Your addresses never reach the public page: visitors see the numbers, not the wallets.">Copy</button>
+</div>
+<div class="step">
+  <span class="step-n">13</span>
+  <span class="tag tag-divider">DIVIDER</span>
+  <div class="step-body"><div><hr></div><span class="step-note">Insert → Divider.</span></div>
+  
+</div>
+<div class="step">
+  <span class="step-n">14</span>
+  <span class="tag tag-heading">HEADING</span>
+  <div class="step-body"><div><strong>Badges and the checkmark</strong></div></div>
+  <button class="copy" data-text="Badges and the checkmark">Copy</button>
+</div>
+<div class="step">
+  <span class="step-n">15</span>
+  <span class="tag tag-media">MEDIA</span>
+  <div class="step-body"><div><a href="images/badges.png" download><img class="step-img" src="images/badges.png" alt=""></a></div><span class="step-note">Insert → Media → badges.png. Click the image to download it.</span></div>
+  
+</div>
+<div class="step">
+  <span class="step-n">16</span>
+  <span class="tag tag-body">BODY</span>
+  <div class="step-body"><div>Badges sit under your name. Some are earned (Early Adopter, OG, Contributor), some are handed out by the team (Builder, Creator). The checkmark is for Premium holders and follows your wallet.</div></div>
+  <button class="copy" data-text="Badges sit under your name. Some are earned (Early Adopter, OG, Contributor), some are handed out by the team (Builder, Creator). The checkmark is for Premium holders and follows your wallet.">Copy</button>
+</div>
+<div class="step">
+  <span class="step-n">17</span>
+  <span class="tag tag-divider">DIVIDER</span>
+  <div class="step-body"><div><hr></div><span class="step-note">Insert → Divider.</span></div>
+  
+</div>
+<div class="step">
+  <span class="step-n">18</span>
+  <span class="tag tag-heading">HEADING</span>
+  <div class="step-body"><div><strong>Invite-only, for now</strong></div></div>
+  <button class="copy" data-text="Invite-only, for now">Copy</button>
+</div>
+<div class="step">
+  <span class="step-n">19</span>
+  <span class="tag tag-media">MEDIA</span>
+  <div class="step-body"><div><a href="images/referral.png" download><img class="step-img" src="images/referral.png" alt=""></a></div><span class="step-note">Insert → Media → referral.png. Click the image to download it.</span></div>
+  
+</div>
+<div class="step">
+  <span class="step-n">20</span>
+  <span class="tag tag-body">BODY</span>
+  <div class="step-body"><div>FL3X opens with invites. Each member gets a link with their own handle in it, and a leaderboard shows who brought the most people. No invite yet? Sign in with X and you&#x27;re on the waitlist.</div></div>
+  <button class="copy" data-text="FL3X opens with invites. Each member gets a link with their own handle in it, and a leaderboard shows who brought the most people. No invite yet? Sign in with X and you&#x27;re on the waitlist.">Copy</button>
+</div>
+<div class="step">
+  <span class="step-n">21</span>
+  <span class="tag tag-body">BODY</span>
+  <div class="step-body"><div>Claim your name before someone else does.</div></div>
+  <button class="copy" data-text="Claim your name before someone else does.">Copy</button>
+</div>
+<div class="step">
+  <span class="step-n">22</span>
+  <span class="tag tag-link">LINK</span>
+  <div class="step-body"><div>fl3x.lol</div><span class="step-note">Paste the link on its own line, or Insert → Link preview.</span></div>
+  <button class="copy" data-text="https://fl3x.lol">Copy</button>
+</div></div>
+</section>
+</main>
+<script>
+function flash(b, label) { const t = b.textContent; b.textContent = label; b.classList.add('done'); setTimeout(() => { b.textContent = t; b.classList.remove('done') }, 1400) }
+document.querySelectorAll('button.copy[data-text]').forEach((b) => b.addEventListener('click', async () => {
+  try { await navigator.clipboard.writeText(b.dataset.text); flash(b, 'Copied') } catch { flash(b, 'Select the text') }
+}))
+</script>
+</body>
+</html>
