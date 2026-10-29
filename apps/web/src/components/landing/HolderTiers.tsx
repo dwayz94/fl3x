@@ -44,7 +44,7 @@ export function HolderTiers({ config }: { config: PublicConfig }) {
           amount={`${fmt(config.thresholds.starter)} $${symbol}`}
           tagline="More widgets and links"
           perks={starterPerks}
-          cta="Start Building"
+          cta="Go Starter"
           className="bg-surface"
         />
         <TierCard
