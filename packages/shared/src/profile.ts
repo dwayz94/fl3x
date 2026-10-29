@@ -93,7 +93,16 @@ export const BACKGROUNDS = [
   { id: "gold", label: "Gold" },
   { id: "teal", label: "Teal" },
   { id: "image", label: "Image" },
+  // Premium: animated, drawn in CSS by the web app (AnimatedBackdrop).
+  { id: "aurora", label: "Aurora", animated: true },
+  { id: "money", label: "Money rain", animated: true },
+  { id: "grid", label: "Grid", animated: true },
+  { id: "pulse", label: "Pulse", animated: true },
 ] as const;
+
+export const ANIMATED_BACKGROUNDS = ["aurora", "money", "grid", "pulse"] as const;
+export type AnimatedBackground = (typeof ANIMATED_BACKGROUNDS)[number];
+export const isAnimatedBackground = (id: string): id is AnimatedBackground => (ANIMATED_BACKGROUNDS as readonly string[]).includes(id);
 
 export interface ProfileTheme {
   accent: string;
@@ -110,11 +119,11 @@ export const DEFAULT_THEME: ProfileTheme = { accent: "#FF97CB", background: "pla
 /** Premium-only customizations. Others keep the defaults for these keys; the background image is open to everyone. */
 export const PREMIUM_THEME_KEYS = ["font", "cursor", "branding"] as const;
 
-/** analyticsDays: how far back the analytics dashboard goes. */
-export const TIER_LIMITS: Record<Tier, { widgets: number; links: number; analyticsDays: number }> = {
-  none: { widgets: 4, links: 2, analyticsDays: 7 },
-  starter: { widgets: 4, links: 4, analyticsDays: 30 },
-  premium: { widgets: 12, links: 8, analyticsDays: 90 },
+/** analyticsDays: how far back the analytics dashboard goes. invites: referral seats during pre-launch. */
+export const TIER_LIMITS: Record<Tier, { widgets: number; links: number; analyticsDays: number; invites: number }> = {
+  none: { widgets: 4, links: 2, analyticsDays: 7, invites: 3 },
+  starter: { widgets: 4, links: 4, analyticsDays: 30, invites: 5 },
+  premium: { widgets: 12, links: 8, analyticsDays: 90, invites: 10 },
 };
 
 /**
@@ -134,14 +143,17 @@ export const TIER_PERKS: Record<Tier, string[]> = {
     "Everything in Free",
     `${TIER_LIMITS.starter.widgets} widgets and ${TIER_LIMITS.starter.links} links`,
     `Analytics for the last ${TIER_LIMITS.starter.analyticsDays} days`,
+    `${TIER_LIMITS.starter.invites} invites to hand out during pre-launch`,
   ],
   premium: [
     "Everything in Starter",
     "Premium checkmark next to your name",
     `${TIER_LIMITS.premium.widgets} widgets and ${TIER_LIMITS.premium.links} links`,
     "Custom fonts and cursors",
+    "Animated backgrounds",
     "Remove the FL3X mark from your profile",
     `Analytics for the last ${TIER_LIMITS.premium.analyticsDays} days`,
+    `${TIER_LIMITS.premium.invites} invites to hand out during pre-launch`,
     "Premium badge",
   ],
 };

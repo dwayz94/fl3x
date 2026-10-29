@@ -81,6 +81,15 @@ body {
   padding-inline: var(--gutter);
 }
 
+/* Premium animated backgrounds (components/profile/AnimatedBackdrop.tsx): transform/opacity only. */
+@keyframes fl3x-drift-a { from { transform: translate(0, 0) scale(1); } to { transform: translate(18%, 14%) scale(1.15); } }
+@keyframes fl3x-drift-b { from { transform: translate(0, 0) scale(1.1); } to { transform: translate(-16%, -12%) scale(0.95); } }
+@keyframes fl3x-drift-c { from { transform: translate(0, 0); } to { transform: translate(-20%, 18%); } }
+@keyframes fl3x-fall { from { transform: translateY(-12%); } to { transform: translateY(105%); } }
+@keyframes fl3x-grid { from { transform: translateY(0); } to { transform: translateY(80px); } }
+/* Centering comes from the element's own `translate`; only scale and opacity move here. */
+@keyframes fl3x-breathe { 0%, 100% { transform: scale(0.85); opacity: 0.55; } 50% { transform: scale(1.05); opacity: 1; } }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;

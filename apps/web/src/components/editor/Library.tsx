@@ -9,6 +9,7 @@ import {
   type EditableProfile, type ProfileTheme, type Tier, type WidgetSize, type WidgetType,
 } from "@fl3x/shared";
 import { Icon, ImageInput } from "@/components/ui";
+import { AnimatedBackdrop } from "@/components/profile/AnimatedBackdrop";
 import { BadgeIcon } from "@/components/profile/Badges";
 import { backdrops, cursorStyle, cursorSvg, fontClass } from "@/components/profile/theme";
 import { WidgetView } from "@/components/widgets";
@@ -154,7 +155,7 @@ export function Library(props: {
             <div>
               <p className="mb-1.5 text-xs text-fg-2">Glows</p>
               <div className="grid grid-cols-2 gap-2">
-                {BACKGROUNDS.filter((b) => b.id !== "image").map((b) => (
+                {BACKGROUNDS.filter((b) => b.id !== "image" && !("animated" in b)).map((b) => (
                   <button
                     key={b.id}
                     type="button"
@@ -166,6 +167,26 @@ export function Library(props: {
                   </button>
                 ))}
               </div>
+            </div>
+            <div>
+              <p className="mb-1.5 text-xs text-fg-2">Animated</p>
+              <PremiumGate locked={!premium} label="Animated backgrounds">
+                {/* Live previews: the tiles really animate. */}
+                <div className="grid grid-cols-2 gap-2">
+                  {BACKGROUNDS.filter((b) => "animated" in b).map((b) => (
+                    <button
+                      key={b.id}
+                      type="button"
+                      onClick={() => props.onTheme({ background: b.id })}
+                      className={cn("relative isolate h-20 overflow-hidden rounded-2xl border-2 p-2 text-left text-xs", theme.background === b.id ? "border-brand" : "border-transparent")}
+                      style={{ background: "#060509" }}
+                    >
+                      <AnimatedBackdrop theme={{ ...theme, background: b.id }} className="absolute inset-0 -z-10" compact />
+                      {b.label}
+                    </button>
+                  ))}
+                </div>
+              </PremiumGate>
             </div>
           </div>
         )}

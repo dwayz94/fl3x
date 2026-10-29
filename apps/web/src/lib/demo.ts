@@ -100,6 +100,8 @@ export function resolveDemo(path: string, params: Record<string, string | undefi
       return media[params.url?.replace("demo:", "") ?? ""];
     case "channel":
       return params.platform === "twitch" ? media.twitch : { ...media.youtube, avatarUrl: IMG.avatar, publishedAt: "2026-10-26T18:00:00.000Z" };
+    case "followers":
+      return { platform: params.platform, handle: params.handle, count: 48_210, approximate: false };
     case "spotify-now":
       return { ...media.spotify, nowPlaying: true };
   }
@@ -117,7 +119,7 @@ export const DEMO_WIDGETS: { type: WidgetType; label?: string; settings: WidgetS
   { type: "token", settings: { chain: "solana", address: "demo:nova", note: "My main bag this cycle. Not financial advice." } },
   { type: "community", label: "Telegram", settings: { platform: "telegram", invite: "fl3x" } },
   { type: "community", label: "Discord", settings: { platform: "discord", invite: "fl3x" } },
-  { type: "followers", settings: { platform: "x", handle: "nova", count: 48_210 } },
+  { type: "followers", settings: { platform: "x", handle: "nova" } },
   { type: "video", label: "YouTube, latest upload", settings: { platform: "youtube", channel: "nova" } },
   { type: "video", label: "Twitch, live now", settings: { platform: "twitch", channel: "nova" } },
   { type: "music", label: "My Spotify, now playing", settings: { source: "spotify" } },

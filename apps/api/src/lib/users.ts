@@ -1,5 +1,5 @@
-import { and, count, eq, isNull } from "drizzle-orm";
-import { tierForBalance, type Me } from "@fl3x/shared";
+import { and, count, eq, isNull, sql } from "drizzle-orm";
+import { TIER_LIMITS, tierForBalance, type Me } from "@fl3x/shared";
 import { db, schema } from "../db";
 import { env, thresholds } from "../env";
 import { devAuth, fetchIdentity } from "./privy";
@@ -27,6 +27,7 @@ export async function refreshTier(user: UserRow, force = false): Promise<UserRow
   if (fresh && !force) return user;
   if (devAuth && env.DEV_TIER && user.privyId.startsWith("did:dev:")) {
     const [row] = await db.update(schema.users).set({ tier: env.DEV_TIER, tierCheckedAt: new Date() }).where(eq(schema.users.id, user.id)).returning();
+    if (row!.tier !== user.tier) await syncInviteSeats(row!);
     return row!;
   }
   try {
@@ -39,11 +40,20 @@ export async function refreshTier(user: UserRow, force = false): Promise<UserRow
       .set({ tokenBalance: balance, tier: tierForBalance(balance, thresholds), tierCheckedAt: new Date() })
       .where(eq(schema.users.id, user.id))
       .returning();
+    if (row!.tier !== user.tier) await syncInviteSeats(row!);
     return row!;
   } catch {
     // RPC hiccup: keep the last known tier rather than downgrading anyone.
     return user;
   }
+}
+
+/** Invite seats follow the tier; never below the seats already used. */
+async function syncInviteSeats(user: UserRow) {
+  await db
+    .update(schema.inviteCodes)
+    .set({ maxUses: sql`greatest(${schema.inviteCodes.uses}, ${TIER_LIMITS[user.tier].invites})` })
+    .where(eq(schema.inviteCodes.ownerId, user.id));
 }
 
 export async function toMe(user: UserRow): Promise<Me> {

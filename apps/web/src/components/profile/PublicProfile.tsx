@@ -8,7 +8,8 @@ import type { FullPublicProfile } from "@fl3x/shared";
 import { Icon } from "@/components/ui";
 import { useIsOwner } from "@/lib/use-owner";
 import { ProfileView } from "./ProfileView";
-import { backdropStyle, cursorStyle } from "./theme";
+import { AnimatedBackdrop } from "./AnimatedBackdrop";
+import { backdropStyle, cursorStyle, effectiveTheme } from "./theme";
 
 function track(username: string, kind: "view" | "click", target?: string) {
   const body = JSON.stringify({ username, kind, target, referrer: document.referrer });
@@ -18,6 +19,7 @@ function track(username: string, kind: "view" | "click", target?: string) {
 
 export function PublicProfile({ profile }: { profile: FullPublicProfile }) {
   const owner = useIsOwner(profile.username);
+  const theme = effectiveTheme(profile.theme, profile.tier);
   useEffect(() => {
     // One view per tab session, so refreshes don't inflate the count.
     const key = `fl3x:viewed:${profile.username}`;
@@ -27,7 +29,12 @@ export function PublicProfile({ profile }: { profile: FullPublicProfile }) {
   }, [profile.username]);
 
   return (
-    <main className="flex min-h-svh flex-col items-center px-3 py-10 md:px-6 md:py-20" style={{ ...backdropStyle(profile.theme), cursor: cursorStyle(profile.theme) }}>
+    <main
+      className="relative isolate flex min-h-svh flex-col items-center px-3 py-10 md:px-6 md:py-20"
+      style={{ ...backdropStyle(theme), cursor: cursorStyle(theme) }}
+    >
+      {/* Premium animated background, behind everything, fixed to the viewport. */}
+      <AnimatedBackdrop theme={theme} className="fixed inset-0 -z-10" />
       {/* Only the signed-in owner sees this. */}
       {owner && (
         <Link

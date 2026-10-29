@@ -30,8 +30,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     title: `${name} (@${profile.username})`,
     description: profile.bio ?? `${name} on FL3X`,
     alternates: { canonical: `/@${profile.username}` },
-    openGraph: { title: `${name} on FL3X`, url: `/@${profile.username}`, images: profile.avatarUrl ? [profile.avatarUrl] : undefined },
-    twitter: { card: "summary", title: `${name} on FL3X`, images: profile.avatarUrl ? [profile.avatarUrl] : undefined },
+    // Images come from opengraph-image.tsx / twitter-image.tsx (large card with the profile).
+    openGraph: { title: `${name} on FL3X`, url: `/@${profile.username}` },
+    twitter: { card: "summary_large_image", title: `${name} on FL3X` },
   };
 }
 

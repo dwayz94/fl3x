@@ -63,6 +63,7 @@ function Account({ me }: { me: Me }) {
   const router = useRouter();
   const { logout, linkTwitter } = useAuth();
   const [busy, setBusy] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   return (
     <section className="flex items-center gap-3 rounded-3xl bg-[#0d0d0d] px-5 py-4">
       <span className="flex size-9 items-center justify-center rounded-xl bg-white/5">
@@ -70,8 +71,14 @@ function Account({ me }: { me: Me }) {
       </span>
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm">{me.xHandle ? `@${me.xHandle}` : "X not linked"}</p>
-        <p className="text-[11px] text-fg-3">Signed in with X</p>
+        <p className="text-[11px] text-fg-3">
+          Signed in with X ·{" "}
+          <button type="button" onClick={() => setDeleting(true)} className="text-fg-3 underline-offset-2 hover:text-danger hover:underline">
+            Delete account
+          </button>
+        </p>
       </div>
+      {deleting && <DeleteAccount username={me.username ?? ""} onClose={() => setDeleting(false)} />}
       {!me.xHandle && (
         <button type="button" onClick={linkTwitter} className="rounded-xl px-3 py-2 text-sm text-brand hover:bg-white/5">
           Link X
@@ -90,6 +97,61 @@ function Account({ me }: { me: Me }) {
         Log out
       </button>
     </section>
+  );
+}
+
+/** Permanent deletion, confirmed by typing the username. */
+function DeleteAccount({ username, onClose }: { username: string; onClose: () => void }) {
+  const router = useRouter();
+  const { getToken, logout } = useAuth();
+  const [typed, setTyped] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const match = typed.trim().replace(/^@/, "").toLowerCase() === username.toLowerCase();
+
+  const remove = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      await api("/me", { method: "DELETE", token: await getToken(), json: { confirm: typed } });
+      await logout();
+      router.replace("/");
+    } catch (err) {
+      setError(err instanceof ApiRequestError ? err.message : "Could not delete the account");
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-4 backdrop-blur-sm sm:items-center" onClick={onClose}>
+      <div className="w-full max-w-[420px] rounded-[28px] bg-[#121212] p-6" onClick={(e) => e.stopPropagation()}>
+        <h2 className="font-primary text-3xl leading-none">Delete your account</h2>
+        <p className="mt-3 text-sm text-fg-2">
+          This removes fl3x.lol/@{username} for good: your profile, widgets, links, wallets, images, connections and analytics. Your username becomes free
+          for anyone. This can&apos;t be undone.
+        </p>
+        <label className="mt-5 block">
+          <span className="mb-1.5 block text-xs text-fg-2">
+            Type <span className="text-fg">{username}</span> to confirm
+          </span>
+          <input className={inputClass} value={typed} onChange={(e) => setTyped(e.target.value)} autoFocus autoComplete="off" spellCheck={false} />
+        </label>
+        {error && <p className="mt-2 text-sm text-danger">{error}</p>}
+        <div className="mt-5 flex gap-2">
+          <button type="button" onClick={onClose} className="h-11 flex-1 rounded-xl bg-white/[0.08] text-sm hover:bg-white/[0.14]">
+            Cancel
+          </button>
+          <button
+            type="button"
+            disabled={!match || busy}
+            onClick={() => void remove()}
+            className="h-11 flex-1 rounded-xl bg-danger text-sm text-white transition-opacity disabled:opacity-30"
+          >
+            {busy ? "Deleting…" : "Delete forever"}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 

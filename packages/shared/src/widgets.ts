@@ -122,12 +122,12 @@ export const WIDGETS = {
     description: "Show off your follower count",
     category: "social",
     fields: [
-      { key: "platform", label: "Platform", kind: "select", options: [{ id: "x", label: "X" }, { id: "youtube", label: "YouTube" }, { id: "twitch", label: "Twitch" }, { id: "tiktok", label: "TikTok" }, { id: "instagram", label: "Instagram" }], default: "x" },
+      // The count is read live from the platform (no typed numbers: no fake data). Instagram has no free source.
+      { key: "platform", label: "Platform", kind: "select", options: [{ id: "x", label: "X" }, { id: "youtube", label: "YouTube" }, { id: "twitch", label: "Twitch" }, { id: "tiktok", label: "TikTok" }], default: "x" },
       {
         key: "handle", label: "Handle", kind: "handle", from: "platform", pattern: "[A-Za-z0-9._-]{1,30}", required: true,
-        prefixes: { x: "x.com/", youtube: "youtube.com/@", twitch: "twitch.tv/", tiktok: "tiktok.com/@", instagram: "instagram.com/" },
+        prefixes: { x: "x.com/", youtube: "youtube.com/@", twitch: "twitch.tv/", tiktok: "tiktok.com/@" },
       },
-      { key: "count", label: "Followers", kind: "number", min: 0, max: 1_000_000_000 },
       opacity,
     ],
   },
@@ -273,6 +273,11 @@ export const widgetInput = z
     settings: z.record(z.string(), z.unknown()),
   })
   .transform((w, ctx) => {
+    // Community widgets saved before the invite field kept a full link: turn it into the invite.
+    if (w.type === "community" && !w.settings.invite && typeof w.settings.url === "string") {
+      const m = w.settings.url.match(/(?:discord\.gg|discord\.com\/invite|t\.me)\/([A-Za-z0-9_-]{2,32})/);
+      if (m) w.settings = { ...w.settings, invite: m[1], platform: w.settings.url.includes("t.me") ? "telegram" : "discord" };
+    }
     const settings: WidgetSettings = {};
     for (const f of WIDGETS[w.type].fields as readonly FieldDef[]) {
       const raw = w.settings[f.key];

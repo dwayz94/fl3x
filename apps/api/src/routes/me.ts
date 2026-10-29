@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
-import { and, eq, gt, isNull, lt, lte, or, sql } from "drizzle-orm";
-import { claimRequest, normalizeUsername, waitlistRequest, type WaitlistStatus } from "@fl3x/shared";
+import { and, eq, gt, inArray, isNull, lt, lte, or, sql } from "drizzle-orm";
+import { z } from "zod";
+import { claimRequest, normalizeUsername, TIER_LIMITS, waitlistRequest, type WaitlistStatus } from "@fl3x/shared";
 import { db, schema } from "../db";
 import { env } from "../env";
 import { requirePrivyId, requireUser } from "../lib/auth";
@@ -18,6 +19,29 @@ export async function meRoutes(app: FastifyInstance) {
   app.post("/me/refresh-tier", { config: { rateLimit: { max: 6, timeWindow: "1 minute" } } }, async (req) =>
     toMe(await refreshTier(await requireUser(req), true)),
   );
+
+  /**
+   * Delete my account and everything attached to it (profile, widgets, links,
+   * wallets, images, connections, analytics: all cascade), plus the waitlist
+   * entry and the wallets' value history. Confirmed by typing the username.
+   */
+  app.delete("/me", { config: { rateLimit: { max: 5, timeWindow: "1 minute" } } }, async (req) => {
+    const user = await requireUser(req);
+    const { confirm } = z.object({ confirm: z.string() }).parse(req.body ?? {});
+    const expected = user.username ?? user.xHandle ?? "";
+    if (!expected || confirm.trim().replace(/^@/, "").toLowerCase() !== expected.toLowerCase()) {
+      throw badRequest("Type your username to confirm", "confirm_mismatch");
+    }
+    const linked = await db.select({ address: schema.wallets.address }).from(schema.wallets).where(eq(schema.wallets.userId, user.id));
+    const addresses = [...new Set([...user.wallets, ...linked.map((w) => w.address)])];
+    await db.transaction(async (tx) => {
+      if (addresses.length) await tx.delete(schema.walletSnapshots).where(inArray(schema.walletSnapshots.wallet, addresses));
+      if (user.xHandle) await tx.delete(schema.waitlist).where(eq(schema.waitlist.xHandle, user.xHandle.toLowerCase()));
+      await tx.delete(schema.users).where(eq(schema.users.id, user.id));
+    });
+    req.log.info({ userId: user.id }, "account deleted");
+    return { deleted: true };
+  });
 
   app.get("/me/waitlist", async (req) => waitlistStatus((await requireUser(req)).xHandle));
 
@@ -80,7 +104,8 @@ export async function meRoutes(app: FastifyInstance) {
       await tx.insert(schema.inviteCodes).values({
         code: generateCode(),
         ownerId: user.id,
-        maxUses: env.DEFAULT_INVITE_QUOTA,
+        // Seats follow the tier (refreshTier raises them when the tier goes up).
+        maxUses: TIER_LIMITS[row.tier].invites,
       });
       return row;
     });

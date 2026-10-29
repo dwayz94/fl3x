@@ -18,7 +18,6 @@ const schema = z.object({
   TOKEN_MINT: z.string().optional().transform((v) => v || null),
   TIER_STARTER_MIN: z.coerce.number().default(100_000),
   TIER_PREMIUM_MIN: z.coerce.number().default(1_000_000),
-  DEFAULT_INVITE_QUOTA: z.coerce.number().int().default(3),
   ADMIN_API_KEY: z.string().default(""),
   // Dev login only (no Privy configured): wallet given to every dev user
   DEV_WALLET: z.string().default(""),

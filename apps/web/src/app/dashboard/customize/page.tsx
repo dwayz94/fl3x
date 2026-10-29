@@ -12,6 +12,7 @@ import { UnsavedBar } from "@/components/dashboard/UnsavedBar";
 import { Inspector } from "@/components/editor/Inspector";
 import { Library } from "@/components/editor/Library";
 import { ProfileView } from "@/components/profile/ProfileView";
+import { AnimatedBackdrop } from "@/components/profile/AnimatedBackdrop";
 import { backdropStyle, cursorStyle } from "@/components/profile/theme";
 import { FieldError, Icon } from "@/components/ui";
 import { api, ApiRequestError } from "@/lib/api";
@@ -291,7 +292,8 @@ function Editor({ initial, tier, wallets }: { initial: EditorPayload; tier: Tier
           />
         </motion.aside>
 
-        <section className="relative flex min-h-[70svh] min-w-0 flex-1 flex-col bg-[#1a1a1a] lg:min-h-0" style={{ ...backdropStyle(draft.theme), cursor: cursorStyle(draft.theme) }}>
+        <section className="relative isolate flex min-h-[70svh] min-w-0 flex-1 flex-col bg-[#1a1a1a] lg:min-h-0" style={{ ...backdropStyle(draft.theme), cursor: cursorStyle(draft.theme) }}>
+          <AnimatedBackdrop theme={draft.theme} className="absolute inset-0 -z-10" />
           <div className="flex flex-1 flex-col items-center overflow-y-auto px-4 py-8" onClick={() => setSelectedId(null)}>
             {/* my-auto centers when it fits, and scrolls from the top when it doesn't */}
             <motion.div

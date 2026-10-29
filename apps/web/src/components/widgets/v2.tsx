@@ -18,6 +18,7 @@ import { cn } from "@/lib/cn";
 import { fmtCompact, fmtNumber, fmtPct, fmtUsd, splitUsd } from "@/lib/format";
 import type { PortfolioData } from "@fl3x/shared";
 import type { MediaData } from "@/lib/types";
+import { useData } from "@/lib/use-data";
 import { useMusic, useVideo } from "@/lib/use-media";
 import { usePortfolio } from "@/lib/use-portfolio";
 import { WEmpty, WidgetFrame, WMuted, WPill, WSkeleton, WTitle } from "./WidgetFrame";
@@ -485,9 +486,13 @@ export function FollowersWidgetV2({ w }: { w: Widget }) {
   const key = (str(w.settings.platform) || "x") as keyof typeof platforms;
   const p = platforms[key] ?? platforms.x;
   const handle = str(w.settings.handle).replace(/^@/, "");
-  const count = useCountUp(num(w.settings.count, 0));
+  // Live count from the platform (cached by the API for an hour).
+  const { data, isLoading, isError } = useData<{ count: number; approximate: boolean }>("followers", { platform: key, handle: handle || undefined });
+  const count = useCountUp(data?.count ?? 0);
   const opacity = num(w.settings.bgOpacity, 100);
   if (!handle) return <WEmpty size={w.size} label="Add your handle" />;
+  if (isError) return <WEmpty size={w.size} label={`@${handle} not found on ${p.name}`} />;
+  if (isLoading || !data) return <WSkeleton size={w.size} />;
   const glow = { background: `radial-gradient(120% 90% at 0% 0%, ${p.color}33 0%, transparent 60%), rgba(255,255,255,${(0.1 * opacity) / 100})` };
   const badge = (cls: string, size: number) => (
     <span className={cn("flex shrink-0 items-center justify-center rounded-2xl bg-black/40", cls)} style={{ color: p.color, boxShadow: `0 0 24px ${p.color}55` }}>

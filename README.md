@@ -47,7 +47,7 @@ After a schema change in `apps/api/src/db/schema.ts`: `npm run db:generate -w @f
 
 1. `/invite/FL3X-XXXXXX` or `/join?code=…` checks the code live.
 2. Sign in with X or a Solana wallet (Privy). `POST /session` syncs the X handle and wallets from Privy.
-3. Claim a username (`POST /onboarding/claim`). This uses one seat of the invite code atomically, records the referrer and gives the new member their own code (`DEFAULT_INVITE_QUOTA` seats).
+3. Claim a username (`POST /onboarding/claim`). This uses one seat of the invite code atomically, records the referrer and gives the new member their own code (seats from `TIER_LIMITS[tier].invites`: 3 / 5 / 10, raised when the tier goes up).
 4. Tier = sum of `TOKEN_MINT` held across linked wallets vs `TIER_STARTER_MIN` / `TIER_PREMIUM_MIN`. Refreshed every 10 min on `/me` or on demand.
 
 No invite → waitlist (`POST /waitlist`). Set `LAUNCH_PHASE=public` to open sign-ups.

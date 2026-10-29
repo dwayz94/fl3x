@@ -1,8 +1,8 @@
 import type { FastifyInstance } from "fastify";
-import { and, eq, notInArray, sql } from "drizzle-orm";
+import { and, count, eq, notInArray, sql } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 import {
-  DEFAULT_THEME, PREMIUM_THEME_KEYS, TIER_LIMITS, identityInput, linksInput, profileInput, widgetsInput,
+  DEFAULT_THEME, PREMIUM_THEME_KEYS, TIER_LIMITS, isAnimatedBackground, identityInput, linksInput, profileInput, widgetsInput,
   type ProfileTheme,
 } from "@fl3x/shared";
 import { db, schema } from "../db";
@@ -32,6 +32,8 @@ export async function editorRoutes(app: FastifyInstance) {
     const theme = { ...body.theme } as ProfileTheme;
     if (user.tier !== "premium") {
       for (const key of PREMIUM_THEME_KEYS) (theme as unknown as Record<string, unknown>)[key] = DEFAULT_THEME[key];
+      // Animated backgrounds are Premium too.
+      if (isAnimatedBackground(theme.background)) theme.background = "plain";
     }
     await db
       .update(schema.profiles)
@@ -63,7 +65,9 @@ export async function editorRoutes(app: FastifyInstance) {
     const user = await requireMember(req);
     const widgets = widgetsInput.parse(req.body);
     const limit = TIER_LIMITS[user.tier].widgets;
-    if (widgets.length > limit) throw badRequest(`Your tier allows ${limit} widgets`, "limit_reached");
+    // Over the limit (tier dropped, limits lowered) you can still edit and remove, just not add.
+    const [{ current } = { current: 0 }] = await db.select({ current: count() }).from(schema.widgets).where(eq(schema.widgets.userId, user.id));
+    if (widgets.length > Math.max(limit, current)) throw badRequest(`Your tier allows ${limit} widgets`, "limit_reached");
     const verified = new Set((await verifiedWallets(user)).map((v) => v.address.toLowerCase()));
     for (const w of widgets) {
       const picked = typeof w.settings.wallets === "string" && w.settings.wallets !== "all" ? w.settings.wallets.split(",") : [];
@@ -97,7 +101,8 @@ export async function editorRoutes(app: FastifyInstance) {
     const user = await requireMember(req);
     const links = linksInput.parse(req.body);
     const limit = TIER_LIMITS[user.tier].links;
-    if (links.length > limit) throw badRequest(`Your tier allows ${limit} links`, "limit_reached");
+    const [{ current } = { current: 0 }] = await db.select({ current: count() }).from(schema.links).where(eq(schema.links.userId, user.id));
+    if (links.length > Math.max(limit, current)) throw badRequest(`Your tier allows ${limit} links`, "limit_reached");
     await db.transaction(async (tx) => {
       await tx.delete(schema.links).where(eq(schema.links.userId, user.id));
       if (links.length) {

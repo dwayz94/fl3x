@@ -1,7 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
-import { BADGES, defaultSettings, type WidgetSettings, type WidgetType } from "@fl3x/shared";
+import { BADGES, defaultSettings, type WidgetSettings, type WidgetType, TIER_LIMITS } from "@fl3x/shared";
 import { db, schema } from "../db";
 import { env } from "../env";
 import { generateCode } from "../lib/codes";
@@ -36,7 +36,7 @@ const SAMPLE_WIDGETS: { type: WidgetType; size: "large" | "long"; settings: Widg
   { type: "community", size: "long", settings: { platform: "discord", invite: "solana" } },
   { type: "token", size: "large", settings: { chain: "solana", address: "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263", note: "The dog of Solana. Never selling." } },
   { type: "portfolio", size: "long", settings: { period: "7d" } },
-  { type: "followers", size: "long", settings: { platform: "x", handle: "tester", count: 48_210 } },
+  { type: "followers", size: "long", settings: { platform: "x", handle: "solana" } },
   { type: "clock", size: "large", settings: { timezone: "Asia/Dubai", city: "Dubai", country: "AE" } },
   { type: "link", size: "large", settings: { image: `${web}/images/creators/bi0.jpg`, title: "My trading course", body: "Everything I learned in 4 years of memecoins, in 12 videos.", ctaLabel: "Get it", url: "https://fl3x.lol" } },
   { type: "video", size: "long", settings: { platform: "youtube", channel: "MrBeast" } },
@@ -79,7 +79,7 @@ async function seedMember(name: string) {
       { userId: user.id, kind: "telegram", url: "https://t.me/durov", position: 2 },
       { userId: user.id, kind: "website", url: "https://fl3x.lol", label: "fl3x.lol", position: 3 },
     ]);
-    await tx.insert(schema.inviteCodes).values({ code: generateCode(), ownerId: user.id, maxUses: env.DEFAULT_INVITE_QUOTA });
+    await tx.insert(schema.inviteCodes).values({ code: generateCode(), ownerId: user.id, maxUses: TIER_LIMITS.none.invites });
 
     // Two weeks of local analytics so the charts have something to show.
     const countries = ["FR", "US", "AE", "GB", "DE", "CA", "NG", "BR"];

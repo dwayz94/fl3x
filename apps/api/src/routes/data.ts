@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { CHAINS } from "@fl3x/shared";
 import { getCommunity } from "../lib/providers/community";
+import { getFollowers } from "../lib/providers/followers";
 import { getToken } from "../lib/providers/dexscreener";
 import { getChannel, getMedia, getPreview } from "../lib/providers/media";
 import { notFound } from "../lib/errors";
@@ -36,6 +37,16 @@ export async function dataRoutes(app: FastifyInstance) {
     const data = await getMedia(url);
     if (!data) throw notFound("Unsupported media link");
     return data;
+  });
+
+  /** Real follower count of a public account (free sources, cached 1 h). */
+  app.get("/data/followers", opts, async (req) => {
+    const q = z.object({ platform: z.enum(["x", "youtube", "twitch", "tiktok"]), handle: z.string().regex(/^@?[A-Za-z0-9._-]{1,30}$/) }).parse(req.query);
+    try {
+      return await getFollowers(q.platform, q.handle);
+    } catch {
+      throw notFound("Account not found");
+    }
   });
 
   /** 30 s audio preview of a track, fetched when a visitor presses play on a music widget. */
