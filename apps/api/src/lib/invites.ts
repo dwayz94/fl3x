@@ -4,7 +4,7 @@ import { db, schema } from "../db";
 
 /**
  * Referral links carry the member's handle (fl3x.lol/invite/alice); older
- * links carry the code itself (FL3X-ABC123). Returns the invite code either way.
+ * links carry the code itself (ABCD-2345). Returns the invite code either way.
  */
 export async function resolveInviteCode(input: string): Promise<string | null> {
   const raw = input.trim().replace(/^@/, "");

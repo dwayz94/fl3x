@@ -8,7 +8,7 @@ export const usernameSchema = z
     if (!r.valid) ctx.addIssue({ code: "custom", message: r.message });
   });
 
-/** An invite code (FL3X-ABC123) or the inviter's handle, from a referral link. */
+/** An invite code (ABCD-2345) or the inviter's handle, from a referral link. */
 export const inviteCodeSchema = z
   .string()
   .trim()

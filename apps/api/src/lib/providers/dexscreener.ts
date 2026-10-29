@@ -32,7 +32,7 @@ export interface TokenData {
  * null = no source knows the token.
  */
 export function getToken(chain: string, address: string) {
-  return cached<TokenData | null>(`token:${chain}:${address}`, 60, async () => {
+  return cached<TokenData | null>(`token:${chain}:${address}`, 120, async () => {
     const sources = [fromDexScreener, ...(chain === "solana" ? [fromJupiter] : []), fromGeckoTerminal];
     let lastError: unknown = null;
     let answered = false;

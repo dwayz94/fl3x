@@ -15,6 +15,7 @@ export const LINK_KINDS = [
   { id: "gmgn", label: "GMGN", prefix: "gmgn.ai/r/", handle: "[A-Za-z0-9_-]{2,32}", placeholder: "yourcode" },
   { id: "padre", label: "Padre", prefix: "trade.padre.gg/rk/", handle: "[A-Za-z0-9_-]{2,32}", placeholder: "yourcode" },
   { id: "proxima", label: "Proxima", prefix: "proxima.tools/@", handle: "[A-Za-z0-9_.-]{2,32}", placeholder: "yourcode" },
+  { id: "fomo", label: "FOMO", prefix: "fomo.family/r/", handle: "[A-Za-z0-9_-]{2,32}", placeholder: "yourcode" },
   { id: "youtube", label: "YouTube", prefix: "youtube.com/@", handle: "[A-Za-z0-9._-]{3,30}", placeholder: "yourchannel" },
   { id: "twitch", label: "Twitch", prefix: "twitch.tv/", handle: "[A-Za-z0-9_]{3,25}", placeholder: "yourchannel" },
   { id: "tiktok", label: "TikTok", prefix: "tiktok.com/@", handle: "[A-Za-z0-9._]{2,24}", placeholder: "yourhandle" },

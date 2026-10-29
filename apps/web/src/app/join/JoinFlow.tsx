@@ -85,7 +85,7 @@ function InviteField({ code, setCode, invite, optional }: { code: string; setCod
   return (
     <div className="w-full">
       <Input
-        placeholder={optional ? "Invite code (optional)" : "Invite code · FL3X-XXXXXX"}
+        placeholder={optional ? "Invite code (optional)" : "Invite code · XXXX-XXXX"}
         value={code}
         autoCapitalize="characters"
         autoComplete="off"
