@@ -15,7 +15,7 @@ const starterPerks = [
 
 const premiumPerks = [
   "Everything in Starter",
-  "Premium holder badge",
+  "Premium checkmark and badge",
   "Unlimited widgets",
   "Premium widget themes & effects",
   "Custom fonts, colors & animations",

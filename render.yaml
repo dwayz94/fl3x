@@ -41,6 +41,20 @@ services:
         generateValue: true
       - key: ANALYTICS_SALT
         generateValue: true
+      - key: CONNECTIONS_SECRET
+        generateValue: true
+      - key: API_PUBLIC_URL
+        sync: false
+      - key: MORALIS_API_KEY
+        sync: false
+      - key: SPOTIFY_CLIENT_ID
+        sync: false
+      - key: SPOTIFY_CLIENT_SECRET
+        sync: false
+      - key: TWITCH_CLIENT_ID
+        sync: false
+      - key: TWITCH_CLIENT_SECRET
+        sync: false
       - key: INTERNAL_API_KEY
         sync: false
       - key: JUPITER_API_KEY

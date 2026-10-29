@@ -77,9 +77,9 @@ export default function PremiumPage() {
         <div className="flex flex-col gap-4">
           {(
             [
-              ["Free", 0, ["Up to 4 widgets", "6 links", "Your fl3x.lol/@username"]],
-              ["Starter", starter, ["Up to 8 widgets", "12 links", "Holder badge", "Background colors"]],
-              ["Premium", premium, ["Up to 60 widgets", "40 links", "Premium badge", "Custom fonts & cursors", "Image backgrounds"]],
+              ["Free", 0, ["Up to 4 widgets", "6 links", "Your own background image"]],
+              ["Starter", starter, ["Up to 8 widgets", "12 links", "Everything in Free"]],
+              ["Premium", premium, ["Up to 60 widgets", "40 links", "Premium checkmark & badge", "Custom fonts & cursors"]],
             ] as const
           ).map(([name, min, perks]) => (
             <Panel key={name} label={min ? `Hold ${fmtCompact(min)} $${symbol}` : "No token needed"} title={name}>

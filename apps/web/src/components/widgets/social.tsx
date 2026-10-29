@@ -3,11 +3,12 @@
 import {
   DiscordIcon, InstagramIcon, NewTwitterIcon, PlayIcon, SpotifyIcon, TelegramIcon, TiktokIcon, TwitchIcon, YoutubeIcon,
 } from "@hugeicons/core-free-icons";
-import type { Widget } from "@fl3x/shared";
+import { communityUrl, type Widget } from "@fl3x/shared";
 import { Icon } from "@/components/ui";
 import { fmtCompact, fmtNumber } from "@/lib/format";
 import type { CommunityData, MediaData } from "@/lib/types";
 import { useData } from "@/lib/use-data";
+import { useMusic, useVideo } from "@/lib/use-media";
 import { Avatar, WEmpty, WidgetFrame, WMuted, WPill, WSkeleton, WTitle } from "./WidgetFrame";
 
 const num = (v: unknown, d: number) => (typeof v === "number" ? v : d);
@@ -41,10 +42,10 @@ function Stat({ dot, children }: { dot: string; children: React.ReactNode }) {
 }
 
 export function CommunityWidget({ w }: { w: Widget }) {
-  const url = str(w.settings.url);
+  const url = communityUrl(w.settings);
   const opacity = num(w.settings.bgOpacity, 100);
   const { data, isLoading, isError } = useData<CommunityData>("community", { url });
-  if (!url) return <WEmpty size={w.size} label="Add a Discord or Telegram link" />;
+  if (!url) return <WEmpty size={w.size} label="Add a Discord or Telegram invite" />;
   if (isError) return <WEmpty size={w.size} label="Invite link not found" />;
   if (isLoading || !data) return <WSkeleton size={w.size} />;
 
@@ -140,11 +141,10 @@ function Live({ live }: { live: boolean | null }) {
 }
 
 export function VideoWidget({ w }: { w: Widget }) {
-  const url = str(w.settings.url);
   const note = str(w.settings.note);
   const opacity = num(w.settings.bgOpacity, 100);
-  const { data, isLoading, isError } = useData<MediaData>("media", { url });
-  if (!url) return <WEmpty size={w.size} label="Add a YouTube or Twitch link" />;
+  const { data, isLoading, isError, empty } = useVideo(w);
+  if (empty) return <WEmpty size={w.size} label="Add your YouTube or Twitch channel" />;
   if (isError) return <WEmpty size={w.size} label="Video not found" />;
   if (isLoading || !data) return <WSkeleton size={w.size} />;
 
@@ -185,11 +185,10 @@ function Wave() {
 }
 
 export function MusicWidget({ w }: { w: Widget }) {
-  const url = str(w.settings.url);
   const opacity = num(w.settings.bgOpacity, 100);
-  const { data, isLoading, isError } = useData<MediaData>("media", { url });
-  if (!url) return <WEmpty size={w.size} label="Add a Spotify link" />;
-  if (isError) return <WEmpty size={w.size} label="Track not found" />;
+  const { data, isLoading, isError, empty, live } = useMusic(w);
+  if (empty) return <WEmpty size={w.size} label="Add a Spotify link" />;
+  if (isError) return <WEmpty size={w.size} label={live ? "Connect Spotify in Settings" : "Track not found"} />;
   if (isLoading || !data) return <WSkeleton size={w.size} />;
   const spotify = <Icon icon={SpotifyIcon} size={30} className="shrink-0 text-white/35" />;
 

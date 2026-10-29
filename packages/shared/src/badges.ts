@@ -1,43 +1,81 @@
 import type { Tier } from "./tiers";
 
 /**
- * Badge catalogue. `unlock` decides who owns a badge; ownership is
+ * Badge catalogue (Figma node 286:819). Icons live in the web app at
+ * /images/badges/<id>.svg. `unlock` decides who owns a badge; ownership is
  * computed by the API, never trusted from the client.
  */
 export type BadgeUnlock =
   | { kind: "tier"; tier: Exclude<Tier, "none"> }
-  | { kind: "early" }       // joined during invite-only
+  | { kind: "early" }                       // joined during the invite-only pre-launch
+  | { kind: "rank"; max: number }           // among the first N members
   | { kind: "referrals"; count: number }
-  | { kind: "x" }           // linked an X account
-  | { kind: "staff" };
+  | { kind: "whale" }                       // holds 10× the Premium threshold
+  | { kind: "staff" }
+  | { kind: "granted" };                    // handed out by the team (admin API)
 
 export interface BadgeDef {
   id: string;
   name: string;
+  /** Text color from the Figma, also baked into the icon. */
+  color: string;
+  /** How to earn it, shown in the badge tooltip. */
   description: string;
-  emoji: string;
   unlock: BadgeUnlock;
 }
 
 export const BADGES: readonly BadgeDef[] = [
-  { id: "og", name: "OG", description: "Joined FL3X during the invite-only pre-launch.", emoji: "🗝️", unlock: { kind: "early" } },
-  { id: "starter", name: "Holder", description: "Holds enough token for the Starter tier.", emoji: "💎", unlock: { kind: "tier", tier: "starter" } },
-  { id: "premium", name: "Premium", description: "Holds enough token for the Premium tier.", emoji: "👑", unlock: { kind: "tier", tier: "premium" } },
-  { id: "verified-x", name: "Verified X", description: "Linked an X account to the profile.", emoji: "✖️", unlock: { kind: "x" } },
-  { id: "recruiter", name: "Recruiter", description: "Brought 3 people to FL3X.", emoji: "🤝", unlock: { kind: "referrals", count: 3 } },
-  { id: "ambassador", name: "Ambassador", description: "Brought 10 people to FL3X.", emoji: "📣", unlock: { kind: "referrals", count: 10 } },
-  { id: "whale-hunter", name: "Whale Hunter", description: "Brought 50 people to FL3X.", emoji: "🐋", unlock: { kind: "referrals", count: 50 } },
-  { id: "staff", name: "Staff", description: "Part of the FL3X team.", emoji: "⚡", unlock: { kind: "staff" } },
+  { id: "founder", name: "Founder", color: "#FF97CB", description: "Part of the team building FL3X.", unlock: { kind: "staff" } },
+  { id: "premium", name: "Premium", color: "#FF97CB", description: "Holds enough $FL3X for the Premium tier.", unlock: { kind: "tier", tier: "premium" } },
+  { id: "og", name: "OG", color: "#FFFFFF", description: "One of the first 100 members.", unlock: { kind: "rank", max: 100 } },
+  { id: "early-adopter", name: "Early Adopter", color: "#F6FF7C", description: "Joined during the invite-only pre-launch.", unlock: { kind: "early" } },
+  { id: "whale", name: "Whale", color: "#008CFF", description: "Holds 10× the Premium amount of $FL3X.", unlock: { kind: "whale" } },
+  { id: "contributor", name: "Contributor", color: "#F87BFF", description: "Brought 3 people to FL3X with their invite link.", unlock: { kind: "referrals", count: 3 } },
+  { id: "kol", name: "Kol", color: "#FFD268", description: "Key opinion leader, recognized by the team.", unlock: { kind: "granted" } },
+  { id: "creator", name: "Creator", color: "#C274FF", description: "Content creator, recognized by the team.", unlock: { kind: "granted" } },
+  { id: "builder", name: "Builder", color: "#93FFFA", description: "Ships products in the ecosystem.", unlock: { kind: "granted" } },
+  { id: "donor", name: "Donor", color: "#2FE3AC", description: "Supported FL3X with a donation.", unlock: { kind: "granted" } },
+  { id: "gifter", name: "Gifter", color: "#FF8132", description: "Gifted Premium to another member.", unlock: { kind: "granted" } },
+  { id: "gas-spender", name: "Gas Spender", color: "#FF4379", description: "Burns gas like there's no tomorrow.", unlock: { kind: "granted" } },
+  { id: "bug-hunter", name: "Bug Hunter", color: "#C7FF78", description: "Reported a real bug to the team.", unlock: { kind: "granted" } },
 ];
 
-export function ownedBadges(u: { tier: Tier; early: boolean; referrals: number; hasX: boolean; staff: boolean }): string[] {
-  return BADGES.filter(({ unlock: x }) => {
-    switch (x.kind) {
-      case "tier": return u.tier === "premium" || (x.tier === "starter" && u.tier === "starter");
-      case "early": return u.early;
-      case "referrals": return u.referrals >= x.count;
-      case "x": return u.hasX;
-      case "staff": return u.staff;
+export const BADGE_IDS = BADGES.map((b) => b.id);
+
+export interface BadgeFacts {
+  tier: Tier;
+  early: boolean;
+  /** 1-based onboarding order, null before claiming a username. */
+  memberNumber: number | null;
+  referrals: number;
+  tokenBalance: number;
+  premiumMin: number;
+  staff: boolean;
+  granted: readonly string[];
+}
+
+export function ownedBadges(f: BadgeFacts): string[] {
+  return BADGES.filter(({ id, unlock: u }) => {
+    switch (u.kind) {
+      case "tier": return f.tier === u.tier;
+      case "early": return f.early;
+      case "rank": return f.memberNumber != null && f.memberNumber <= u.max;
+      case "referrals": return f.referrals >= u.count;
+      case "whale": return f.premiumMin > 0 && f.tokenBalance >= f.premiumMin * 10;
+      case "staff": return f.staff;
+      case "granted": return f.granted.includes(id);
     }
   }).map((b) => b.id);
+}
+
+/** Counter shown in the tooltip, e.g. "Member #42" or "2/3 invites". */
+export function badgeDetail(b: BadgeDef, stats: { memberNumber: number | null; referrals: number }): string | null {
+  switch (b.unlock.kind) {
+    case "rank":
+      return stats.memberNumber ? `Member #${stats.memberNumber}` : null;
+    case "referrals":
+      return `${stats.referrals} ${stats.referrals === 1 ? "invite" : "invites"}`;
+    default:
+      return null;
+  }
 }

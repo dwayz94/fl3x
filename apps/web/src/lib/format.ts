@@ -19,5 +19,6 @@ export const shortAddress = (a: string) => `${a.slice(0, 4)}…${a.slice(-4)}`;
 
 export function flagUrl(country?: string | number) {
   const c = String(country ?? "").toLowerCase();
-  return /^[a-z]{2}$/.test(c) ? `https://flagcdn.com/w80/${c}.png` : null;
+  // flagcdn.com: free flag API, SVG stays sharp at any size.
+  return /^[a-z]{2}$/.test(c) ? `https://flagcdn.com/${c}.svg` : null;
 }

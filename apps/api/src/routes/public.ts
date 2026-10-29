@@ -5,7 +5,7 @@ import { normalizeUsername, validateUsername, type FullPublicProfile, type Publi
 import { db, schema } from "../db";
 import { env, thresholds } from "../env";
 import { notFound } from "../lib/errors";
-import { loadProfile } from "../lib/profiles";
+import { badgesFor, badgeStats, loadProfile } from "../lib/profiles";
 import { isUsernameTaken } from "../lib/users";
 
 export async function publicRoutes(app: FastifyInstance) {
@@ -50,7 +50,11 @@ export async function publicRoutes(app: FastifyInstance) {
       .select({ views: sql<number>`count(*)::int` })
       .from(schema.profileEvents)
       .where(and(eq(schema.profileEvents.profileUserId, row.user.id), eq(schema.profileEvents.kind, "view")));
-    return { ...(await loadProfile(row.user)), tier: row.user.tier, xHandle: row.user.xHandle, views };
+    const profile = await loadProfile(row.user);
+    const stats = await badgeStats(row.user);
+    // Only show badges still owned (a tier can drop, a granted badge can be taken back).
+    const owned = new Set(await badgesFor(row.user, stats));
+    return { ...profile, badges: profile.badges.filter((b) => owned.has(b)), badgeStats: stats, tier: row.user.tier, xHandle: row.user.xHandle, views };
   });
 
   app.get<{ Params: { id: string } }>("/widgets/:id/reactions", async (req) => {

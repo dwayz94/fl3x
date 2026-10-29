@@ -18,6 +18,7 @@ export interface Me {
   invitesLeft: number;
   referrals: number;
   role: "user" | "admin";
+  linkedWallets: LinkedWallet[];
 }
 
 export interface PublicProfile {
@@ -39,4 +40,38 @@ export interface WaitlistStatus {
   xHandle: string | null;
   position: number | null;
   total: number;
+}
+
+export type WalletChain = "solana" | "evm";
+
+export interface LinkedWallet {
+  id: string;
+  chain: WalletChain;
+  address: string;
+  label: string | null;
+  /** "login": the Solana wallet used to sign in; "signature": linked in Settings. */
+  source: "login" | "signature";
+}
+
+/** Combined value of one or more wallets, any chain. Addresses are never included. */
+export interface PortfolioData {
+  valueUsd: number;
+  period: string;
+  start: { valueUsd: number; at: string } | null;
+  changeUsd: number | null;
+  changePct: number | null;
+  history: { at: string; valueUsd: number }[];
+  holdings: {
+    id: string;
+    chain: string;
+    symbol: string;
+    name: string;
+    iconUrl: string | null;
+    amount: number;
+    valueUsd: number;
+    change24h: number | null;
+  }[];
+  /** Value per network, biggest first (Solana, Ethereum, Base…). */
+  networks: { id: string; name: string; valueUsd: number }[];
+  wallets: number;
 }

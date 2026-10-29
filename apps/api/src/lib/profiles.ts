@@ -1,22 +1,40 @@
-import { asc, count, eq } from "drizzle-orm";
+import { and, asc, count, eq, isNotNull, lte } from "drizzle-orm";
 import {
   DEFAULT_THEME, WIDGETS, ownedBadges,
   type EditableProfile, type LinkKind, type ProfileTheme, type Widget, type WidgetSize, type WidgetType,
 } from "@fl3x/shared";
 import { db, schema } from "../db";
+import { thresholds } from "../env";
 import type { UserRow } from "./users";
 
-export async function badgesFor(user: UserRow) {
+/** Numbers behind badges: referrals and onboarding order. */
+export async function badgeStats(user: UserRow) {
   const [{ value: referrals } = { value: 0 }] = await db
     .select({ value: count() })
     .from(schema.users)
     .where(eq(schema.users.invitedById, user.id));
+  let memberNumber: number | null = null;
+  if (user.onboardedAt) {
+    const [{ value } = { value: 0 }] = await db
+      .select({ value: count() })
+      .from(schema.users)
+      .where(and(isNotNull(schema.users.onboardedAt), lte(schema.users.onboardedAt, user.onboardedAt)));
+    memberNumber = value;
+  }
+  return { referrals, memberNumber };
+}
+
+export async function badgesFor(user: UserRow, stats?: Awaited<ReturnType<typeof badgeStats>>) {
+  const { referrals, memberNumber } = stats ?? (await badgeStats(user));
   return ownedBadges({
     tier: user.tier,
     early: Boolean(user.invitedWithCode),
+    memberNumber,
     referrals,
-    hasX: Boolean(user.xHandle),
+    tokenBalance: user.tokenBalance,
+    premiumMin: thresholds.premium,
     staff: user.role === "admin",
+    granted: user.grantedBadges,
   });
 }
 

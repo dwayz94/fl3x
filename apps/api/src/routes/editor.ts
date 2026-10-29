@@ -2,7 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { and, eq, notInArray, sql } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 import {
-  DEFAULT_THEME, PREMIUM_THEME_KEYS, TIER_LIMITS, linksInput, profileInput, widgetsInput,
+  DEFAULT_THEME, PREMIUM_THEME_KEYS, TIER_LIMITS, identityInput, linksInput, profileInput, widgetsInput,
   type ProfileTheme,
 } from "@fl3x/shared";
 import { db, schema } from "../db";
@@ -10,6 +10,7 @@ import { requireUser } from "../lib/auth";
 import { badRequest, forbidden } from "../lib/errors";
 import { badgesFor, loadProfile } from "../lib/profiles";
 import type { UserRow } from "../lib/users";
+import { verifiedWallets } from "../lib/wallets";
 
 async function requireMember(req: Parameters<typeof requireUser>[0]): Promise<UserRow> {
   const user = await requireUser(req);
@@ -45,14 +46,27 @@ export async function editorRoutes(app: FastifyInstance) {
     return loadProfile(user);
   });
 
+  app.patch("/me/identity", async (req) => {
+    const user = await requireMember(req);
+    const body = identityInput.parse(req.body);
+    const set: Partial<typeof schema.profiles.$inferInsert> = { updatedAt: new Date() };
+    if (body.displayName !== undefined) set.displayName = body.displayName || null;
+    if (body.bio !== undefined) set.bio = body.bio || null;
+    if (body.avatarUrl !== undefined) set.avatarUrl = body.avatarUrl || null;
+    await db.update(schema.profiles).set(set).where(eq(schema.profiles.userId, user.id));
+    return loadProfile(user);
+  });
+
   /** Replaces the whole widget layout (the editor saves it as one unit). */
   app.put("/me/widgets", async (req) => {
     const user = await requireMember(req);
     const widgets = widgetsInput.parse(req.body);
     const limit = TIER_LIMITS[user.tier].widgets;
     if (widgets.length > limit) throw badRequest(`Your tier allows ${limit} widgets`, "limit_reached");
+    const verified = new Set((await verifiedWallets(user)).map((v) => v.address.toLowerCase()));
     for (const w of widgets) {
-      if (typeof w.settings.wallet === "string" && w.settings.wallet && !user.wallets.includes(w.settings.wallet)) {
+      const picked = typeof w.settings.wallets === "string" && w.settings.wallets !== "all" ? w.settings.wallets.split(",") : [];
+      if (picked.some((a) => !verified.has(a.trim().toLowerCase()))) {
         throw badRequest("Only your verified wallets can be displayed", "wallet_not_verified");
       }
     }

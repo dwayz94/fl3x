@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { CheckmarkCircle02Icon, LockIcon } from "@hugeicons/core-free-icons";
 import { BADGES, type EditableProfile } from "@fl3x/shared";
+import { BadgeIcon } from "@/components/profile/Badges";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { PageHeader, Spinner } from "@/components/dashboard/Panel";
 import { Icon } from "@/components/ui";
@@ -52,9 +53,11 @@ export default function BadgesPage() {
                 owned ? "border-white/10 hover:border-white/25" : "cursor-not-allowed border-white/5 opacity-50",
               )}
             >
-              <span className="text-2xl drop-shadow-[0_0_12px_rgba(255,181,71,0.5)]">{b.emoji}</span>
+              <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-white/5" style={{ boxShadow: owned ? `0 0 24px ${b.color}33` : undefined }}>
+                <BadgeIcon id={b.id} size={24} />
+              </span>
               <span className="min-w-0 flex-1">
-                <span className="block font-primary text-xl leading-none">{b.name}</span>
+                <span className="block font-primary text-xl leading-none" style={{ color: owned ? b.color : undefined }}>{b.name}</span>
                 <span className="mt-1 block text-[11px] leading-tight text-fg-3">{b.description}</span>
               </span>
               {owned ? (

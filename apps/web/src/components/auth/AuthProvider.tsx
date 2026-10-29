@@ -17,7 +17,6 @@ interface AuthState {
   login: (opts?: { xOnly?: boolean }) => void;
   logout: () => Promise<void>;
   linkTwitter: () => void;
-  linkWallet: () => void;
   getToken: () => Promise<string | null>;
 }
 
@@ -32,7 +31,6 @@ const AuthContext = createContext<AuthState>({
   login: noop,
   logout: async () => {},
   linkTwitter: noop,
-  linkWallet: noop,
   getToken: async () => null,
 });
 
@@ -68,8 +66,7 @@ function DevAuth({ children }: { children: ReactNode }) {
         queryClient.clear();
       },
       linkTwitter: noop,
-      linkWallet: noop,
-      getToken: async () => (user ? `dev:${user}` : null),
+          getToken: async () => (user ? `dev:${user}` : null),
     }),
     [ready, user, queryClient],
   );
@@ -140,7 +137,6 @@ function PrivyBridge({ children }: { children: ReactNode }) {
         queryClient.removeQueries({ queryKey: ["me"] });
       },
       linkTwitter: () => privy.linkTwitter(),
-      linkWallet: () => privy.linkWallet({ walletChainType: "solana-only" }),
       getToken: () => privy.getAccessToken(),
     }),
     [privy, queryClient],

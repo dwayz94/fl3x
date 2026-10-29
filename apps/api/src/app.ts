@@ -7,11 +7,14 @@ import { HttpError } from "./lib/errors";
 import helmet from "@fastify/helmet";
 import { adminRoutes } from "./routes/admin";
 import { analyticsRoutes } from "./routes/analytics";
+import { connectionRoutes } from "./routes/connections";
 import { dataRoutes } from "./routes/data";
 import { devRoutes } from "./routes/dev";
 import { editorRoutes } from "./routes/editor";
+import { mediaRoutes } from "./routes/media";
 import { meRoutes } from "./routes/me";
 import { publicRoutes } from "./routes/public";
+import { walletRoutes } from "./routes/wallets";
 
 export async function buildApp() {
   const app = Fastify({
@@ -21,6 +24,8 @@ export async function buildApp() {
 
   await app.register(cors, {
     origin: env.WEB_ORIGIN.split(",").map((o) => o.trim()),
+    // @fastify/cors only allows GET/HEAD/POST by default; the editor saves with PUT/PATCH/DELETE.
+    methods: ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE"],
     credentials: true,
   });
   await app.register(helmet, { global: true });
@@ -46,6 +51,9 @@ export async function buildApp() {
   await app.register(editorRoutes);
   await app.register(analyticsRoutes);
   await app.register(dataRoutes);
+  await app.register(mediaRoutes);
+  await app.register(walletRoutes);
+  await app.register(connectionRoutes);
   await app.register(adminRoutes);
   await app.register(devRoutes);
   return app;

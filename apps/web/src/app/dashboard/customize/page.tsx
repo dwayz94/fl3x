@@ -1,29 +1,35 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { ArrowLeft01Icon } from "@hugeicons/core-free-icons";
 import { useQueryClient } from "@tanstack/react-query";
-import { defaultSettings, type EditableProfile, type ProfileTheme, type Tier, type Widget, type WidgetSize, type WidgetType } from "@fl3x/shared";
+import { defaultSettings, type EditableProfile, type LinkedWallet, type ProfileTheme, type Tier, type Widget, type WidgetSize, type WidgetType } from "@fl3x/shared";
 import { useAuth, useMe } from "@/components/auth/AuthProvider";
 import { Spinner } from "@/components/dashboard/Panel";
 import { Inspector } from "@/components/editor/Inspector";
 import { Library } from "@/components/editor/Library";
 import { ProfileView } from "@/components/profile/ProfileView";
-import { backdropStyle } from "@/components/profile/theme";
-import { Button, buttonClass, FieldError } from "@/components/ui";
+import { backdropStyle, cursorStyle } from "@/components/profile/theme";
+import { Button, buttonClass, FieldError, Icon } from "@/components/ui";
 import { api, ApiRequestError } from "@/lib/api";
 import { cn } from "@/lib/cn";
+import { pickImage, useUpload } from "@/lib/upload";
 import { useEditorProfile, type EditorPayload } from "@/lib/use-profile";
 
 export default function CustomizePage() {
   const { data: me } = useMe();
   const { data, isLoading } = useEditorProfile();
   if (isLoading || !data || !me) return <Spinner />;
-  return <Editor initial={data} tier={me.tier} wallets={me.wallets} />;
+  return <Editor initial={data} tier={me.tier} wallets={me.linkedWallets} />;
 }
 
-function Editor({ initial, tier, wallets }: { initial: EditorPayload; tier: Tier; wallets: string[] }) {
+function Editor({ initial, tier, wallets }: { initial: EditorPayload; tier: Tier; wallets: LinkedWallet[] }) {
   const { getToken } = useAuth();
+  const router = useRouter();
+  const avatar = useUpload("avatar");
   const qc = useQueryClient();
   const [saved, setSaved] = useState(initial.profile);
   const [draft, setDraft] = useState<EditableProfile>(initial.profile);
@@ -45,7 +51,6 @@ function Editor({ initial, tier, wallets }: { initial: EditorPayload; tier: Tier
 
   const addWidget = (type: WidgetType, size: WidgetSize) => {
     const w: Widget = { id: crypto.randomUUID(), type, size, settings: defaultSettings(type) };
-    if ((type === "pnl" || type === "portfolio") && wallets[0]) w.settings.wallet = wallets[0];
     if (type === "clock") w.settings.timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
     setWidgets((ws) => [...ws, w]);
     setSelectedId(w.id);
@@ -93,24 +98,38 @@ function Editor({ initial, tier, wallets }: { initial: EditorPayload; tier: Tier
     }
   };
 
-  return (
-    <div className="flex min-h-svh flex-col lg:h-svh lg:flex-row">
-      <aside className="border-white/10 bg-[#0b0b0b] p-4 lg:w-[280px] lg:shrink-0 lg:border-r">
-        <Library
-          draft={draft}
-          tier={tier}
-          ownedBadges={initial.ownedBadges}
-          widgetLimit={initial.limits.widgets}
-          onAddWidget={addWidget}
-          onTheme={(patch: Partial<ProfileTheme>) => setDraft((d) => ({ ...d, theme: { ...d.theme, ...patch } }))}
-          onBadges={(badges) => setDraft((d) => ({ ...d, badges }))}
-        />
-      </aside>
+  const changeAvatar = async () => {
+    const file = await pickImage();
+    if (!file) return;
+    const url = await avatar.upload(file);
+    if (!url) return setError(avatar.error);
+    // The picture saves right away, like in Settings.
+    const profile = await api<EditableProfile>("/me/identity", { method: "PATCH", token: await getToken(), json: { avatarUrl: url } });
+    setSaved((s) => ({ ...s, avatarUrl: profile.avatarUrl }));
+    setDraft((d) => ({ ...d, avatarUrl: profile.avatarUrl }));
+    qc.setQueryData<EditorPayload>(["profile"], (old) => (old ? { ...old, profile: { ...old.profile, avatarUrl: profile.avatarUrl } } : old));
+  };
 
-      <section className="relative flex min-w-0 flex-1 flex-col bg-[#1a1a1a]" style={backdropStyle(draft.theme)}>
-        <div className="z-20 flex shrink-0 items-center justify-end gap-3 p-4">
+  const back = () => {
+    if (dirty && !window.confirm("Leave without saving your changes?")) return;
+    router.push("/dashboard/analytics");
+  };
+
+  return (
+    // Full-screen customize mode: no dashboard sidebar, a back button instead.
+    <div className="fixed inset-0 z-30 flex flex-col overflow-y-auto bg-[#0b0b0b] lg:overflow-hidden">
+      <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-3 border-b border-white/10 bg-[#0b0b0b]/95 px-3 backdrop-blur md:px-4">
+        <button type="button" onClick={back} className="flex items-center gap-1.5 rounded-xl px-2 py-1.5 text-sm text-fg-2 transition-colors hover:bg-white/5 hover:text-fg">
+          <Icon icon={ArrowLeft01Icon} size={18} />
+          <span className="hidden sm:inline">Dashboard</span>
+        </button>
+        <span className="h-5 w-px bg-white/10" />
+        <Image src="/images/fl3x-icon.svg" alt="" width={18} height={19} />
+        <h1 className="font-primary text-xl leading-none">Customize</h1>
+        <div className="ml-auto flex items-center gap-2">
           {error && <FieldError>{error}</FieldError>}
-          {dirty && !error && <span className="text-xs text-fg-2">Unsaved changes</span>}
+          {(avatar.busy || saving) && <span className="text-xs text-fg-3">Saving…</span>}
+          {dirty && !error && !saving && <span className="hidden text-xs text-fg-2 sm:inline">Unsaved changes</span>}
           <Link href={`/@${draft.username}`} target="_blank" className={buttonClass({ variant: "secondary", size: "md" })}>
             View
           </Link>
@@ -118,28 +137,44 @@ function Editor({ initial, tier, wallets }: { initial: EditorPayload; tier: Tier
             Save
           </Button>
         </div>
-        <div className="flex flex-1 flex-col items-center overflow-y-auto px-4 pt-2 pb-16" onClick={() => setSelectedId(null)}>
-          {/* my-auto centers when it fits, and scrolls from the top when it doesn't */}
-          <FitWidth onClick={(e) => e.stopPropagation()} className="my-auto">
-            <ProfileView profile={draft} tier={tier} views={0} editor={{ selectedId, onSelect: setSelectedId, onMove: move }} />
-          </FitWidth>
-        </div>
-      </section>
+      </header>
 
-      <aside className="border-white/10 bg-[#0b0b0b] p-5 lg:w-[300px] lg:shrink-0 lg:overflow-y-auto lg:border-l">
-        <Inspector
-          draft={draft}
-          selected={selected}
-          wallets={wallets}
-          onWidget={(patch) => setWidgets((ws) => ws.map((w) => (w.id === selectedId ? { ...w, ...patch } : w)))}
-          onRemove={() => {
-            setWidgets((ws) => ws.filter((w) => w.id !== selectedId));
-            setSelectedId(null);
-          }}
-          onShift={shift}
-          onProfile={(patch) => setDraft((d) => ({ ...d, ...patch }))}
-        />
-      </aside>
+      <div className="flex flex-col lg:min-h-0 lg:flex-1 lg:flex-row">
+        <aside className="border-white/10 bg-[#0b0b0b] p-4 lg:w-[300px] lg:shrink-0 lg:overflow-y-auto lg:border-r">
+          <Library
+            draft={draft}
+            tier={tier}
+            ownedBadges={initial.ownedBadges}
+            widgetLimit={initial.limits.widgets}
+            onAddWidget={addWidget}
+            onTheme={(patch: Partial<ProfileTheme>) => setDraft((d) => ({ ...d, theme: { ...d.theme, ...patch } }))}
+            onBadges={(badges) => setDraft((d) => ({ ...d, badges }))}
+          />
+        </aside>
+
+        <section className="relative flex min-h-[70svh] min-w-0 flex-1 flex-col bg-[#1a1a1a] lg:min-h-0" style={{ ...backdropStyle(draft.theme), cursor: cursorStyle(draft.theme) }}>
+          <div className="flex flex-1 flex-col items-center overflow-y-auto px-4 py-8" onClick={() => setSelectedId(null)}>
+            {/* my-auto centers when it fits, and scrolls from the top when it doesn't */}
+            <FitWidth onClick={(e) => e.stopPropagation()} className="my-auto">
+              <ProfileView profile={draft} tier={tier} views={0} editor={{ selectedId, onSelect: setSelectedId, onMove: move, onAvatar: () => void changeAvatar() }} />
+            </FitWidth>
+          </div>
+        </section>
+
+        <aside className="border-white/10 bg-[#0b0b0b] p-5 lg:w-[300px] lg:shrink-0 lg:overflow-y-auto lg:border-l">
+          <Inspector
+            draft={draft}
+            selected={selected}
+            wallets={wallets}
+            onWidget={(patch) => setWidgets((ws) => ws.map((w) => (w.id === selectedId ? { ...w, ...patch } : w)))}
+            onRemove={() => {
+              setWidgets((ws) => ws.filter((w) => w.id !== selectedId));
+              setSelectedId(null);
+            }}
+            onShift={shift}
+          />
+        </aside>
+      </div>
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { db, schema } from "../db";
 import { env, thresholds } from "../env";
 import { devAuth, fetchIdentity } from "./privy";
 import { totalTokenBalance } from "./solana";
+import { verifiedWallets } from "./wallets";
 
 export type UserRow = typeof schema.users.$inferSelect;
 
@@ -28,7 +29,8 @@ export async function refreshTier(user: UserRow, force = false): Promise<UserRow
     return row!;
   }
   try {
-    const balance = await totalTokenBalance(user.wallets);
+    const linked = await db.select({ address: schema.wallets.address }).from(schema.wallets).where(and(eq(schema.wallets.userId, user.id), eq(schema.wallets.chain, "solana")));
+    const balance = await totalTokenBalance([...new Set([...user.wallets, ...linked.map((l) => l.address)])]);
     const [row] = await db
       .update(schema.users)
       .set({ tokenBalance: balance, tier: tierForBalance(balance, thresholds), tierCheckedAt: new Date() })
@@ -62,6 +64,7 @@ export async function toMe(user: UserRow): Promise<Me> {
     invitesLeft: code ? Math.max(0, code.maxUses - code.uses) : 0,
     referrals,
     role: user.role,
+    linkedWallets: await verifiedWallets(user),
   };
 }
 

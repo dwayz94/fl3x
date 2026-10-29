@@ -3,7 +3,7 @@
 import type { Widget } from "@fl3x/shared";
 import { HoldingsWidget, PnlWidget, PortfolioWidget, TokenWidget } from "./crypto";
 import { CommunityWidget, FollowersWidget, MusicWidget, VideoWidget } from "./social";
-import { ClockWidgetV2, FollowersWidgetV2, MusicWidgetV2, PortfolioWidgetV2 } from "./v2";
+import { ClockWidgetV2, CountdownWidgetV2, FollowersWidgetV2, MusicWidgetV2, PortfolioWidgetV2, VideoWidgetV2 } from "./v2";
 import { ClockWidget, CountdownWidget, ImageWidget, LinkWidget, ReactionsWidget, TextWidget } from "./utility";
 
 export { sizeClass } from "./WidgetFrame";
@@ -16,6 +16,8 @@ export function WidgetView({ w, interactive = true }: { w: Widget; interactive?:
       case "music": return <MusicWidgetV2 w={w} />;
       case "clock": return <ClockWidgetV2 w={w} />;
       case "followers": return <FollowersWidgetV2 w={w} />;
+      case "video": return <VideoWidgetV2 w={w} />;
+      case "countdown": return <CountdownWidgetV2 w={w} />;
     }
   }
   switch (w.type) {

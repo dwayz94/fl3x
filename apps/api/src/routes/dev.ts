@@ -32,18 +32,17 @@ const web = env.WEB_ORIGIN.split(",")[0]!.trim();
 
 const SAMPLE_WIDGETS: { type: WidgetType; size: "large" | "long"; settings: WidgetSettings }[] = [
   { type: "pnl", size: "large", settings: { period: "1m" } },
-  { type: "community", size: "long", settings: { url: "https://t.me/durov" } },
-  { type: "community", size: "long", settings: { url: "https://discord.gg/solana" } },
+  { type: "community", size: "long", settings: { platform: "telegram", invite: "durov" } },
+  { type: "community", size: "long", settings: { platform: "discord", invite: "solana" } },
   { type: "token", size: "large", settings: { chain: "solana", address: "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263", note: "The dog of Solana. Never selling." } },
   { type: "portfolio", size: "long", settings: { period: "7d" } },
   { type: "followers", size: "long", settings: { platform: "x", handle: "tester", count: 48_210 } },
   { type: "clock", size: "large", settings: { timezone: "Asia/Dubai", city: "Dubai", country: "AE" } },
   { type: "link", size: "large", settings: { image: `${web}/images/creators/bi0.jpg`, title: "My trading course", body: "Everything I learned in 4 years of memecoins, in 12 videos.", ctaLabel: "Get it", url: "https://fl3x.lol" } },
-  { type: "video", size: "long", settings: { url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ", note: "Must watch." } },
-  { type: "music", size: "long", settings: { url: "https://open.spotify.com/track/4cOdK2wGLETKBW3PvgPWqT" } },
+  { type: "video", size: "long", settings: { platform: "youtube", channel: "MrBeast" } },
+  { type: "music", size: "long", settings: { source: "link", url: "https://open.spotify.com/track/4cOdK2wGLETKBW3PvgPWqT" } },
   { type: "holdings", size: "large", settings: {} },
   { type: "countdown", size: "large", settings: { title: "FL3X launch", target: "2026-12-01T18:00:00.000Z", country: "AE", ctaLabel: "Coming soon", ctaUrl: "https://fl3x.lol" } },
-  { type: "reactions", size: "large", settings: { emojis: "🤑😈💀🤡🤖" } },
 ];
 
 /** Idempotent: the member keeps whatever was edited in the dashboard since the first seed. */
@@ -71,7 +70,7 @@ async function seedMember(name: string) {
           type: w.type,
           size: w.size,
           position,
-          settings: { ...defaultSettings(w.type), ...w.settings, ...(["pnl", "portfolio", "holdings"].includes(w.type) ? { wallet } : {}) },
+          settings: { ...defaultSettings(w.type), ...w.settings },
         })),
     );
     await tx.insert(schema.links).values([

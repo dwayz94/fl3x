@@ -55,7 +55,7 @@ export function WidgetsGallery() {
               <h2 className="mb-5 font-primary text-3xl text-fg-2">{c.label}</h2>
               <div className="grid gap-4 lg:grid-cols-2">
                 {DEMO_WIDGETS.map((d, i) => ({ d, i }))
-                  .filter(({ d }) => WIDGETS[d.type].category === c.id)
+                  .filter(({ d }) => WIDGETS[d.type].category === c.id && !("hidden" in WIDGETS[d.type]))
                   .map(({ d, i }) => (
                     <article key={i} className="rounded-[32px] border border-white/[0.06] bg-[#1c1c1c] p-5">
                       <div className="mb-4 flex items-baseline justify-between gap-3">

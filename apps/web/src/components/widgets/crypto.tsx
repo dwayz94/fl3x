@@ -4,8 +4,10 @@ import type { Widget } from "@fl3x/shared";
 import { PERIODS } from "@fl3x/shared";
 import { Sparkline } from "@/components/ui";
 import { fmtPct, fmtUsd, fmtUsdCompact, splitUsd } from "@/lib/format";
-import type { TokenData, WalletData } from "@/lib/types";
+import type { PortfolioData } from "@fl3x/shared";
+import type { TokenData } from "@/lib/types";
 import { useData } from "@/lib/use-data";
+import { usePortfolio } from "@/lib/use-portfolio";
 import { Avatar, WEmpty, WidgetFrame, WMuted, WPill, WSkeleton, WTitle } from "./WidgetFrame";
 
 const num = (v: unknown, d: number) => (typeof v === "number" ? v : d);
@@ -24,13 +26,12 @@ function periodLabel(id: string) {
 }
 
 export function PnlWidget({ w }: { w: Widget }) {
-  const wallet = str(w.settings.wallet);
   const period = str(w.settings.period) || "1m";
   const accent = str(w.settings.accent) || "#2FE3AC";
   const opacity = num(w.settings.bgOpacity, 100);
-  const { data, isLoading } = useData<WalletData>("wallet", { address: wallet, period });
-  if (!wallet) return <WEmpty size={w.size} label="Pick a verified wallet" />;
-  if (isLoading || !data) return <WSkeleton size={w.size} />;
+  const { data, isLoading } = usePortfolio(w, period);
+  if (isLoading) return <WSkeleton size={w.size} />;
+  if (!data || data.wallets === 0) return <WEmpty size={w.size} label="Link a wallet in Settings" />;
 
   const change = data.changeUsd ?? 0;
   const positive = change >= 0;
@@ -76,12 +77,11 @@ export function PnlWidget({ w }: { w: Widget }) {
 }
 
 export function PortfolioWidget({ w }: { w: Widget }) {
-  const wallet = str(w.settings.wallet);
   const period = str(w.settings.period) || "7d";
   const opacity = num(w.settings.bgOpacity, 100);
-  const { data, isLoading } = useData<WalletData>("wallet", { address: wallet, period });
-  if (!wallet) return <WEmpty size={w.size} label="Pick a verified wallet" />;
-  if (isLoading || !data) return <WSkeleton size={w.size} />;
+  const { data, isLoading } = usePortfolio(w, period);
+  if (isLoading) return <WSkeleton size={w.size} />;
+  if (!data || data.wallets === 0) return <WEmpty size={w.size} label="Link a wallet in Settings" />;
 
   const [whole, cents] = splitUsd(data.valueUsd);
   const change = data.changeUsd ?? 0;
@@ -166,11 +166,10 @@ export function TokenWidget({ w }: { w: Widget }) {
 const amount = new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 2 });
 
 export function HoldingsWidget({ w }: { w: Widget }) {
-  const wallet = str(w.settings.wallet);
   const opacity = num(w.settings.bgOpacity, 100);
-  const { data, isLoading } = useData<WalletData>("wallet", { address: wallet, period: "1d" });
-  if (!wallet) return <WEmpty size={w.size} label="Pick a verified wallet" />;
-  if (isLoading || !data) return <WSkeleton size={w.size} />;
+  const { data, isLoading } = usePortfolio(w, "1d");
+  if (isLoading) return <WSkeleton size={w.size} />;
+  if (!data || data.wallets === 0) return <WEmpty size={w.size} label="Link a wallet in Settings" />;
 
   const [whole, cents] = splitUsd(data.valueUsd);
   const change = data.changeUsd ?? 0;
@@ -193,7 +192,7 @@ export function HoldingsWidget({ w }: { w: Widget }) {
   const list = (
     <ul className="flex min-w-0 flex-1 flex-col gap-1.5">
       {holdings.map((h) => (
-        <li key={h.mint} className="flex items-center gap-2">
+        <li key={h.id} className="flex items-center gap-2">
           <Avatar src={h.iconUrl} className="size-7 rounded-full" />
           <div className="min-w-0 flex-1">
             <p className="truncate font-primary text-sm leading-none uppercase">{h.symbol}</p>

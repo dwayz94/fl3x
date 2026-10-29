@@ -1,6 +1,5 @@
 import Image from "next/image";
-import { CheckmarkBadge01Icon } from "@hugeicons/core-free-icons";
-import { Icon } from "@/components/ui";
+import { Icon, Verified } from "@/components/ui";
 
 const creators = [
   { name: "SOLAMIES", image: "/images/creators/solamies.jpg", description: "Building the future of Solana one degen at a time" },
@@ -29,7 +28,7 @@ export function FamousCreators() {
               </div>
               <div className="flex items-center gap-1 px-3 pt-2">
                 <span className="font-primary text-[36px] leading-tight">{c.name}</span>
-                <Icon icon={CheckmarkBadge01Icon} size={24} className="text-verified drop-shadow-[0_0_20px_rgba(0,246,255,0.6)]" />
+                <Verified size={24} />
               </div>
               <p className="px-3 text-[11px] leading-tight font-normal text-fg-2">{c.description}</p>
             </div>

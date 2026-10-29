@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { imageUrl } from "./profile";
 
 /**
  * Widget catalogue. Field definitions drive both the dashboard inspector
@@ -30,9 +31,17 @@ type Opt = { id: string; label: string };
 
 export type FieldDef =
   | { key: string; label: string; kind: "text" | "url" | "textarea"; placeholder?: string; max?: number; required?: boolean }
+  /**
+   * A handle typed after a fixed domain, picked by the `from` field
+   * (e.g. platform "discord" → discord.gg/). Keeps links on the right site.
+   */
+  | { key: string; label: string; kind: "handle"; from: string; prefixes: Record<string, string>; pattern: string; required?: boolean }
+  /** Uploaded image (or a link to one). */
+  | { key: string; label: string; kind: "image"; required?: boolean }
   | { key: string; label: string; kind: "number"; min?: number; max?: number }
   | { key: string; label: string; kind: "select" | "segmented"; options: readonly Opt[]; default: string }
-  | { key: string; label: string; kind: "wallet" }
+  /** "all" (every verified wallet, the default) or a comma-separated list of addresses. */
+  | { key: string; label: string; kind: "wallets"; default: string }
   | { key: string; label: string; kind: "datetime"; required?: boolean }
   | { key: string; label: string; kind: "timezone" }
   | { key: string; label: string; kind: "color"; default: string }
@@ -43,12 +52,21 @@ export interface WidgetDef {
   description: string;
   category: "crypto" | "social" | "media" | "utility";
   fields: readonly FieldDef[];
+  /** Kept working for existing profiles but no longer offered in the library. */
+  hidden?: boolean;
 }
 
+const wallets: FieldDef = { key: "wallets", label: "Wallets", kind: "wallets", default: "all" };
 const accent: FieldDef = { key: "accent", label: "Color", kind: "color", default: "#2FE3AC" };
 /** Design version. V2 is the default (kept on 2026-10-29); V1 stays available for whoever prefers it. */
 const style: FieldDef = { key: "style", label: "Style", kind: "segmented", options: [{ id: "v2", label: "V2" }, { id: "v1", label: "V1" }], default: "v2" };
-export const V2_WIDGETS = ["portfolio", "music", "clock", "followers"] as const;
+export const V2_WIDGETS = ["portfolio", "music", "clock", "followers", "video", "countdown"] as const;
+/** Media widgets: blurred cover colors behind (default), plain glass, or a color. */
+const background: FieldDef = {
+  key: "background", label: "Background", kind: "segmented", default: "cover",
+  options: [{ id: "cover", label: "Cover colors" }, { id: "glass", label: "Glass" }, { id: "color", label: "Color" }],
+};
+const tint: FieldDef = { key: "tint", label: "Color", kind: "color", default: "#7B5CFF" };
 const opacity: FieldDef = { key: "bgOpacity", label: "Background opacity", kind: "range", min: 20, max: 100, default: 100 };
 
 export const WIDGETS = {
@@ -57,7 +75,7 @@ export const WIDGETS = {
     description: "Profit and loss of a verified wallet over a period",
     category: "crypto",
     fields: [
-      { key: "wallet", label: "Wallet", kind: "wallet" },
+      wallets,
       { key: "period", label: "Time", kind: "segmented", options: PERIODS, default: "1m" },
       accent,
       opacity,
@@ -69,7 +87,7 @@ export const WIDGETS = {
     category: "crypto",
     fields: [
       style,
-      { key: "wallet", label: "Wallet", kind: "wallet" },
+      wallets,
       { key: "period", label: "Time", kind: "segmented", options: PERIODS, default: "7d" },
       opacity,
     ],
@@ -78,7 +96,7 @@ export const WIDGETS = {
     name: "Holdings",
     description: "Wallet value and its biggest bags",
     category: "crypto",
-    fields: [{ key: "wallet", label: "Wallet", kind: "wallet" }, opacity],
+    fields: [wallets, opacity],
   },
   token: {
     name: "Token",
@@ -96,7 +114,8 @@ export const WIDGETS = {
     description: "Discord or Telegram with live member count",
     category: "social",
     fields: [
-      { key: "url", label: "Invite link", kind: "url", placeholder: "https://discord.gg/… or https://t.me/…", required: true },
+      { key: "platform", label: "Platform", kind: "segmented", options: [{ id: "discord", label: "Discord" }, { id: "telegram", label: "Telegram" }], default: "discord" },
+      { key: "invite", label: "Invite", kind: "handle", from: "platform", prefixes: { discord: "discord.gg/", telegram: "t.me/" }, pattern: "[A-Za-z0-9_-]{2,32}", required: true },
       opacity,
     ],
   },
@@ -107,29 +126,37 @@ export const WIDGETS = {
     fields: [
       style,
       { key: "platform", label: "Platform", kind: "select", options: [{ id: "x", label: "X" }, { id: "youtube", label: "YouTube" }, { id: "twitch", label: "Twitch" }, { id: "tiktok", label: "TikTok" }, { id: "instagram", label: "Instagram" }], default: "x" },
-      { key: "handle", label: "Handle", kind: "text", placeholder: "@you", max: 40, required: true },
+      {
+        key: "handle", label: "Handle", kind: "handle", from: "platform", pattern: "[A-Za-z0-9._-]{1,30}", required: true,
+        prefixes: { x: "x.com/", youtube: "youtube.com/@", twitch: "twitch.tv/", tiktok: "tiktok.com/@", instagram: "instagram.com/" },
+      },
       { key: "count", label: "Followers", kind: "number", min: 0, max: 1_000_000_000 },
       opacity,
     ],
   },
   video: {
     name: "Video",
-    description: "A YouTube video or your Twitch channel",
+    description: "Your latest YouTube video or Twitch stream, automatically",
     category: "media",
     fields: [
-      { key: "url", label: "Video or channel link", kind: "url", placeholder: "https://youtube.com/… or https://twitch.tv/…", required: true },
-      { key: "note", label: "Description", kind: "textarea", max: 140 },
-      opacity,
+      style,
+      { key: "platform", label: "Platform", kind: "segmented", options: [{ id: "youtube", label: "YouTube" }, { id: "twitch", label: "Twitch" }], default: "youtube" },
+      { key: "channel", label: "Channel", kind: "handle", from: "platform", prefixes: { youtube: "youtube.com/@", twitch: "twitch.tv/" }, pattern: "[A-Za-z0-9._-]{2,30}" },
+      { key: "url", label: "Pin one video instead (optional)", kind: "url", placeholder: "https://youtube.com/watch?v=…" },
+      background,
+      tint,
     ],
   },
   music: {
     name: "Music",
-    description: "A Spotify track, album or playlist",
+    description: "What you're listening to on Spotify, or a track you pick",
     category: "media",
     fields: [
       style,
-      { key: "url", label: "Spotify link", kind: "url", placeholder: "https://open.spotify.com/…", required: true },
-      opacity,
+      { key: "source", label: "Show", kind: "segmented", options: [{ id: "spotify", label: "My Spotify (live)" }, { id: "link", label: "A track or playlist" }], default: "spotify" },
+      { key: "url", label: "Spotify link (when showing a track)", kind: "url", placeholder: "https://open.spotify.com/track/…" },
+      background,
+      tint,
     ],
   },
   image: {
@@ -137,7 +164,7 @@ export const WIDGETS = {
     description: "A picture or GIF",
     category: "media",
     fields: [
-      { key: "url", label: "Image URL", kind: "url", placeholder: "https://…/image.gif", required: true },
+      { key: "url", label: "Image", kind: "image", required: true },
       { key: "caption", label: "Caption", kind: "text", max: 60 },
     ],
   },
@@ -149,7 +176,7 @@ export const WIDGETS = {
       style,
       { key: "timezone", label: "Time zone", kind: "timezone" },
       { key: "city", label: "City", kind: "text", max: 30 },
-      { key: "country", label: "Country code", kind: "text", placeholder: "AE", max: 2 },
+      { key: "country", label: "Flag (auto from the time zone)", kind: "text", placeholder: "Auto, or a code like AE", max: 2 },
       opacity,
     ],
   },
@@ -158,6 +185,7 @@ export const WIDGETS = {
     description: "Count down to a launch or an event",
     category: "utility",
     fields: [
+      style,
       { key: "title", label: "Title", kind: "text", max: 40 },
       { key: "target", label: "Date", kind: "datetime", required: true },
       { key: "country", label: "Country code", kind: "text", placeholder: "AE", max: 2 },
@@ -167,6 +195,7 @@ export const WIDGETS = {
     ],
   },
   reactions: {
+    hidden: true,
     name: "Reactions",
     description: "Visitors drop emojis on your profile",
     category: "utility",
@@ -177,7 +206,7 @@ export const WIDGETS = {
     description: "An image, a few words and a button to your own thing",
     category: "utility",
     fields: [
-      { key: "image", label: "Image URL", kind: "url", placeholder: "https://…/cover.png" },
+      { key: "image", label: "Image", kind: "image" },
       { key: "title", label: "Title", kind: "text", max: 40, required: true },
       { key: "body", label: "Text", kind: "textarea", max: 280 },
       { key: "ctaLabel", label: "Button label", kind: "text", placeholder: "Join", max: 20 },
@@ -228,9 +257,14 @@ function fieldSchema(f: FieldDef): z.ZodType {
       return z.string().regex(/^#[0-9a-fA-F]{6}$/);
     case "url":
       return z.union([z.url({ protocol: /^https?$/ }).max(500), z.literal("")]);
+    case "image":
+      return imageUrl;
+    case "handle":
+      return z.string().regex(new RegExp(`^(?:${f.pattern})$`), "Invalid handle");
     case "datetime":
       return z.iso.datetime({ offset: true }).or(z.iso.datetime());
-    case "wallet":
+    case "wallets":
+      return z.union([z.literal("all"), z.string().regex(/^[A-Za-z0-9]{32,44}(,[A-Za-z0-9]{32,44}){0,9}$/)]);
     case "timezone":
       return z.string().max(64);
     default:
@@ -261,3 +295,17 @@ export const widgetInput = z
   });
 
 export const widgetsInput = z.array(widgetInput).max(60);
+
+/** Full link for a "handle" field, from the settings it lives in. */
+export function handleUrl(def: { from: string; prefixes: Record<string, string> }, settings: WidgetSettings, handle: string) {
+  const platform = String(settings[def.from] ?? Object.keys(def.prefixes)[0]);
+  return `https://${def.prefixes[platform] ?? ""}${handle}`;
+}
+
+/** Community widget link: platform + invite handle (older widgets stored a full url). */
+export function communityUrl(settings: WidgetSettings): string {
+  if (typeof settings.invite === "string" && settings.invite) {
+    return `https://${settings.platform === "telegram" ? "t.me" : "discord.gg"}/${settings.invite}`;
+  }
+  return typeof settings.url === "string" ? settings.url : "";
+}

@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo } from "react";
-import type { FieldDef } from "@fl3x/shared";
+import type { FieldDef, LinkedWallet } from "@fl3x/shared";
+import { ImageInput } from "@/components/ui";
 import { shortAddress } from "@/lib/format";
 import { cn } from "@/lib/cn";
 
@@ -41,11 +42,13 @@ export function Field({
   value,
   onChange,
   wallets,
+  settings,
 }: {
   def: FieldDef;
+  settings: Record<string, unknown>;
   value: string | number | undefined;
   onChange: (v: string | number | undefined) => void;
-  wallets: string[];
+  wallets: LinkedWallet[];
 }) {
   const timezones = useMemo(() => (def.kind === "timezone" ? Intl.supportedValuesOf("timeZone") : []), [def.kind]);
   const str = value === undefined ? "" : String(value);
@@ -81,19 +84,8 @@ export function Field({
     case "segmented":
       control = <Segmented options={def.options} value={str || def.default} onChange={onChange} />;
       break;
-    case "wallet":
-      control = wallets.length ? (
-        <select className={inputClass} value={str} onChange={(e) => onChange(e.target.value)}>
-          <option value="">Choose a wallet</option>
-          {wallets.map((w) => (
-            <option key={w} value={w}>
-              {shortAddress(w)}
-            </option>
-          ))}
-        </select>
-      ) : (
-        <p className="rounded-xl border border-dashed border-white/15 px-3 py-2.5 text-xs text-fg-3">Link a wallet in Settings to display it</p>
-      );
+    case "wallets":
+      control = <WalletsPicker value={str || def.default} onChange={onChange} wallets={wallets} />;
       break;
     case "timezone":
       control = (
@@ -124,6 +116,28 @@ export function Field({
         </div>
       );
       break;
+    case "image":
+      control = <ImageInput kind="widget" value={str} onChange={onChange} />;
+      break;
+    case "handle": {
+      const platform = String(settings[def.from] ?? Object.keys(def.prefixes)[0]);
+      const prefix = def.prefixes[platform] ?? "";
+      control = (
+        <div className={cn(inputClass, "flex items-center")}>
+          <span className="shrink-0 text-fg-3">{prefix}</span>
+          <input
+            className="h-full min-w-0 flex-1 bg-transparent outline-none placeholder:text-fg-3"
+            placeholder="handle"
+            value={str}
+            spellCheck={false}
+            autoCapitalize="none"
+            // A pasted full link keeps only what comes after the domain.
+            onChange={(e) => onChange(e.target.value.trim().replace(/^(https?:\/\/)?(www\.)?/, "").replace(prefix, "").replace(/^@/, "").replace(/\/$/, ""))}
+          />
+        </div>
+      );
+      break;
+    }
     case "range": {
       const v = typeof value === "number" ? value : def.default;
       control = (
@@ -152,5 +166,46 @@ export function Field({
       <Label>{def.label}</Label>
       {control}
     </div>
+  );
+}
+
+/** "All wallets" (default, follows future links) or a hand-picked set. */
+function WalletsPicker({ value, onChange, wallets }: { value: string; onChange: (v: string) => void; wallets: LinkedWallet[] }) {
+  if (wallets.length === 0) {
+    return <p className="rounded-xl border border-dashed border-white/15 px-3 py-2.5 text-xs text-fg-3">Link a wallet in Settings to display it</p>;
+  }
+  const all = value === "all";
+  const picked = new Set(all ? wallets.map((w) => w.address) : value.split(",").filter(Boolean));
+  const toggle = (address: string) => {
+    const next = new Set(picked);
+    if (next.has(address)) next.delete(address);
+    else next.add(address);
+    onChange(next.size === wallets.length ? "all" : [...next].join(","));
+  };
+  return (
+    <div className="flex flex-col gap-1.5">
+      <button
+        type="button"
+        onClick={() => onChange("all")}
+        className={cn("flex items-center justify-between rounded-xl border px-3 py-2 text-xs", all ? "border-brand bg-brand/10 text-fg" : "border-white/10 bg-[#111] text-fg-2")}
+      >
+        All my wallets <span className="text-fg-3">{wallets.length} combined</span>
+      </button>
+      {wallets.map((w) => (
+        <label key={w.id} className="flex cursor-pointer items-center gap-2.5 rounded-xl border border-white/10 bg-[#111] px-3 py-2 text-xs">
+          <input type="checkbox" checked={picked.has(w.address)} onChange={() => toggle(w.address)} className="accent-brand" />
+          <ChainDot chain={w.chain} />
+          <span className="font-mono text-fg-2">{shortAddress(w.address)}</span>
+        </label>
+      ))}
+    </div>
+  );
+}
+
+export function ChainDot({ chain }: { chain: LinkedWallet["chain"] }) {
+  return (
+    <span className={cn("rounded-md px-1.5 py-0.5 text-[9px] font-normal uppercase", chain === "solana" ? "bg-[#9945FF]/25 text-[#C9A8FF]" : "bg-[#627EEA]/25 text-[#AFC0FF]")}>
+      {chain === "solana" ? "SOL" : "EVM"}
+    </span>
   );
 }

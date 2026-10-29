@@ -1,10 +1,12 @@
 import type { FastifyInstance } from "fastify";
 import { timingSafeEqual } from "node:crypto";
+import { eq, sql } from "drizzle-orm";
 import { z } from "zod";
+import { BADGES } from "@fl3x/shared";
 import { db, schema } from "../db";
 import { env } from "../env";
 import { generateCode } from "../lib/codes";
-import { forbidden } from "../lib/errors";
+import { forbidden, notFound } from "../lib/errors";
 
 const createInvites = z.object({
   count: z.number().int().min(1).max(500).default(1),
@@ -19,6 +21,9 @@ function isAdminKey(given: unknown) {
   return a.length === b.length && timingSafeEqual(a, b);
 }
 
+const grantable = BADGES.filter((b) => b.unlock.kind === "granted").map((b) => b.id) as [string, ...string[]];
+const grantBadge = z.object({ username: z.string().min(1), badge: z.enum(grantable), granted: z.boolean().default(true) });
+
 export async function adminRoutes(app: FastifyInstance) {
   app.addHook("onRequest", async (req) => {
     if (!isAdminKey(req.headers["x-admin-key"])) throw forbidden();
@@ -30,5 +35,21 @@ export async function adminRoutes(app: FastifyInstance) {
     const rows = Array.from({ length: count }, () => ({ code: generateCode(), maxUses, note }));
     const created = await db.insert(schema.inviteCodes).values(rows).returning();
     return { codes: created.map((c) => c.code) };
+  });
+
+  /** Hand out (or take back) a team badge: Kol, Creator, Builder, Donor, Gifter, Gas Spender, Bug Hunter. */
+  app.post("/admin/badges", async (req) => {
+    const { username, badge, granted } = grantBadge.parse(req.body);
+    const [row] = await db
+      .update(schema.users)
+      .set({
+        grantedBadges: granted
+          ? sql`array(select distinct unnest(array_append(${schema.users.grantedBadges}, ${badge})))`
+          : sql`array_remove(${schema.users.grantedBadges}, ${badge})`,
+      })
+      .where(eq(schema.users.username, username.toLowerCase()))
+      .returning({ grantedBadges: schema.users.grantedBadges });
+    if (!row) throw notFound("No such user");
+    return row;
   });
 }

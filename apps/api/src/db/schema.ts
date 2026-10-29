@@ -1,7 +1,9 @@
 import { sql } from "drizzle-orm";
 import {
-  boolean, doublePrecision, index, integer, jsonb, pgTable, primaryKey, text, timestamp, uuid,
+  boolean, customType, doublePrecision, index, integer, jsonb, pgTable, primaryKey, text, timestamp, uniqueIndex, uuid,
 } from "drizzle-orm/pg-core";
+
+const bytea = customType<{ data: Buffer }>({ dataType: () => "bytea" });
 import type { ProfileTheme, WidgetSettings } from "@fl3x/shared";
 
 export const users = pgTable("users", {
@@ -16,6 +18,8 @@ export const users = pgTable("users", {
   tier: text("tier", { enum: ["none", "starter", "premium"] }).notNull().default("none"),
   tokenBalance: doublePrecision("token_balance").notNull().default(0),
   tierCheckedAt: timestamp("tier_checked_at", { withTimezone: true }),
+  /** Badges handed out by the team (see BADGES with unlock "granted"). */
+  grantedBadges: text("granted_badges").array().notNull().default(sql`'{}'::text[]`),
   invitedById: uuid("invited_by_id"),
   invitedWithCode: text("invited_with_code"),
   onboardedAt: timestamp("onboarded_at", { withTimezone: true }),
@@ -106,3 +110,47 @@ export const dataCache = pgTable("data_cache", {
   value: jsonb("value").notNull(),
   expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
 });
+
+/**
+ * Wallets proven with a signature (our own connect flow, any chain). The
+ * Solana wallet used to sign in through Privy lives in users.wallets.
+ */
+export const wallets = pgTable("wallets", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  chain: text("chain", { enum: ["solana", "evm"] }).notNull(),
+  /** Base58 for Solana, lowercase 0x hex for EVM. */
+  address: text("address").notNull(),
+  label: text("label"),
+  verifiedAt: timestamp("verified_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [uniqueIndex("wallets_chain_address_idx").on(t.chain, t.address), index("wallets_user_idx").on(t.userId)]);
+
+/** One-time messages to sign when linking a wallet. */
+export const walletChallenges = pgTable("wallet_challenges", {
+  nonce: text("nonce").primaryKey(),
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+});
+
+/** Uploaded images, re-encoded to WebP by the API (never served as uploaded). */
+export const media = pgTable("media", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  kind: text("kind", { enum: ["avatar", "background", "widget"] }).notNull(),
+  mime: text("mime").notNull(),
+  bytes: bytea("bytes").notNull(),
+  width: integer("width").notNull(),
+  height: integer("height").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [index("media_user_idx").on(t.userId)]);
+
+/** Third-party accounts a member connected (Spotify now playing). Tokens are encrypted. */
+export const connections = pgTable("connections", {
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  provider: text("provider", { enum: ["spotify"] }).notNull(),
+  accountName: text("account_name"),
+  refreshToken: text("refresh_token").notNull(),
+  accessToken: text("access_token"),
+  expiresAt: timestamp("expires_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [primaryKey({ columns: [t.userId, t.provider] })]);

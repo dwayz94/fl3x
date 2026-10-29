@@ -1,36 +1,31 @@
 "use client";
 
 import {
-  Award01Icon, ChartLineData01Icon, Clock01Icon, Coins01Icon, Cursor01Icon, GridViewIcon, Image01Icon, LockIcon,
-  MusicNote01Icon, PaintBucketIcon, SmileIcon, TextFontIcon, TextIcon, Timer01Icon, UserGroupIcon, Video01Icon,
-  ArrowLeft01Icon, Search01Icon, Wallet02Icon, NewTwitterIcon, Link01Icon, PieChartIcon,
+  ArrowLeft01Icon, Award01Icon, Cursor01Icon, GridViewIcon, LockIcon, PaintBucketIcon, Search01Icon, TextFontIcon,
 } from "@hugeicons/core-free-icons";
 import { useState } from "react";
 import {
   BACKGROUNDS, BADGES, CURSORS, FONTS, WIDGETS, WIDGET_TYPES,
   type EditableProfile, type ProfileTheme, type Tier, type WidgetSize, type WidgetType,
 } from "@fl3x/shared";
-import { Icon } from "@/components/ui";
-import { backdrops, fontClass } from "@/components/profile/theme";
+import { Icon, ImageInput } from "@/components/ui";
+import { BadgeIcon } from "@/components/profile/Badges";
+import { backdrops, cursorStyle, cursorSvg, fontClass } from "@/components/profile/theme";
+import { WidgetView } from "@/components/widgets";
+import { DEMO_WIDGETS, demoWidget, resolveDemo } from "@/lib/demo";
+import { DemoDataProvider } from "@/lib/use-data";
 import { cn } from "@/lib/cn";
 import { inputClass, Segmented } from "./Field";
 
-const widgetIcons: Record<WidgetType, typeof GridViewIcon> = {
-  pnl: Wallet02Icon,
-  portfolio: ChartLineData01Icon,
-  holdings: PieChartIcon,
-  token: Coins01Icon,
-  community: UserGroupIcon,
-  followers: NewTwitterIcon,
-  video: Video01Icon,
-  music: MusicNote01Icon,
-  image: Image01Icon,
-  clock: Clock01Icon,
-  countdown: Timer01Icon,
-  reactions: SmileIcon,
-  link: Link01Icon,
-  text: TextIcon,
-};
+/** Widgets offered in the library, each with the demo settings used for its preview. */
+const LIBRARY = WIDGET_TYPES.filter((t) => !("hidden" in WIDGETS[t])).map((t) => ({ type: t, settings: DEMO_WIDGETS.find((d) => d.type === t)?.settings ?? {} }));
+
+/** Built-in backgrounds from the FL3X art, usable without uploading anything. */
+const IMAGE_PRESETS = [
+  { url: "/images/backgrounds/sign-bg.png", label: "Money bags" },
+  { url: "/images/backgrounds/hero-bg.png", label: "Hero" },
+  { url: "/images/backgrounds/footer-bg.png", label: "Glow" },
+];
 
 const SECTIONS = [
   { id: "widgets", kicker: "Widget", title: "Widgets", desc: "Add live cards to your profile", icon: GridViewIcon },
@@ -102,47 +97,71 @@ export function Library(props: {
             <p className="text-xs text-fg-3">
               {props.draft.widgets.length}/{props.widgetLimit} widgets{full && " · limit reached for your tier"}
             </p>
-            {WIDGET_TYPES.filter((t) => match(WIDGETS[t].name) || match(WIDGETS[t].description)).map((t) => (
-              <button
-                key={t}
-                type="button"
-                disabled={full}
-                onClick={() => props.onAddWidget(t, size)}
-                className="flex items-center gap-3 rounded-2xl bg-[#141414] p-3 text-left transition-colors hover:bg-[#1c1c1c] disabled:opacity-40"
-              >
-                <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-white/5 text-brand">
-                  <Icon icon={widgetIcons[t]} size={22} />
-                </span>
-                <span className="min-w-0">
-                  <span className="block font-primary text-lg leading-none">{WIDGETS[t].name}</span>
-                  <span className="block text-[11px] leading-tight text-fg-3">{WIDGETS[t].description}</span>
-                </span>
-              </button>
-            ))}
+            {/* Real widgets with sample data, so it's obvious what each one looks like. */}
+            <DemoDataProvider resolve={resolveDemo}>
+              <div className={cn("grid gap-2", size === "large" ? "grid-cols-2" : "grid-cols-1")}>
+                {LIBRARY.filter((l) => match(WIDGETS[l.type].name) || match(WIDGETS[l.type].description)).map((l) => (
+                  <button
+                    key={l.type}
+                    type="button"
+                    disabled={full}
+                    title={WIDGETS[l.type].description}
+                    onClick={() => props.onAddWidget(l.type, size)}
+                    className="group flex flex-col gap-1.5 rounded-2xl bg-[#141414] p-2 text-left transition-colors hover:bg-[#1c1c1c] disabled:opacity-40"
+                  >
+                    <div className="pointer-events-none overflow-hidden rounded-xl transition-transform group-hover:scale-[1.03]">
+                      <div style={{ zoom: size === "large" ? 0.66 : 0.68 }} className={size === "large" ? "h-[204px] w-[172px]" : "h-[96px] w-[356px]"}>
+                        <WidgetView w={demoWidget(l.type, size, l.settings, `lib-${l.type}-${size}`)} interactive={false} />
+                      </div>
+                    </div>
+                    <span className="px-1 font-primary text-sm leading-none">{WIDGETS[l.type].name}</span>
+                  </button>
+                ))}
+              </div>
+            </DemoDataProvider>
           </div>
         )}
 
         {section === "background" && (
-          <div className="grid grid-cols-2 gap-2">
-            {BACKGROUNDS.filter((b) => b.id !== "image").map((b) => (
-              <button
-                key={b.id}
-                type="button"
-                onClick={() => props.onTheme({ background: b.id })}
-                className={cn("h-20 rounded-2xl border-2 p-2 text-left text-xs", theme.background === b.id ? "border-brand" : "border-transparent")}
-                style={{ background: backdrops[b.id as keyof typeof backdrops] }}
-              >
-                {b.label}
-              </button>
-            ))}
-            <div className="col-span-2 mt-2">
-              <p className="mb-1.5 text-xs text-fg-2">Background image</p>
-              <input
-                className={inputClass}
-                placeholder="https://… image or GIF"
-                value={theme.backgroundUrl ?? ""}
-                onChange={(e) => props.onTheme({ background: e.target.value ? "image" : "plain", backgroundUrl: e.target.value })}
+          <div className="flex flex-col gap-4">
+            <div>
+              <p className="mb-1.5 text-xs text-fg-2">Your image</p>
+              <ImageInput
+                kind="background"
+                value={theme.background === "image" ? theme.backgroundUrl : undefined}
+                onChange={(url) => props.onTheme(url ? { background: "image", backgroundUrl: url } : { background: "plain", backgroundUrl: "" })}
               />
+            </div>
+            <div>
+              <p className="mb-1.5 text-xs text-fg-2">FL3X images</p>
+              <div className="grid grid-cols-3 gap-2">
+                {IMAGE_PRESETS.map((p) => (
+                  <button
+                    key={p.url}
+                    type="button"
+                    title={p.label}
+                    onClick={() => props.onTheme({ background: "image", backgroundUrl: p.url })}
+                    className={cn("h-14 rounded-xl border-2 bg-cover bg-center", theme.backgroundUrl === p.url && theme.background === "image" ? "border-brand" : "border-transparent")}
+                    style={{ backgroundImage: `url(${p.url})` }}
+                  />
+                ))}
+              </div>
+            </div>
+            <div>
+              <p className="mb-1.5 text-xs text-fg-2">Glows</p>
+              <div className="grid grid-cols-2 gap-2">
+                {BACKGROUNDS.filter((b) => b.id !== "image").map((b) => (
+                  <button
+                    key={b.id}
+                    type="button"
+                    onClick={() => props.onTheme({ background: b.id })}
+                    className={cn("h-16 rounded-2xl border-2 p-2 text-left text-xs", theme.background === b.id ? "border-brand" : "border-transparent")}
+                    style={{ background: backdrops[b.id as keyof typeof backdrops] }}
+                  >
+                    {b.label}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         )}
@@ -160,9 +179,9 @@ export function Library(props: {
                   onClick={() => props.onBadges(shown ? props.draft.badges.filter((x) => x !== b.id) : [...props.draft.badges, b.id])}
                   className={cn("flex items-center gap-3 rounded-2xl border p-3 text-left disabled:opacity-40", shown ? "border-brand bg-brand/10" : "border-white/10 bg-[#141414]")}
                 >
-                  <span className="text-xl">{b.emoji}</span>
+                  <BadgeIcon id={b.id} size={22} />
                   <span className="min-w-0 flex-1">
-                    <span className="block font-primary text-lg leading-none">{b.name}</span>
+                    <span className="block font-primary text-lg leading-none" style={{ color: owned ? b.color : undefined }}>{b.name}</span>
                     <span className="block text-[11px] leading-tight text-fg-3">{owned ? b.description : "Locked"}</span>
                   </span>
                   {!owned && <Icon icon={LockIcon} size={16} className="text-fg-3" />}
@@ -174,12 +193,24 @@ export function Library(props: {
 
         {section === "cursor" && (
           <PremiumGate locked={!premium} label="Custom cursors">
-            <div className="grid grid-cols-2 gap-2">
-              {CURSORS.map((c) => (
-                <OptionTile key={c.id} active={theme.cursor === c.id} onClick={() => props.onTheme({ cursor: c.id })}>
-                  {c.label}
-                </OptionTile>
-              ))}
+            <div className="grid grid-cols-3 gap-2">
+              {CURSORS.map((c) => {
+                const preview = cursorSvg(c.id, theme.accent);
+                return (
+                  // Hovering a tile also tries the cursor for real.
+                  <div key={c.id} style={{ cursor: cursorStyle({ ...theme, cursor: c.id }) }}>
+                    <OptionTile active={theme.cursor === c.id} onClick={() => props.onTheme({ cursor: c.id })}>
+                      {preview ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={`data:image/svg+xml,${encodeURIComponent(preview.svg)}`} alt="" className="size-7" />
+                      ) : (
+                        <Icon icon={Cursor01Icon} size={24} />
+                      )}
+                      <span className="text-[10px] text-fg-2">{c.label}</span>
+                    </OptionTile>
+                  </div>
+                );
+              })}
             </div>
           </PremiumGate>
         )}
@@ -227,7 +258,7 @@ function OptionTile({ active, onClick, children }: { active: boolean; onClick: (
     <button
       type="button"
       onClick={onClick}
-      className={cn("flex h-20 flex-col items-center justify-center gap-1 rounded-2xl border-2 bg-[#141414] text-sm", active ? "border-brand" : "border-transparent")}
+      className={cn("flex h-20 w-full flex-col items-center justify-center gap-1 rounded-2xl border-2 bg-[#141414] text-sm [cursor:inherit]", active ? "border-brand" : "border-transparent")}
     >
       {children}
     </button>

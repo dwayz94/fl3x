@@ -15,6 +15,13 @@
       "when": 1793209494359,
       "tag": "0001_widgets_analytics",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793271743109,
+      "tag": "0002_wallets_media_badges",
+      "breakpoints": true
     }
   ]
 }

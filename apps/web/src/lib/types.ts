@@ -27,25 +27,8 @@ export interface MediaData {
   thumbnailUrl: string | null;
   live: boolean | null;
   url: string;
-}
-
-export interface WalletData {
-  wallet: string;
-  valueUsd: number;
-  period: string;
-  start: { valueUsd: number; at: string } | null;
-  changeUsd: number | null;
-  changePct: number | null;
-  history: { at: string; valueUsd: number }[];
-  holdings?: Holding[];
-}
-
-export interface Holding {
-  mint: string;
-  symbol: string;
-  name: string;
-  iconUrl: string | null;
-  amount: number;
-  valueUsd: number;
-  change24h: number | null;
+  avatarUrl?: string | null;
+  publishedAt?: string | null;
+  viewers?: number | null;
+  nowPlaying?: boolean | null;
 }

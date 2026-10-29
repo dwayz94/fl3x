@@ -1,15 +1,18 @@
 "use client";
 
-import type { DragEvent, ReactNode } from "react";
-import { CheckmarkBadge01Icon, EyeIcon } from "@hugeicons/core-free-icons";
-import { BADGES, type EditableProfile, type Tier, type Widget } from "@fl3x/shared";
-import { Icon } from "@/components/ui";
+import { EyeIcon } from "@hugeicons/core-free-icons";
+import type { EditableProfile, FullPublicProfile, Tier, Widget } from "@fl3x/shared";
+import { Icon, Verified } from "@/components/ui";
 import { WidgetView, sizeClass } from "@/components/widgets";
 import { fmtNumber } from "@/lib/format";
+import { WidgetHost } from "@/lib/use-portfolio";
 import { cn } from "@/lib/cn";
-import { badgeIcons, fallbackBadgeIcon } from "./badges";
+import { BadgeStrip } from "./Badges";
+import { EditableGrid, type EditorHooks } from "./EditableGrid";
 import { linkIcons } from "./links";
 import { fontClass } from "./theme";
+
+const GRID = "mt-7 grid auto-rows-[96px] grid-flow-dense grid-cols-4 gap-3 md:grid-cols-[repeat(var(--cols),minmax(0,1fr))]";
 
 /**
  * Desktop column count (each column is one grid cell). Mirrors the Figma
@@ -23,11 +26,7 @@ function columnsFor(widgets: Widget[]) {
   return Math.min(8, Math.max(4, band + (band % 2)));
 }
 
-export interface EditorHooks {
-  selectedId: string | null;
-  onSelect: (id: string | null) => void;
-  onMove: (fromId: string, toId: string) => void;
-}
+export type { EditorHooks } from "./EditableGrid";
 
 /**
  * The profile card. Used as-is on fl3x.lol/@username and as the live
@@ -48,21 +47,12 @@ export function ProfileView({
 }) {
   // In the editor the card keeps its real desktop width and the preview scales it down.
   const { theme } = profile;
-  const badges = BADGES.filter((b) => profile.badges.includes(b.id));
   const name = profile.displayName || profile.username;
   const cols = columnsFor(profile.widgets);
   // Narrow cards stack the header like the small Figma variants.
   const narrow = cols <= 4;
-  const verified = tier !== "none" && (
-    // Premium badge takes the profile accent, Starter the classic verified cyan.
-    <span
-      className="shrink-0"
-      title={tier === "premium" ? "Premium holder" : "Holder"}
-      style={{ color: tier === "premium" ? theme.accent : "#00F6FF", filter: `drop-shadow(0 0 12px ${tier === "premium" ? theme.accent : "#00F6FF"}99)` }}
-    >
-      <Icon icon={CheckmarkBadge01Icon} size={26} />
-    </span>
-  );
+  // The checkmark is Premium-only.
+  const verified = tier === "premium" && <Verified size={26} />;
 
   return (
     <article
@@ -76,36 +66,31 @@ export function ProfileView({
       )}
     >
       <header className={cn("flex gap-4 md:gap-6", narrow ? "flex-col items-center text-center" : "items-center")}>
-        <div className="size-[84px] shrink-0 overflow-hidden rounded-full bg-white/10 md:size-[120px]">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          {profile.avatarUrl && <img src={profile.avatarUrl} alt="" className="size-full object-cover" />}
-        </div>
+        <Avatar url={profile.avatarUrl} onEdit={editor?.onAvatar} />
         <div className={cn("flex min-w-0 flex-col gap-2", narrow && "items-center")}>
           <h1 className={cn("flex max-w-full items-center gap-2 text-[34px] leading-none uppercase md:text-[44px]", fontClass[theme.font])}>
             <span className="truncate">{name}</span>
             {verified}
           </h1>
-          {badges.length > 0 && (
-            <ul className="flex w-fit max-w-full flex-wrap gap-x-2.5 gap-y-1 rounded-full bg-white/10 px-3 py-1.5">
-              {badges.map((b) => (
-                <li key={b.id} title={`${b.name}: ${b.description}`} className="text-white/85">
-                  <Icon icon={badgeIcons[b.id] ?? fallbackBadgeIcon} size={18} />
-                </li>
-              ))}
-            </ul>
-          )}
+          <BadgeStrip ids={profile.badges} stats={(profile as Partial<FullPublicProfile>).badgeStats} interactive={!editor} />
           {profile.bio && <p className="text-xs uppercase text-fg-2 md:text-sm">{profile.bio}</p>}
         </div>
       </header>
 
       {profile.widgets.length > 0 && (
-        <div className="mt-7 grid auto-rows-[96px] grid-flow-dense grid-cols-4 gap-3 md:grid-cols-[repeat(var(--cols),minmax(0,1fr))]">
-          {profile.widgets.map((w) => (
-            <Slot key={w.id} id={w.id} className={sizeClass[w.size]} editor={editor}>
-              <WidgetView w={w} interactive={!editor} />
-            </Slot>
-          ))}
-        </div>
+        <WidgetHost.Provider value={editor ? "editor" : "public"}>
+          {editor ? (
+            <EditableGrid widgets={profile.widgets} editor={editor} className={GRID} />
+          ) : (
+            <div className={GRID}>
+              {profile.widgets.map((w) => (
+                <div key={w.id} className={sizeClass[w.size]}>
+                  <WidgetView w={w} />
+                </div>
+              ))}
+            </div>
+          )}
+        </WidgetHost.Provider>
       )}
 
       <footer className="mt-7 flex items-center justify-between gap-4">
@@ -138,31 +123,17 @@ export function ProfileView({
   );
 }
 
-function Slot({ id, className, editor, children }: { id: string; className: string; editor?: EditorHooks; children: ReactNode }) {
-  if (!editor) return <div className={className}>{children}</div>;
-  const selected = editor.selectedId === id;
+function Avatar({ url, onEdit }: { url: string | null; onEdit?: () => void }) {
+  const img = (
+    // eslint-disable-next-line @next/next/no-img-element
+    url && <img src={url} alt="" className="size-full object-cover" />
+  );
+  const cls = "relative size-[84px] shrink-0 overflow-hidden rounded-full bg-white/10 md:size-[120px]";
+  if (!onEdit) return <div className={cls}>{img}</div>;
   return (
-    <div
-      className={cn(
-        "cursor-grab rounded-[28px] transition-[box-shadow,transform] active:cursor-grabbing",
-        selected ? "scale-[1.02] shadow-[0_0_0_2px_#fff,0_10px_30px_rgba(0,0,0,0.5)]" : "hover:shadow-[0_0_0_1px_rgba(255,255,255,0.3)]",
-        className,
-      )}
-      draggable
-      onDragStart={(e: DragEvent) => e.dataTransfer.setData("text/widget", id)}
-      onDragOver={(e) => e.preventDefault()}
-      onDrop={(e) => {
-        e.preventDefault();
-        const from = e.dataTransfer.getData("text/widget");
-        if (from && from !== id) editor.onMove(from, id);
-      }}
-      onClickCapture={(e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        editor.onSelect(id);
-      }}
-    >
-      <div className="pointer-events-none h-full">{children}</div>
-    </div>
+    <button type="button" onClick={onEdit} className={cn(cls, "group")} title="Change your picture">
+      {img}
+      <span className="absolute inset-0 flex items-center justify-center bg-black/55 text-xs opacity-0 transition-opacity group-hover:opacity-100">Change</span>
+    </button>
   );
 }

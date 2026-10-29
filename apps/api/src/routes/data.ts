@@ -1,10 +1,9 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
-import { CHAINS, PERIODS } from "@fl3x/shared";
+import { CHAINS } from "@fl3x/shared";
 import { getCommunity } from "../lib/providers/community";
 import { getToken } from "../lib/providers/dexscreener";
-import { getMedia } from "../lib/providers/media";
-import { getWallet } from "../lib/providers/wallet";
+import { getChannel, getMedia } from "../lib/providers/media";
 import { notFound } from "../lib/errors";
 
 const httpUrl = z.url({ protocol: /^https?$/ });
@@ -39,13 +38,10 @@ export async function dataRoutes(app: FastifyInstance) {
     return data;
   });
 
-  app.get("/data/wallet", opts, async (req) => {
-    const q = z
-      .object({
-        address: z.string().regex(/^[1-9A-HJ-NP-Za-km-z]{32,44}$/),
-        period: z.enum(PERIODS.map((p) => p.id) as [string, ...string[]]).default("7d"),
-      })
-      .parse(req.query);
-    return getWallet(q.address, q.period as (typeof PERIODS)[number]["id"]);
+  app.get("/data/channel", opts, async (req) => {
+    const q = z.object({ platform: z.enum(["youtube", "twitch"]), handle: z.string().regex(/^[A-Za-z0-9._-]{2,30}$/) }).parse(req.query);
+    const data = await getChannel(q.platform, q.handle);
+    if (!data) throw notFound("Channel not found");
+    return data;
   });
 }

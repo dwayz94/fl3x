@@ -4,3 +4,5 @@ export * from "./Icon";
 export * from "./Brand";
 export * from "./Sparkline";
 export * from "./Flag";
+export * from "./Verified";
+export * from "./ImageInput";

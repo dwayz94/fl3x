@@ -3,11 +3,12 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { motion } from "motion/react";
 import {
-  Analytics02Icon, Award01Icon, CheckmarkBadge01Icon, Crown02Icon, Link01Icon, PaintBoardIcon, Settings02Icon,
+  Analytics02Icon, Award01Icon, Crown02Icon, Link01Icon, PaintBoardIcon, Settings02Icon,
 } from "@hugeicons/core-free-icons";
 import type { Me } from "@fl3x/shared";
-import { Icon } from "@/components/ui";
+import { Icon, Verified } from "@/components/ui";
 import { cn } from "@/lib/cn";
 
 export const NAV = [
@@ -20,66 +21,53 @@ export const NAV = [
 
 const SETTINGS = { href: "/dashboard/settings", label: "Settings", icon: Settings02Icon };
 
-function NavItem({ item, compact, active }: { item: (typeof NAV)[number]; compact: boolean; active: boolean }) {
+function NavItem({ item, active }: { item: (typeof NAV)[number]; active: boolean }) {
   return (
     <Link
       href={item.href}
       title={item.label}
-      className={cn(
-        "flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm transition-colors",
-        active ? "bg-white/10 text-fg" : "text-fg-2 hover:bg-white/5 hover:text-fg",
-        compact && "justify-center px-0",
-      )}
+      className={cn("relative flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm transition-colors", active ? "text-fg" : "text-fg-2 hover:bg-white/5 hover:text-fg")}
     >
-      <Icon icon={item.icon} size={18} className={active ? "text-brand" : undefined} />
-      {!compact && item.label}
+      {/* The highlight slides from one item to the next. */}
+      {active && <motion.span layoutId="nav-active" className="absolute inset-0 rounded-xl bg-white/10" transition={{ type: "spring", stiffness: 500, damping: 38 }} />}
+      <Icon icon={item.icon} size={18} className={cn("relative", active && "text-brand")} />
+      <span className="relative">{item.label}</span>
     </Link>
   );
 }
 
-export function Sidebar({ me, avatarUrl, compact }: { me: Me; avatarUrl: string | null; compact: boolean }) {
+export function Sidebar({ me, avatarUrl }: { me: Me; avatarUrl: string | null }) {
   const pathname = usePathname();
   return (
     <>
-      <aside
-        className={cn(
-          "sticky top-0 hidden h-svh shrink-0 flex-col border-r border-white/10 bg-[#0b0b0b] py-6 md:flex",
-          compact ? "w-[72px] px-3" : "w-[240px] px-4",
-        )}
-      >
-        <Link href="/" className={cn("mb-6 flex h-10 items-center border-b border-white/10 pb-6", compact ? "justify-center" : "px-3")}>
-          {compact ? (
-            <Image src="/images/fl3x-icon.svg" alt="FL3X" width={24} height={26} />
-          ) : (
-            <Image src="/images/fl3x-logo.svg" alt="FL3X" width={78} height={26} />
-          )}
+      <aside className="sticky top-0 hidden h-svh w-[240px] shrink-0 flex-col border-r border-white/10 bg-[#0b0b0b] px-4 py-6 md:flex">
+        <Link href="/" className="mb-6 flex h-10 items-center border-b border-white/10 px-3 pb-6">
+          <Image src="/images/fl3x-logo.svg" alt="FL3X" width={78} height={26} />
         </Link>
         <nav className="flex flex-col gap-1">
           {NAV.map((item) => (
-            <NavItem key={item.href} item={item} compact={compact} active={pathname.startsWith(item.href)} />
+            <NavItem key={item.href} item={item} active={pathname.startsWith(item.href)} />
           ))}
         </nav>
         <div className="mt-auto flex flex-col gap-4">
-          <NavItem item={SETTINGS} compact={compact} active={pathname.startsWith(SETTINGS.href)} />
+          <NavItem item={SETTINGS} active={pathname.startsWith(SETTINGS.href)} />
           <Link
             href={`/@${me.username}`}
             target="_blank"
-            className={cn("flex items-center gap-2.5 border-t border-white/10 pt-4", compact ? "justify-center" : "px-1")}
+            className="flex items-center gap-2.5 border-t border-white/10 px-1 pt-4"
             title="View your profile"
           >
             <div className="size-9 shrink-0 overflow-hidden rounded-full bg-white/10">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               {avatarUrl && <img src={avatarUrl} alt="" className="size-full object-cover" />}
             </div>
-            {!compact && (
-              <div className="min-w-0">
-                <p className="flex items-center gap-1 truncate font-primary text-base leading-none">
-                  {me.username}
-                  {me.tier !== "none" && <Icon icon={CheckmarkBadge01Icon} size={14} className="text-verified" />}
-                </p>
-                <p className="truncate text-[11px] text-fg-3">fl3x.lol/@{me.username}</p>
-              </div>
-            )}
+            <div className="min-w-0">
+              <p className="flex items-center gap-1 truncate font-primary text-base leading-none">
+                {me.username}
+                {me.tier === "premium" && <Verified size={14} />}
+              </p>
+              <p className="truncate text-[11px] text-fg-3">fl3x.lol/@{me.username}</p>
+            </div>
           </Link>
         </div>
       </aside>

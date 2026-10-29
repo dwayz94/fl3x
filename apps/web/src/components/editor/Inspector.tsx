@@ -1,43 +1,47 @@
 "use client";
 
 import { ArrowDown02Icon, ArrowUp02Icon, Delete02Icon } from "@hugeicons/core-free-icons";
-import { WIDGETS, type EditableProfile, type FieldDef, type Widget, type WidgetSize } from "@fl3x/shared";
+import Link from "next/link";
+import { WIDGETS, type EditableProfile, type FieldDef, type LinkedWallet, type Widget, type WidgetSize } from "@fl3x/shared";
 import { Brand, Icon } from "@/components/ui";
 import { WidgetView } from "@/components/widgets";
 import { cn } from "@/lib/cn";
-import { Field, inputClass, Label, Segmented } from "./Field";
+import { Field, Label, Segmented } from "./Field";
 
 export function Inspector(props: {
   draft: EditableProfile;
   selected: Widget | null;
-  wallets: string[];
+  wallets: LinkedWallet[];
   onWidget: (patch: Partial<Widget>) => void;
   onRemove: () => void;
   onShift: (dir: -1 | 1) => void;
-  onProfile: (patch: Partial<Pick<EditableProfile, "displayName" | "bio" | "avatarUrl">>) => void;
 }) {
   const w = props.selected;
 
   if (!w) {
     return (
-      <div className="flex flex-col gap-5">
+      <div className="flex flex-col gap-4">
         <h2 className="border-b border-white/10 pb-5 text-3xl">
-          <Brand>PR[o]F[i]Le</Brand>
+          <Brand>[e]D[i]T</Brand>
         </h2>
-        <div>
-          <Label>Display name</Label>
-          <input className={inputClass} maxLength={32} value={props.draft.displayName ?? ""} placeholder={props.draft.username} onChange={(e) => props.onProfile({ displayName: e.target.value })} />
-        </div>
-        <div>
-          <Label>Bio</Label>
-          <textarea className={cn(inputClass, "h-24 resize-none py-2")} maxLength={160} value={props.draft.bio ?? ""} placeholder="FL3X on all screens!" onChange={(e) => props.onProfile({ bio: e.target.value })} />
-        </div>
-        <div>
-          <Label>Avatar URL</Label>
-          <input className={inputClass} value={props.draft.avatarUrl ?? ""} placeholder="https://…" onChange={(e) => props.onProfile({ avatarUrl: e.target.value })} />
-          <p className="mt-1.5 text-[11px] text-fg-3">Defaults to your X picture. Uploads are coming.</p>
-        </div>
-        <p className="rounded-xl bg-white/5 p-3 text-xs text-fg-2">Click a widget in the preview to edit it. Drag widgets to reorder them.</p>
+        {[
+          ["Add", "Pick a widget on the left. It shows up at the end of your card."],
+          ["Move", "Drag a widget: the others make room as you go. On a phone, hold it first."],
+          ["Edit", "Click a widget to change its content, size and style here."],
+          ["Picture", "Click your avatar on the card to upload a new one."],
+        ].map(([t, d]) => (
+          <div key={t} className="rounded-2xl bg-white/[0.04] p-3">
+            <p className="font-primary text-lg leading-none">{t}</p>
+            <p className="mt-1 text-xs text-fg-2">{d}</p>
+          </div>
+        ))}
+        <p className="text-xs text-fg-3">
+          Name and bio are in{" "}
+          <Link href="/dashboard/settings" className="text-brand hover:underline">
+            Settings
+          </Link>
+          .
+        </p>
       </div>
     );
   }
@@ -67,6 +71,7 @@ export function Inspector(props: {
           key={f.key}
           def={f}
           value={w.settings[f.key]}
+          settings={w.settings}
           wallets={props.wallets}
           onChange={(v) => props.onWidget({ settings: { ...w.settings, [f.key]: v } })}
         />
