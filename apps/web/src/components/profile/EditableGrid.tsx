@@ -13,6 +13,8 @@ export interface EditorHooks {
   onMove: (fromId: string, toId: string) => void;
   /** Click on the avatar in the preview: change it. */
   onAvatar?: () => void;
+  /** A widget being dragged in from the library: shown as its empty slot. */
+  incomingId?: string | null;
   /** Inline edit of the display name and bio, right on the card. */
   onIdentity?: (patch: { displayName?: string | null; bio?: string | null }) => void;
 }
@@ -157,7 +159,13 @@ export function EditableGrid({ widgets, editor, className, style }: { widgets: W
     <LayoutGroup>
       <div className={className} style={style}>
         {widgets.map((w) => (
-          <Slot key={w.id} w={w} selected={editor.selectedId === w.id} lifted={drag?.id === w.id} dragging={!!drag} />
+          <Slot
+            key={w.id}
+            w={w}
+            selected={editor.selectedId === w.id}
+            lifted={drag?.id === w.id || editor.incomingId === w.id}
+            dragging={!!drag || !!editor.incomingId}
+          />
         ))}
       </div>
       {drag &&

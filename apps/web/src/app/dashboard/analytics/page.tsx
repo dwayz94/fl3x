@@ -10,6 +10,7 @@ import { Chip, PageHeader, Panel, Spinner } from "@/components/dashboard/Panel";
 import { Segmented } from "@/components/editor/Field";
 import { linkIcons } from "@/components/profile/links";
 import { Flag, Icon } from "@/components/ui";
+import type { AnyIcon } from "@/components/ui/Icon";
 import { api } from "@/lib/api";
 import { fmtNumber } from "@/lib/format";
 
@@ -48,13 +49,13 @@ function linkLabel(target: string) {
   return { label: kind?.label ?? target, icon: kind ? linkIcons[kind.id as LinkKind] : Link01Icon };
 }
 
-const sourceIcon: Partial<Record<string, typeof Link01Icon>> = {
+const sourceIcon: Partial<Record<string, AnyIcon>> = {
   x: linkIcons.x, telegram: linkIcons.telegram, discord: linkIcons.discord, youtube: linkIcons.youtube,
   tiktok: linkIcons.tiktok, instagram: linkIcons.instagram, twitch: linkIcons.twitch, google: linkIcons.website, other: linkIcons.website,
 };
 
 /** Ranked list with a proportional bar behind each row. */
-function RankList({ items, empty }: { items: { key: string; label: string; icon: typeof Link01Icon; count: number }[]; empty: string }) {
+function RankList({ items, empty }: { items: { key: string; label: string; icon: AnyIcon; count: number }[]; empty: string }) {
   const total = items.reduce((a, b) => a + b.count, 0);
   const max = Math.max(1, ...items.map((i) => i.count));
   if (!items.length) return <p className="py-10 text-center text-sm text-fg-3">{empty}</p>;

@@ -25,7 +25,8 @@ interface Network {
   llama: string;
   moralis: string;
   native: { symbol: string; name: string; llama: string };
-  tokens: [address: string, symbol: string, decimals: number][];
+  /** Optional 4th entry: price key when DefiLlama doesn't list the token on this chain. */
+  tokens: [address: string, symbol: string, decimals: number, priceKey?: string][];
 }
 
 const ETH = { symbol: "ETH", name: "Ether", llama: "coingecko:ethereum" };
@@ -90,6 +91,12 @@ export const EVM_NETWORKS: Network[] = [
       ["0x7ceb23fd6bc0add59e62ac25578270cff1b9f619", "WETH", 18],
     ],
   },
+  {
+    // Arbitrum Orbit L2, gas in ETH. Its explorer API sits behind a bot wall and price
+    // feeds don't list its tokens yet: ETH and WETH (priced as ETH). Moralis doesn't cover it.
+    id: "robinhood", name: "Robinhood Chain", chainId: 4663, rpc: "https://rpc.mainnet.chain.robinhood.com", llama: "robinhood", moralis: "", native: ETH,
+    tokens: [["0x0bd7d308f8e1639fab988df18a8011f41eacad73", "WETH", 18, "coingecko:ethereum"]],
+  },
 ];
 
 const chainIcon = (n: Network) => `https://icons.llamao.fi/icons/chains/rsz_${n.id === "bsc" ? "binance" : n.id}?w=48&h=48`;
@@ -117,17 +124,17 @@ async function llamaPrices(keys: string[]): Promise<Record<string, number>> {
   return Object.fromEntries(Object.entries(res.coins).map(([k, v]) => [k, v.price]));
 }
 
-async function viaRpc(owner: string): Promise<EvmPosition[]> {
-  const results = await Promise.allSettled(EVM_NETWORKS.map((n) => balancesOn(n, owner)));
+async function viaRpc(owner: string, networks: Network[]): Promise<EvmPosition[]> {
+  const results = await Promise.allSettled(networks.map((n) => balancesOn(n, owner)));
   const held: { n: Network; key: string; symbol: string; name: string; icon: string; amount: number; id: string }[] = [];
   results.forEach((r, i) => {
     if (r.status !== "fulfilled") return; // one slow network shouldn't hide the others
-    const n = EVM_NETWORKS[i]!;
+    const n = networks[i]!;
     if (r.value.native > 0n) held.push({ n, key: n.native.llama, symbol: n.native.symbol, name: n.native.name, icon: chainIcon(n), amount: units(r.value.native, 18), id: `${n.id}:native` });
     r.value.tokens.forEach((raw, j) => {
       if (raw === 0n) return;
-      const [address, symbol, decimals] = n.tokens[j]!;
-      held.push({ n, key: `${n.llama}:${address}`, symbol, name: symbol, icon: tokenIcon(n, address), amount: units(raw, decimals), id: `${n.id}:${address}` });
+      const [address, symbol, decimals, priceKey] = n.tokens[j]!;
+      held.push({ n, key: priceKey ?? `${n.llama}:${address}`, symbol, name: symbol, icon: tokenIcon(n, address), amount: units(raw, decimals), id: `${n.id}:${address}` });
     });
   });
   const prices = await llamaPrices([...new Set(held.map((h) => h.key))]);
@@ -141,9 +148,9 @@ type MoralisToken = {
   usd_value: number | null; native_token: boolean; possible_spam: boolean;
 };
 
-async function viaMoralis(owner: string): Promise<EvmPosition[]> {
+async function viaMoralis(owner: string, networks: Network[]): Promise<EvmPosition[]> {
   const results = await Promise.allSettled(
-    EVM_NETWORKS.map((n) =>
+    networks.map((n) =>
       fetchJson<{ result: MoralisToken[] }>(`https://deep-index.moralis.io/api/v2.2/wallets/${owner}/tokens?chain=${n.moralis}&exclude_spam=true`, {
         headers: { "x-api-key": env.MORALIS_API_KEY },
       }).then((r) => ({ n, tokens: r.result })),
@@ -166,8 +173,14 @@ async function viaMoralis(owner: string): Promise<EvmPosition[]> {
   );
 }
 
-export function evmPositions(owner: string): Promise<EvmPosition[]> {
-  return env.MORALIS_API_KEY ? viaMoralis(owner) : viaRpc(owner);
+export async function evmPositions(owner: string): Promise<EvmPosition[]> {
+  if (!env.MORALIS_API_KEY) return viaRpc(owner, EVM_NETWORKS);
+  // Moralis where it covers the network, our RPC reads elsewhere.
+  const [a, b] = await Promise.all([
+    viaMoralis(owner, EVM_NETWORKS.filter((n) => n.moralis)),
+    viaRpc(owner, EVM_NETWORKS.filter((n) => !n.moralis)),
+  ]);
+  return [...a, ...b];
 }
 
 export const evmNetworkName = (id: string) => EVM_NETWORKS.find((n) => n.id === id)?.name ?? id;

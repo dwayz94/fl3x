@@ -8,7 +8,8 @@ Profiles with live widgets for crypto people. The founder speaks French: reply i
 - Sign-in uses Privy: X + Solana wallet, no embedded wallet.
 - The landing page keeps the old project's design (`../fl3x-old`). Join / waitlist follow the Figma sign screens: no card, centered column on the money-bag background.
 - Customize is a full-screen mode (no sidebar, back button). Drag reorders live (`profile/EditableGrid.tsx`, motion layout animations). Name and bio are edited in Settings or in place on the card in Customize; clicking the avatar in Customize uploads a new one.
-- Links and community/video widgets take a handle only; the domain is fixed (`LINK_KINDS`, field kind `handle`).
+- Links and community/video widgets take a handle only; the domain is fixed (`LINK_KINDS`, field kind `handle`). Trading terminal referral links (Axiom, GMGN, Padre, Proxima) use their own one-color marks (`BrandIcon` in `profile/links.ts`).
+- Widgets are added by click or by dragging a library tile onto the card (`dragFromLibrary` in Customize).
 - Reactions widget is hidden from the library (kept for existing profiles).
 - Widgets: V2 designs are the default (decided 2026-10-29). V1 stays selectable through the `style` setting; new designs go in as a new version, never by editing the existing one. The dashboard follows the Figma prototype (`FL3X.lol`, node 186:1226), which is **not final**. Widgets (node 217:191) are redrawn in the same style, never copied.
 
@@ -17,7 +18,7 @@ Profiles with live widgets for crypto people. The founder speaks French: reply i
 - `apps/api`: Fastify + Drizzle + Postgres, on Render (`render.yaml`). Migrations run on boot. Without `DATABASE_URL`, local dev uses PGlite in `.pglite/`.
 - `packages/shared`: zod schemas, the widget catalogue (`widgets.ts`: fields drive both the inspector and validation), badges, tiers.
 - Third-party API keys live in the API only. Widgets read `/data/*` (Postgres cache `data_cache`).
-- Data sources: DexScreener (tokens), Jupiter Price v3 + Tokens v2 + Solana RPC (Solana wallets), publicnode RPCs + DefiLlama prices (EVM wallets; Moralis optional), Discord invites API, public t.me pages, YouTube channel page + RSS (latest video), Twitch Helix or decapi.me, Spotify Web API (member's own account, OAuth), flagcdn (flags).
+- Data sources: DexScreener (tokens), Jupiter Price v3 + Tokens v2 + Solana RPC (Solana wallets), publicnode RPCs + DefiLlama prices (EVM wallets; Moralis optional), Robinhood Chain RPC (chain 4663: ETH + WETH only, no price feed for its tokens yet), Discord invites API, public t.me pages, YouTube channel page + RSS (latest video), Twitch Helix or decapi.me, Spotify Web API (member's own account, OAuth), flagcdn (flags).
 - Wallets: our own connect flow (EIP-6963 for EVM, Wallet Standard for Solana), the user signs a one-time message, the API verifies it (`lib/wallets.ts`). No connect kit. Wallet widgets combine every verified wallet; public profiles fetch values by widget id so addresses never reach the page.
 - Uploads: `POST /me/media` (PNG/JPG/WebP ≤ 8 MB, sniffed by magic bytes), re-encoded to WebP with sharp, stored in Postgres (`media`), served from `/media/:id.webp`.
 - Badges: catalogue in `shared/badges.ts` (Figma 286:819), icons in `public/images/badges/`. Team badges are granted with `POST /admin/badges`. The Premium checkmark (`ui/Verified`, Figma 496:201) is Premium-only.
@@ -34,6 +35,6 @@ Profiles with live widgets for crypto people. The founder speaks French: reply i
 - Editor saves go through the bottom unsaved bar (`UnsavedBar`: Discard / Save changes), never a browser `beforeunload` prompt.
 
 ## Open decisions
-- Token mint, final thresholds, chain(s) beyond Solana (EVM, Robinhood Chain).
+- Token mint, final thresholds.
 - Image uploads (avatar, backgrounds): storage still to choose (R2 / Vercel Blob).
 - Custom badge (purchase), extra widgets, waitlist with points.

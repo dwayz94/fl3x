@@ -45,6 +45,8 @@ export function Library(props: {
   ownedBadges: string[];
   widgetLimit: number;
   onAddWidget: (type: WidgetType, size: WidgetSize) => void;
+  /** Start dragging a widget tile onto the card. */
+  onDragWidget?: (type: WidgetType, size: WidgetSize, e: React.PointerEvent<HTMLElement>) => void;
   onTheme: (patch: Partial<ProfileTheme>) => void;
   onBadges: (ids: string[]) => void;
 }) {
@@ -95,7 +97,7 @@ export function Library(props: {
           <div className="flex flex-col gap-3">
             <Segmented options={[{ id: "long", label: "Long card" }, { id: "large", label: "Large card" }]} value={size} onChange={(v) => setSize(v as WidgetSize)} />
             <p className="text-xs text-fg-3">
-              {props.draft.widgets.length}/{props.widgetLimit} widgets{full && " · limit reached for your tier"}
+              {props.draft.widgets.length}/{props.widgetLimit} widgets{full ? " · limit reached for your tier" : " · click to add, or drag onto your card"}
             </p>
             {/* Real widgets with sample data, so it's obvious what each one looks like. */}
             <DemoDataProvider resolve={resolveDemo}>
@@ -107,7 +109,8 @@ export function Library(props: {
                     disabled={full}
                     title={WIDGETS[l.type].description}
                     onClick={() => props.onAddWidget(l.type, size)}
-                    className="group flex flex-col gap-1.5 rounded-2xl bg-[#141414] p-2 text-left transition-colors hover:bg-[#1c1c1c] disabled:opacity-40"
+                    onPointerDown={(e) => !full && props.onDragWidget?.(l.type, size, e)}
+                    className="group flex cursor-grab touch-pan-y select-none flex-col gap-1.5 rounded-2xl bg-[#141414] p-2 text-left transition-colors hover:bg-[#1c1c1c] active:cursor-grabbing disabled:opacity-40"
                   >
                     <div className="pointer-events-none overflow-hidden rounded-xl transition-transform group-hover:scale-[1.03]">
                       <div style={{ zoom: size === "large" ? 0.66 : 0.68 }} className={size === "large" ? "h-[204px] w-[172px]" : "h-[96px] w-[356px]"}>

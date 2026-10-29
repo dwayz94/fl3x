@@ -15,6 +15,7 @@ export const CHAINS = [
   { id: "base", label: "Base" },
   { id: "bsc", label: "BNB Chain" },
   { id: "arbitrum", label: "Arbitrum" },
+  { id: "robinhood", label: "Robinhood Chain" },
 ] as const;
 export type ChainId = (typeof CHAINS)[number]["id"];
 

@@ -45,11 +45,105 @@ function Editor({ initial, tier, wallets }: { initial: EditorPayload; tier: Tier
 
   const setWidgets = (fn: (ws: Widget[]) => Widget[]) => setDraft((d) => ({ ...d, widgets: fn(d.widgets) }));
 
-  const addWidget = (type: WidgetType, size: WidgetSize) => {
+  const makeWidget = (type: WidgetType, size: WidgetSize): Widget => {
     const w: Widget = { id: crypto.randomUUID(), type, size, settings: defaultSettings(type) };
     if (type === "clock") w.settings.timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    return w;
+  };
+
+  const addWidget = (type: WidgetType, size: WidgetSize) => {
+    // A click right after dragging a tile isn't a second add.
+    if (justDragged.current) return;
+    const w = makeWidget(type, size);
     setWidgets((ws) => [...ws, w]);
     setSelectedId(w.id);
+  };
+
+  /**
+   * Drag a widget from the library onto the card: a slot opens where the
+   * pointer is (the others make room), dropping places it. Outside the card
+   * the slot goes away and nothing is added.
+   */
+  const [incomingId, setIncomingId] = useState<string | null>(null);
+  const justDragged = useRef(false);
+  const dragFromLibrary = (type: WidgetType, size: WidgetSize, e: React.PointerEvent<HTMLElement>) => {
+    if (e.button !== 0 || e.pointerType === "touch") return; // touch scrolls the library; a tap still adds
+    const tile = e.currentTarget;
+    const start = { x: e.clientX, y: e.clientY };
+    let ghost: HTMLElement | null = null;
+    let id: string | null = null;
+    let last: string | null = null;
+    let frame = 0;
+    let pointer = start;
+
+    const tick = () => {
+      frame = 0;
+      if (!ghost) return;
+      ghost.style.translate = `${pointer.x - start.x}px ${pointer.y - start.y}px`;
+      const hits = document.elementsFromPoint(pointer.x, pointer.y);
+      const overCard = hits.some((h) => h.closest("article"));
+      let slot: string | null = null;
+      for (const h of hits) {
+        const el = (h as HTMLElement).closest<HTMLElement>("[data-slot]");
+        if (el && el.dataset.slot !== id) {
+          slot = el.dataset.slot!;
+          break;
+        }
+      }
+      if (overCard && !id) {
+        const w = makeWidget(type, size);
+        id = w.id;
+        last = slot;
+        setWidgets((ws) => {
+          const at = slot ? ws.findIndex((x) => x.id === slot) : -1;
+          return at < 0 ? [...ws, w] : [...ws.slice(0, at), w, ...ws.slice(at)];
+        });
+        setIncomingId(w.id);
+      } else if (overCard && id && slot && slot !== last) {
+        last = slot;
+        move(id, slot);
+      } else if (overCard && !slot) {
+        last = null;
+      } else if (!overCard && id) {
+        const gone = id;
+        id = null;
+        setWidgets((ws) => ws.filter((x) => x.id !== gone));
+        setIncomingId(null);
+      }
+    };
+    const onMove = (ev: PointerEvent) => {
+      pointer = { x: ev.clientX, y: ev.clientY };
+      if (!ghost) {
+        if (Math.hypot(ev.clientX - start.x, ev.clientY - start.y) < 6) return;
+        const r = tile.getBoundingClientRect();
+        ghost = tile.cloneNode(true) as HTMLElement;
+        Object.assign(ghost.style, {
+          position: "fixed", left: `${r.left}px`, top: `${r.top}px`, width: `${r.width}px`, height: `${r.height}px`,
+          margin: "0", zIndex: "100", pointerEvents: "none", opacity: "0.95", scale: "1.04", rotate: "-1.5deg",
+          boxShadow: "0 24px 60px rgba(0,0,0,0.6)", willChange: "translate",
+        });
+        document.body.appendChild(ghost);
+        document.body.style.cursor = "grabbing";
+      }
+      ev.preventDefault();
+      if (!frame) frame = requestAnimationFrame(tick);
+    };
+    const onUp = () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onUp);
+      cancelAnimationFrame(frame);
+      document.body.style.cursor = "";
+      if (!ghost) return;
+      ghost.remove();
+      justDragged.current = true;
+      setTimeout(() => (justDragged.current = false), 0);
+      setIncomingId(null);
+      if (id) setSelectedId(id);
+    };
+    window.addEventListener("pointermove", onMove, { passive: false });
+    window.addEventListener("pointerup", onUp);
+    window.addEventListener("pointercancel", onUp);
   };
 
   const move = (fromId: string, toId: string) =>
@@ -158,6 +252,7 @@ function Editor({ initial, tier, wallets }: { initial: EditorPayload; tier: Tier
             ownedBadges={initial.ownedBadges}
             widgetLimit={initial.limits.widgets}
             onAddWidget={addWidget}
+            onDragWidget={dragFromLibrary}
             onTheme={(patch: Partial<ProfileTheme>) => setDraft((d) => ({ ...d, theme: { ...d.theme, ...patch } }))}
             onBadges={(badges) => setDraft((d) => ({ ...d, badges }))}
           />
@@ -177,6 +272,7 @@ function Editor({ initial, tier, wallets }: { initial: EditorPayload; tier: Tier
                   onMove: move,
                   onAvatar: () => void changeAvatar(),
                   onIdentity: (patch) => setDraft((d) => ({ ...d, ...patch })),
+                  incomingId,
                 }}
               />
             </FitWidth>

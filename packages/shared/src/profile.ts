@@ -10,6 +10,11 @@ export const LINK_KINDS = [
   { id: "x", label: "X", prefix: "x.com/", handle: "[A-Za-z0-9_]{1,15}", placeholder: "yourhandle" },
   { id: "discord", label: "Discord", prefix: "discord.gg/", handle: "[A-Za-z0-9-]{2,32}", placeholder: "invite-code" },
   { id: "telegram", label: "Telegram", prefix: "t.me/", handle: "[A-Za-z0-9_]{4,32}", placeholder: "yourchannel" },
+  // Trading terminals: referral links.
+  { id: "axiom", label: "Axiom", prefix: "axiom.trade/@", handle: "[A-Za-z0-9_.-]{2,32}", placeholder: "yourcode" },
+  { id: "gmgn", label: "GMGN", prefix: "gmgn.ai/r/", handle: "[A-Za-z0-9_-]{2,32}", placeholder: "yourcode" },
+  { id: "padre", label: "Padre", prefix: "trade.padre.gg/rk/", handle: "[A-Za-z0-9_-]{2,32}", placeholder: "yourcode" },
+  { id: "proxima", label: "Proxima", prefix: "proxima.tools/@", handle: "[A-Za-z0-9_.-]{2,32}", placeholder: "yourcode" },
   { id: "youtube", label: "YouTube", prefix: "youtube.com/@", handle: "[A-Za-z0-9._-]{3,30}", placeholder: "yourchannel" },
   { id: "twitch", label: "Twitch", prefix: "twitch.tv/", handle: "[A-Za-z0-9_]{3,25}", placeholder: "yourchannel" },
   { id: "tiktok", label: "TikTok", prefix: "tiktok.com/@", handle: "[A-Za-z0-9._]{2,24}", placeholder: "yourhandle" },

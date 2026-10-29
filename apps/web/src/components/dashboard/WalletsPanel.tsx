@@ -57,7 +57,7 @@ export function WalletsPanel({ me }: { me: Me }) {
       >
         <Icon icon={Add01Icon} size={16} />
         {me.linkedWallets.length ? "Add another wallet" : "Link a wallet"}
-        <span className="ml-auto text-[10px] text-fg-3">Solana · Ethereum · Base · BNB · Arbitrum…</span>
+        <span className="ml-auto text-[10px] text-fg-3">Solana · Ethereum · Base · Robinhood · BNB…</span>
       </button>
       <p className="text-[11px] text-fg-3">Wallet widgets add up every wallet here. Linking only asks for a free signature.</p>
       {open && <ConnectModal onClose={() => setOpen(false)} onLinked={(next) => qc.setQueryData(["me"], next)} />}
