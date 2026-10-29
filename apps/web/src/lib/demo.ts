@@ -97,7 +97,8 @@ export function resolveDemo(path: string, params: Record<string, string | undefi
     case "community":
       return params.url?.includes("t.me/") ? communities.telegram : params.url?.includes("discord.gg/") ? communities.discord : undefined;
     case "media":
-      return media[params.url?.replace("demo:", "") ?? ""];
+      // The landing's real song stays fixed: the hero never waits on (or breaks with) the API.
+      return params.url === DEMO_TRACK_URL ? media.spotify : media[params.url?.replace("demo:", "") ?? ""];
     case "channel":
       return params.platform === "twitch" ? media.twitch : { ...media.youtube, avatarUrl: IMG.avatar, publishedAt: "2026-10-26T18:00:00.000Z" };
     case "followers":

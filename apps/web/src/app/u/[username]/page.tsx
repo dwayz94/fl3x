@@ -39,5 +39,25 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function ProfilePage({ params }: Props) {
   const profile = await getProfile((await params).username);
   if (!profile) notFound();
-  return <PublicProfile profile={profile} />;
+  const name = profile.displayName ?? profile.username;
+  // Tells search engines this page is a person's profile (name, handle, avatar, their links).
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "ProfilePage",
+    url: `${site.url}/@${profile.username}`,
+    mainEntity: {
+      "@type": "Person",
+      name,
+      alternateName: `@${profile.username}`,
+      description: profile.bio ?? undefined,
+      image: profile.avatarUrl ?? undefined,
+      sameAs: profile.links.map((l) => l.url),
+    },
+  };
+  return (
+    <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }} />
+      <PublicProfile profile={profile} />
+    </>
+  );
 }

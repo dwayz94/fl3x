@@ -71,18 +71,8 @@ export async function renderShareImage(username: string) {
   const logoUri = svgUri(logo);
   const bagUri = svgUri(bag);
 
-  // Unknown profile: a plain FL3X card.
-  if (!profile) {
-    return new ImageResponse(
-      (
-        <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 28, background: "radial-gradient(80% 90% at 50% 0%, #3d1a2d 0%, #0b0709 60%, #000 100%)", color: "#fff", fontFamily: "Moga" }}>
-          {logoUri && <img src={logoUri} width={440} height={153} alt="" />}
-          <div style={{ fontSize: 56, textTransform: "uppercase" }}>Flex on all screens</div>
-        </div>
-      ),
-      { ...shareImageSize, fonts },
-    );
-  }
+  // Unknown profile: the site's own card.
+  if (!profile) return siteCard(logoUri, fonts);
 
   const premium = profile.tier === "premium";
   const name = (profile.displayName || profile.username).toUpperCase();
@@ -149,4 +139,32 @@ export async function renderShareImage(username: string) {
     ),
     { ...shareImageSize, fonts },
   );
+}
+
+type Fonts = ConstructorParameters<typeof ImageResponse>[1] extends infer O ? (O extends { fonts?: infer F } ? F : never) : never;
+
+function siteCard(logoUri: string | null, fonts: Fonts) {
+  return new ImageResponse(
+    (
+      <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 26, background: "radial-gradient(80% 90% at 50% 0%, #3d1a2d 0%, #0b0709 60%, #000 100%)", color: "#fff", fontFamily: "Moga" }}>
+        {logoUri && <img src={logoUri} width={440} height={153} alt="" />}
+        <div style={{ fontSize: 60, textTransform: "uppercase" }}>Your on-chain identity</div>
+        <div style={{ fontFamily: "Outfit", fontSize: 30, color: "rgba(255,255,255,0.7)" }}>Live widgets · Verified wallets · Free to start</div>
+      </div>
+    ),
+    { ...shareImageSize, fonts },
+  );
+}
+
+/** The image shown when fl3x.lol itself (or any page without its own) is shared. */
+export async function renderSiteImage() {
+  const [moga, outfit, logo] = await Promise.all([
+    publicAsset("/fonts/primary/moga.otf"),
+    publicAsset("/fonts/secondary/Outfit-Regular.ttf"),
+    publicAsset("/images/fl3x-logo.svg"),
+  ]);
+  return siteCard(svgUri(logo), [
+    ...(moga ? [{ name: "Moga", data: moga, weight: 400 as const, style: "normal" as const }] : []),
+    ...(outfit ? [{ name: "Outfit", data: outfit, weight: 400 as const, style: "normal" as const }] : []),
+  ]);
 }
