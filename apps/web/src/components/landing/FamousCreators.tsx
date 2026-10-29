@@ -9,8 +9,10 @@ const creators = [
 ];
 
 export function FamousCreators() {
-  // Two identical halves so translateX(-50%) loops seamlessly at any width.
-  const loop = [...creators, ...creators, ...creators, ...creators];
+  // Two identical halves so translateX(-50%) loops seamlessly. Each half (6 × 4 cards ≈ 5,600px)
+  // is wider than any screen, even zoomed far out, so the strip never runs short on the right.
+  const half = Array.from({ length: 6 }, () => creators).flat();
+  const loop = [...half, ...half];
   return (
     <section className="overflow-hidden py-24 md:py-40">
       <div className="px-gutter">

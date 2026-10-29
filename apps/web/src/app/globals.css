@@ -16,7 +16,7 @@
   --font-primary: var(--font-moga), system-ui, sans-serif;
   --font-secondary: var(--font-outfit), system-ui, sans-serif;
 
-  --animate-marquee: marquee 30s linear infinite;
+  --animate-marquee: marquee 90s linear infinite;
   @keyframes marquee {
     from { transform: translateX(0); }
     to { transform: translateX(-50%); }
@@ -47,8 +47,11 @@
 }
 
 :root {
-  /* Was a fixed 280px in the old build; now scales from phone to wide desktop. */
-  --gutter: clamp(16px, 14.6vw, 280px);
+  /*
+   * Scales from phone to desktop; past ~2160px (zoomed out, ultra-wide) content stops
+   * growing and centers in a 1600px column instead of hugging the left edge.
+   */
+  --gutter: max(clamp(16px, 14.6vw, 280px), calc((100vw - 1600px) / 2));
 }
 
 body {

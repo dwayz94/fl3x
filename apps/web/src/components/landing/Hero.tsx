@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { CheckmarkCircle02Icon, Loading03Icon, TagsIcon } from "@hugeicons/core-free-icons";
 import { validateUsername } from "@fl3x/shared";
 import { Button, Icon, Input } from "@/components/ui";
@@ -30,7 +30,7 @@ export function Hero() {
     <section className="relative min-h-[calc(100svh-75px)]">
       <Image src="/images/backgrounds/hero-bg.png" alt="" fill priority className="object-cover object-center" />
       <div className="px-gutter relative grid min-h-[calc(100svh-75px)] items-center gap-12 py-16 xl:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
-        <div className="flex flex-col">
+        <div className="flex min-w-0 flex-col">
         <h1 className="mb-6 text-5xl md:text-6xl lg:text-7xl">PRove eveRythInG.</h1>
         <p className="mb-4 max-w-xl text-lg text-fg-2">
           With fl3x, you can verify on-chain data, display social links, showcase live widgets, personalize your page and
@@ -42,7 +42,7 @@ export function Hero() {
         </p>
         <form onSubmit={claim} className="mb-8 flex max-w-xl flex-col gap-3 sm:flex-row sm:items-start">
           <Input
-            containerClassName="flex-1"
+            containerClassName="min-w-0 flex-1"
             placeholder="username"
             value={username}
             maxLength={20}
@@ -65,7 +65,7 @@ export function Hero() {
               ) : null
             }
           />
-          <Button type="submit" leftIcon={<Icon icon={TagsIcon} size={18} />}>
+          <Button type="submit" className="shrink-0" leftIcon={<Icon icon={TagsIcon} size={18} />}>
             Claim Now
           </Button>
         </form>
@@ -73,10 +73,49 @@ export function Hero() {
         </div>
         {/* What their profile will look like; follows the name they type. */}
         {/* Bigger than the text column on purpose; only a slight bleed toward the right edge. */}
-        <div className="hidden justify-center xl:flex xl:-mr-[calc(var(--gutter)/2)]" style={{ zoom: 0.92 }}>
-          <HeroPreview username={availability && availability !== "checking" && availability.available ? name : undefined} />
+        <div className="hidden min-w-0 justify-center xl:flex xl:-mr-[calc(var(--gutter)/2)]">
+          <FitWidth max={0.92}>
+            <HeroPreview username={availability && availability !== "checking" && availability.available ? name : undefined} />
+          </FitWidth>
         </div>
       </div>
     </section>
+  );
+}
+
+/**
+ * Scales its child down to the column's width (never above `max`), so the card
+ * shrinks with the window or the browser zoom instead of covering the form.
+ */
+function FitWidth({ max, children }: { max: number; children: ReactNode }) {
+  const box = useRef<HTMLDivElement>(null);
+  const inner = useRef<HTMLDivElement>(null);
+  const [fit, setFit] = useState({ scale: max, width: 0, height: 0 });
+
+  useEffect(() => {
+    const cell = box.current?.parentElement;
+    const el = inner.current;
+    if (!cell || !el) return;
+    const update = () => {
+      // offsetWidth/Height ignore transforms: the card's natural size.
+      const width = el.offsetWidth;
+      const height = el.offsetHeight;
+      if (!width) return;
+      const scale = Math.min(max, cell.clientWidth / width);
+      setFit({ scale, width: width * scale, height: height * scale });
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(cell);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [max]);
+
+  return (
+    <div ref={box} style={fit.width ? { width: fit.width, height: fit.height } : undefined}>
+      <div ref={inner} className="w-max origin-top-left" style={{ transform: `scale(${fit.scale})` }}>
+        {children}
+      </div>
+    </div>
   );
 }
