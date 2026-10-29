@@ -101,17 +101,49 @@ export interface ProfileTheme {
   backgroundUrl?: string;
   font: (typeof FONTS)[number]["id"];
   cursor: (typeof CURSORS)[number]["id"];
+  /** The small FL3X mark under the card. Premium can hide it. */
+  branding?: boolean;
 }
 
-export const DEFAULT_THEME: ProfileTheme = { accent: "#FF97CB", background: "plain", font: "moga", cursor: "default" };
+export const DEFAULT_THEME: ProfileTheme = { accent: "#FF97CB", background: "plain", font: "moga", cursor: "default", branding: true };
 
 /** Premium-only customizations. Others keep the defaults for these keys; the background image is open to everyone. */
-export const PREMIUM_THEME_KEYS = ["font", "cursor"] as const;
+export const PREMIUM_THEME_KEYS = ["font", "cursor", "branding"] as const;
 
-export const TIER_LIMITS: Record<Tier, { widgets: number; links: number }> = {
-  none: { widgets: 4, links: 6 },
-  starter: { widgets: 8, links: 12 },
-  premium: { widgets: 60, links: 40 },
+/** analyticsDays: how far back the analytics dashboard goes. */
+export const TIER_LIMITS: Record<Tier, { widgets: number; links: number; analyticsDays: number }> = {
+  none: { widgets: 4, links: 6, analyticsDays: 7 },
+  starter: { widgets: 8, links: 12, analyticsDays: 30 },
+  premium: { widgets: 60, links: 40, analyticsDays: 90 },
+};
+
+/**
+ * What each tier gets, shown on the landing and the Premium page. Only list
+ * what the product really does: every line here must exist in the code.
+ */
+export const TIER_PERKS: Record<Tier, string[]> = {
+  none: [
+    `Your profile at fl3x.lol/@you`,
+    `${TIER_LIMITS.none.widgets} live widgets and ${TIER_LIMITS.none.links} links`,
+    "Wallets, tokens, music, videos, communities",
+    "Colors, backgrounds and your own images",
+    "Badges and referral link",
+    `Analytics for the last ${TIER_LIMITS.none.analyticsDays} days`,
+  ],
+  starter: [
+    "Everything in Free",
+    `${TIER_LIMITS.starter.widgets} widgets and ${TIER_LIMITS.starter.links} links`,
+    `Analytics for the last ${TIER_LIMITS.starter.analyticsDays} days`,
+  ],
+  premium: [
+    "Everything in Starter",
+    "Premium checkmark next to your name",
+    `Up to ${TIER_LIMITS.premium.widgets} widgets and ${TIER_LIMITS.premium.links} links`,
+    "Custom fonts and cursors",
+    "Remove the FL3X mark from your profile",
+    `Analytics for the last ${TIER_LIMITS.premium.analyticsDays} days`,
+    "Premium badge",
+  ],
 };
 
 /**
@@ -130,6 +162,7 @@ export const themeInput = z.object({
   backgroundUrl: z.union([imageUrl, z.literal("")]).optional(),
   font: z.enum(FONTS.map((f) => f.id) as [string, ...string[]]),
   cursor: z.enum(CURSORS.map((c) => c.id) as [string, ...string[]]),
+  branding: z.boolean().optional(),
 });
 
 export const profileInput = z.object({

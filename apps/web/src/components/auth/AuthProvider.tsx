@@ -7,7 +7,7 @@ import { QueryClient, QueryClientProvider, useQuery, useQueryClient } from "@tan
 import type { Me } from "@fl3x/shared";
 import { site } from "@/config/site";
 import { api } from "@/lib/api";
-import { DEV_KEY } from "@/lib/dev-session";
+import { DEV_KEY, devSession } from "@/lib/dev-session";
 import { AuthContext, noop, useAuth, type AuthState } from "./auth-context";
 
 export { useAuth };
@@ -63,7 +63,7 @@ export function Providers({ children }: { children: ReactNode }) {
     <QueryClientProvider client={queryClient}>
       {publicProfile ? (
         children
-      ) : site.privyAppId ? (
+      ) : site.privyAppId && !devSession.enabled ? (
         <PrivyAuth>{children}</PrivyAuth>
       ) : process.env.NODE_ENV !== "production" ? (
         <DevAuth>{children}</DevAuth>

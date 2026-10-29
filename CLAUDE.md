@@ -3,13 +3,14 @@
 Profiles with live widgets for crypto people. The founder speaks French: reply in French. The product is in English.
 
 ## Product
-- Holding the token gives a tier: `none` (free, limited profile: 4 widgets, 6 links) / `starter` / `premium`. Decided on 2026-10-28: free profiles are allowed. Thresholds come from the API env and are provisional (100K / 1M for now).
+- Holding the token gives a tier: `none` (free, limited profile: 4 widgets, 6 links) / `starter` / `premium`. What each tier gets lives in `TIER_LIMITS` + `TIER_PERKS` (shared), shown on the landing and the Premium page: list only features that exist. Premium-only: checkmark, fonts, cursors, hiding the FL3X mark, 90-day analytics (Starter 30, Free 7). Decided on 2026-10-28: free profiles are allowed. Thresholds come from the API env and are provisional (100K / 1M for now).
 - Pre-launch is invite-only: an invite code is required to claim a username. Each member gets their own code (referrals); the referral link carries the handle (`/invite/<username>`), resolved to the code by the API (old codes still work). Everyone else goes to the waitlist.
 - Sign-in uses Privy: X + Solana wallet, no embedded wallet.
 - The landing page keeps the old project's design (`../fl3x-old`). Join / waitlist follow the Figma sign screens: no card, centered column on the money-bag background.
 - Customize is a full-screen mode (no sidebar, back button). Drag reorders live (`profile/EditableGrid.tsx`, motion layout animations). Name and bio are edited in Settings or in place on the card in Customize; clicking the avatar in Customize uploads a new one.
 - Links and community/video widgets take a handle only; the domain is fixed (`LINK_KINDS`, field kind `handle`). Trading terminal referral links (Axiom, GMGN, Padre, Proxima) use their own one-color marks (`BrandIcon` in `profile/links.ts`).
-- Widgets are added by click or by dragging a library tile onto the card (`dragFromLibrary` in Customize).
+- Widgets are added by click or by dragging a library tile onto the card (`dragFromLibrary` in Customize). Profile links are reordered by drag or arrows on the Links page (order = `position`).
+- Music widgets play a 30 s preview from Deezer (`/data/preview`, looked up by title + artist on click; links expire after ~15 min).
 - Reactions widget is hidden from the library (kept for existing profiles).
 - Widgets: V2 designs are the default (decided 2026-10-29). V1 stays selectable through the `style` setting; new designs go in as a new version, never by editing the existing one. The dashboard follows the Figma prototype (`FL3X.lol`, node 186:1226), which is **not final**. Widgets (node 217:191) are redrawn in the same style, never copied.
 
@@ -24,7 +25,7 @@ Profiles with live widgets for crypto people. The founder speaks French: reply i
 - Badges: catalogue in `shared/badges.ts` (Figma 286:819), icons in `public/images/badges/`. Team badges are granted with `POST /admin/badges`. The Premium checkmark (`ui/Verified`, Figma 496:201) is Premium-only.
 - P&L / portfolio: built from our own hourly snapshots (`wallet_snapshots`). History starts when the wallet is first shown.
 - Analytics: the browser calls `/api/track` (Next, reads Vercel geo), which forwards to `/internal/track` with `INTERNAL_API_KEY`. IPs are hashed with a daily salt and never stored.
-- Local dev without Privy: a "dev login" (`dev:<name>` tokens) is accepted by the API only outside production. `/dev` gives one-click test sessions: "Test member" (@tester, seeded profile + analytics, tier from `DEV_TIER`) or a fresh account for the join/waitlist flow.
+- Local dev: a "dev login" (`dev:<name>` tokens) is accepted by the API only outside production, when Privy isn't configured or with `DEV_LOGIN=1` (API) / `NEXT_PUBLIC_DEV_LOGIN=1` (web). `/dev` gives one-click test sessions: "Test member" (@tester, seeded profile + analytics, tier from `DEV_TIER`) or a fresh account for the join/waitlist flow.
 - Waitlist = sign in with X (no form). `POST /me/waitlist` uses the X handle from Privy.
 
 ## Conventions

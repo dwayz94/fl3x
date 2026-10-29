@@ -6,14 +6,14 @@ export const privy = env.PRIVY_APP_ID
   : null;
 
 /**
- * Local dev without Privy: tokens look like "dev:<name>". Never active in
- * production or when Privy is configured.
+ * Local dev login: tokens look like "dev:<name>". On when Privy isn't
+ * configured, or alongside it with DEV_LOGIN=1. Never in production.
  */
-export const devAuth = !privy && env.NODE_ENV !== "production";
+export const devAuth = env.NODE_ENV !== "production" && (!privy || env.DEV_LOGIN);
 
 /** Returns the Privy user id for a valid access token, or null. */
 export async function verifyAccessToken(token: string): Promise<string | null> {
-  if (devAuth) return /^dev:[a-z0-9_]{2,20}$/.test(token) ? `did:dev:${token.slice(4)}` : null;
+  if (devAuth && token.startsWith("dev:")) return /^dev:[a-z0-9_]{2,20}$/.test(token) ? `did:dev:${token.slice(4)}` : null;
   if (!privy) return null;
   try {
     const claims = await privy.utils().auth().verifyAccessToken(token);

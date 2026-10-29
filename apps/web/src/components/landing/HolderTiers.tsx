@@ -1,29 +1,12 @@
 import Link from "next/link";
 import { Tick01Icon } from "@hugeicons/core-free-icons";
-import type { PublicConfig } from "@fl3x/shared";
+import { TIER_PERKS, type PublicConfig } from "@fl3x/shared";
 import { Brand, buttonClass, Icon } from "@/components/ui";
 import { cn } from "@/lib/cn";
 
-const starterPerks = [
-  "Custom FL3X profile (fl3x.lol/@you)",
-  "Verified Solana wallets",
-  "Essential live widgets",
-  "Social links & X verification",
-  "Basic analytics",
-  "Invite friends to the pre-launch",
-];
-
-const premiumPerks = [
-  "Everything in Starter",
-  "Premium checkmark and badge",
-  "Unlimited widgets",
-  "Premium widget themes & effects",
-  "Custom fonts, colors & animations",
-  "Remove FL3X branding",
-  "Custom domain",
-  "Advanced analytics",
-  "More invites to hand out",
-];
+// One source of truth with the Premium page (TIER_PERKS in shared): only real features.
+const starterPerks = TIER_PERKS.starter;
+const premiumPerks = TIER_PERKS.premium;
 
 export const premiumBackground =
   "linear-gradient(180deg, rgba(0, 0, 0, 0) 0%, rgba(255, 151, 203, 0.35) 100%), rgba(255, 255, 255, 0.10)";
@@ -57,7 +40,7 @@ export function HolderTiers({ config }: { config: PublicConfig }) {
         <TierCard
           title="PR[e]M[i]UM"
           amount={`${fmt(config.thresholds.premium)} $${symbol}`}
-          tagline="Unlimited customization and power"
+          tagline="The full FL3X, checkmark included"
           perks={premiumPerks}
           cta="Go Premium"
           primary

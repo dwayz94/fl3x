@@ -25,9 +25,12 @@ export function PublicProfile({ profile }: { profile: FullPublicProfile }) {
   return (
     <main className="flex min-h-svh flex-col items-center px-3 py-10 md:px-6 md:py-20" style={{ ...backdropStyle(profile.theme), cursor: cursorStyle(profile.theme) }}>
       <ProfileView profile={profile} tier={profile.tier} views={profile.views} onLinkClick={(t) => track(profile.username, "click", t)} />
-      <Link href="/" className="mt-auto pt-12 opacity-50 transition-opacity hover:opacity-100" aria-label="Made with FL3X">
-        <Image src="/images/fl3x-logo.svg" alt="FL3X" width={64} height={22} />
-      </Link>
+      {/* Premium can hide the FL3X mark. */}
+      {!(profile.tier === "premium" && profile.theme.branding === false) && (
+        <Link href="/" className="mt-auto pt-12 opacity-50 transition-opacity hover:opacity-100" aria-label="Made with FL3X">
+          <Image src="/images/fl3x-logo.svg" alt="FL3X" width={64} height={22} />
+        </Link>
+      )}
     </main>
   );
 }

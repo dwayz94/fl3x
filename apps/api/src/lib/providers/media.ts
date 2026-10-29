@@ -191,3 +191,21 @@ async function spotifyArtist(href: string): Promise<string | null> {
     return null;
   }
 }
+
+type DeezerTrack = { title: string; preview: string; artist: { name: string } };
+
+/**
+ * A playable 30 s preview for a track, from Deezer's public search (Spotify no
+ * longer gives previews to new apps). Deezer's links expire after ~15 min,
+ * hence the short cache. null when no confident match.
+ */
+export function getPreview(title: string, artist: string) {
+  const norm = (v: string) => v.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  return cached<{ url: string | null }>(`deezer:${norm(artist)}|${norm(title)}`, 600, async () => {
+    const res = await fetchJson<{ data: DeezerTrack[] }>(`https://api.deezer.com/search?q=${encodeURIComponent(`${artist} ${title}`)}&limit=10`);
+    const a = norm(artist.split(",")[0]!);
+    const t = norm(title);
+    const hit = res.data.find((d) => d.preview && norm(d.artist.name).includes(a) && norm(d.title).startsWith(t));
+    return { url: hit?.preview ?? null };
+  });
+}

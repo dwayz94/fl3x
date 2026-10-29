@@ -1,11 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import { Reorder, useDragControls } from "motion/react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Delete02Icon } from "@hugeicons/core-free-icons";
+import { ArrowDown01Icon, ArrowUp01Icon, Delete02Icon, DragDropVerticalIcon } from "@hugeicons/core-free-icons";
 import { buildLinkUrl, handleFromInput, isValidLinkHandle, LINK_KINDS, type LinkKind, type ProfileLink } from "@fl3x/shared";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { PageHeader, Spinner } from "@/components/dashboard/Panel";
+import { UnsavedBar } from "@/components/dashboard/UnsavedBar";
 import { inputClass } from "@/components/editor/Field";
 import { linkIcons } from "@/components/profile/links";
 import { Button, FieldError, Icon } from "@/components/ui";
@@ -14,6 +16,11 @@ import { cn } from "@/lib/cn";
 import { useEditorProfile, type EditorPayload } from "@/lib/use-profile";
 
 type Draft = Omit<ProfileLink, "id"> & { id?: string };
+/** A link in the editor, with a local key so new (unsaved) links can be reordered too. */
+type Row = Draft & { key: string };
+
+const withKeys = (ls: Draft[]): Row[] => ls.map((l) => ({ ...l, key: l.id ?? crypto.randomUUID() }));
+const strip = (rs: Row[]): Draft[] => rs.map(({ key: _key, ...l }) => l);
 
 export default function LinksPage() {
   const { data } = useEditorProfile();
@@ -24,13 +31,16 @@ export default function LinksPage() {
 function LinksEditor({ initial, limit }: { initial: ProfileLink[]; limit: number }) {
   const { getToken } = useAuth();
   const qc = useQueryClient();
-  const [links, setLinks] = useState<Draft[]>(initial);
+  const [saved, setSaved] = useState<Draft[]>(initial);
+  const [rows, setRows] = useState<Row[]>(() => withKeys(initial));
+  const links = strip(rows);
+  const [savedFlash, setSavedFlash] = useState(false);
   const [kind, setKind] = useState<LinkKind | null>(null);
   const [handle, setHandle] = useState("");
   const [label, setLabel] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const dirty = JSON.stringify(links) !== JSON.stringify(initial);
+  const dirty = JSON.stringify(links) !== JSON.stringify(saved);
 
   const pick = (k: LinkKind) => {
     setKind(k);
@@ -43,7 +53,7 @@ function LinksEditor({ initial, limit }: { initial: ProfileLink[]; limit: number
     const h = handleFromInput(kind!, handle);
     if (!isValidLinkHandle(kind!, h)) return setError(`That doesn't look like a valid ${LINK_KINDS.find((l) => l.id === kind)!.label} handle`);
     setError(null);
-    setLinks((ls) => [...ls, { kind: kind!, url: buildLinkUrl(kind!, h), label: kind === "custom" || kind === "website" ? label || null : null }]);
+    setRows((rs) => [...rs, { key: crypto.randomUUID(), kind: kind!, url: buildLinkUrl(kind!, h), label: kind === "custom" || kind === "website" ? label || null : null }]);
     setKind(null);
     setHandle("");
   };
@@ -54,7 +64,10 @@ function LinksEditor({ initial, limit }: { initial: ProfileLink[]; limit: number
     setError(null);
     try {
       const next = await api<ProfileLink[]>("/me/links", { method: "PUT", token: await getToken(), json: links });
-      setLinks(next);
+      setSaved(next);
+      setRows(withKeys(next));
+      setSavedFlash(true);
+      setTimeout(() => setSavedFlash(false), 1800);
       qc.setQueryData<EditorPayload>(["profile"], (old) => (old ? { ...old, profile: { ...old.profile, links: next } } : old));
     } catch (err) {
       setError(err instanceof ApiRequestError ? err.message : "Could not save");
@@ -68,11 +81,6 @@ function LinksEditor({ initial, limit }: { initial: ProfileLink[]; limit: number
       <PageHeader
         title="L[i]NKS"
         subtitle={`The icons under your profile. ${links.length}/${limit} used.`}
-        action={
-          <Button size="md" onClick={save} loading={saving} disabled={!dirty}>
-            Save links
-          </Button>
-        }
       />
 
       <div className="flex flex-wrap gap-3">
@@ -124,21 +132,101 @@ function LinksEditor({ initial, limit }: { initial: ProfileLink[]; limit: number
       )}
       {error && <div className="mt-3"><FieldError>{error}</FieldError></div>}
 
-      <div className="mt-8 flex flex-col gap-2">
-        {links.length === 0 && <p className="text-sm text-fg-3">No links yet. Pick a network above.</p>}
-        {links.map((l, i) => (
-          <div key={l.id ?? `new-${i}`} className="flex items-center gap-3 rounded-2xl border border-white/10 bg-[#0d0d0d] px-4 py-3">
-            <Icon icon={linkIcons[l.kind]} size={20} className="text-fg-2" />
-            <span className="min-w-0 flex-1 truncate text-sm">
-              {l.label && <span className="mr-2 text-fg">{l.label}</span>}
-              <span className="text-fg-2">{l.url}</span>
-            </span>
-            <button type="button" aria-label="Remove" onClick={() => setLinks((ls) => ls.filter((_, j) => j !== i))} className="rounded-lg p-1.5 text-danger hover:bg-white/10">
-              <Icon icon={Delete02Icon} size={18} />
-            </button>
+      <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,1fr)_260px]">
+        {links.length === 0 ? (
+          <p className="text-sm text-fg-3">No links yet. Pick a network above.</p>
+        ) : (
+          // Order here = order of the icons on your profile. Drag by the handle, or use the arrows.
+          <Reorder.Group axis="y" values={rows} onReorder={setRows} className="flex flex-col gap-2">
+            {rows.map((r, i) => (
+              <LinkRow
+                key={r.key}
+                row={r}
+                index={i}
+                count={rows.length}
+                onMove={(dir) =>
+                  setRows((rs) => {
+                    const next = [...rs];
+                    const j = i + dir;
+                    [next[i], next[j]] = [next[j]!, next[i]!];
+                    return next;
+                  })
+                }
+                onRemove={() => setRows((rs) => rs.filter((x) => x.key !== r.key))}
+              />
+            ))}
+          </Reorder.Group>
+        )}
+        <aside className="h-fit rounded-2xl bg-white/[0.03] p-4">
+          <div className="mb-2 flex items-center gap-2 text-fg">
+            <Icon icon={DragDropVerticalIcon} size={18} className="text-brand" />
+            <p className="font-primary text-lg leading-none">Change the order</p>
           </div>
-        ))}
+          <p className="text-xs leading-relaxed text-fg-3">
+            Your icons show on your profile in this order, first one on the left. Drag a link by its handle, or use the arrows, then save.
+          </p>
+          {links.length > 0 && (
+            <div className="mt-4 flex flex-wrap gap-3 rounded-xl bg-black/40 p-3 text-fg-2">
+              {rows.map((r) => (
+                <Icon key={r.key} icon={linkIcons[r.kind]} size={20} />
+              ))}
+            </div>
+          )}
+        </aside>
       </div>
+
+      <UnsavedBar
+        dirty={dirty}
+        saving={saving}
+        savedFlash={savedFlash}
+        error={error}
+        nudge={0}
+        onDiscard={() => {
+          setRows(withKeys(saved));
+          setError(null);
+        }}
+        onSave={() => void save()}
+      />
     </div>
+  );
+}
+
+function LinkRow({ row, index, count, onMove, onRemove }: { row: Row; index: number; count: number; onMove: (dir: -1 | 1) => void; onRemove: () => void }) {
+  const drag = useDragControls();
+  return (
+    <Reorder.Item
+      value={row}
+      dragListener={false}
+      dragControls={drag}
+      transition={{ type: "spring", stiffness: 500, damping: 40 }}
+      whileDrag={{ scale: 1.02, boxShadow: "0 18px 40px rgba(0,0,0,0.55)" }}
+      className="flex items-center gap-3 rounded-2xl bg-[#0d0d0d] py-2.5 pr-3 pl-2"
+    >
+      <button
+        type="button"
+        aria-label="Drag to reorder"
+        onPointerDown={(e) => drag.start(e)}
+        className="cursor-grab touch-none rounded-lg p-1.5 text-fg-3 hover:bg-white/5 hover:text-fg active:cursor-grabbing"
+      >
+        <Icon icon={DragDropVerticalIcon} size={18} />
+      </button>
+      <span className="w-5 text-center font-primary text-sm text-fg-3">{index + 1}</span>
+      <Icon icon={linkIcons[row.kind]} size={20} className="text-fg-2" />
+      <span className="min-w-0 flex-1 truncate text-sm">
+        {row.label && <span className="mr-2 text-fg">{row.label}</span>}
+        <span className="text-fg-2">{row.url}</span>
+      </span>
+      <div className="flex">
+        <button type="button" aria-label="Move up" disabled={index === 0} onClick={() => onMove(-1)} className="rounded-lg p-1.5 text-fg-3 hover:bg-white/10 hover:text-fg disabled:opacity-25">
+          <Icon icon={ArrowUp01Icon} size={18} />
+        </button>
+        <button type="button" aria-label="Move down" disabled={index === count - 1} onClick={() => onMove(1)} className="rounded-lg p-1.5 text-fg-3 hover:bg-white/10 hover:text-fg disabled:opacity-25">
+          <Icon icon={ArrowDown01Icon} size={18} />
+        </button>
+      </div>
+      <button type="button" aria-label="Remove" onClick={onRemove} className="rounded-lg p-1.5 text-danger hover:bg-white/10">
+        <Icon icon={Delete02Icon} size={18} />
+      </button>
+    </Reorder.Item>
   );
 }

@@ -7,12 +7,13 @@
 
 import { useEffect, useId, useState } from "react";
 import {
-  ArrowDownRight01Icon, ArrowUpRight01Icon, InstagramIcon, Moon02Icon, NewTwitterIcon, PlayIcon, SpotifyIcon, Sun03Icon,
+  ArrowDownRight01Icon, ArrowUpRight01Icon, InstagramIcon, Moon02Icon, NewTwitterIcon, PauseIcon, PlayIcon, SpotifyIcon, Sun03Icon,
   TiktokIcon, TwitchIcon, YoutubeIcon,
 } from "@hugeicons/core-free-icons";
 import { getTimezone } from "countries-and-timezones";
 import { PERIODS, type Widget } from "@fl3x/shared";
 import { Flag, Icon } from "@/components/ui";
+import { usePreview } from "@/lib/audio";
 import { cn } from "@/lib/cn";
 import { fmtCompact, fmtNumber, fmtPct, fmtUsd, splitUsd } from "@/lib/format";
 import type { PortfolioData } from "@fl3x/shared";
@@ -192,11 +193,41 @@ function MediaBackdrop({ w, image }: { w: Widget; image: string | null | undefin
   return <Ambient src={image ?? null} />;
 }
 
-function PlayButton({ className }: { className?: string }) {
+/** Decorative play icon (video thumbnails): the whole widget opens the video. */
+function PlayIconBadge({ className }: { className?: string }) {
   return (
     <span className={cn("flex shrink-0 items-center justify-center rounded-full bg-white text-black shadow-lg", className)}>
       <Icon icon={PlayIcon} size={16} className="translate-x-px fill-black" />
     </span>
+  );
+}
+
+/** Plays a 30 s preview right on the profile; the rest of the widget still opens Spotify. */
+function PlayButton({ className, title, artist }: { className?: string; title?: string | null; artist?: string | null }) {
+  const p = usePreview(title, artist);
+  return (
+    <button
+      type="button"
+      aria-label={p.playing ? "Pause preview" : "Play preview"}
+      title={p.unavailable ? "No preview for this track" : undefined}
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        void p.toggle();
+      }}
+      className={cn(
+        "relative flex shrink-0 items-center justify-center rounded-full bg-white text-black shadow-lg transition-transform hover:scale-110 active:scale-95",
+        p.unavailable && "opacity-50",
+        className,
+      )}
+    >
+      {p.loading ? (
+        <span className="size-3.5 animate-spin rounded-full border-2 border-black border-t-transparent" />
+      ) : (
+        <Icon icon={p.playing ? PauseIcon : PlayIcon} size={16} className={cn("fill-black", !p.playing && "translate-x-px")} />
+      )}
+      {p.playing && <span className="absolute inset-0 animate-ping-slow rounded-full bg-white/40" />}
+    </button>
   );
 }
 
@@ -234,7 +265,7 @@ export function MusicWidgetV2({ w }: { w: Widget }) {
           </div>
           <div className="flex flex-col items-end justify-between self-stretch">
             {logo}
-            <PlayButton className="size-9" />
+            <PlayButton className="size-9" title={data.title} artist={data.author} />
           </div>
         </div>
       </WidgetFrame>
@@ -253,7 +284,7 @@ export function MusicWidgetV2({ w }: { w: Widget }) {
         {data.author && <p className="truncate text-[11px] text-fg-2">{data.author}</p>}
         <div className="mt-2.5 flex items-center justify-between">
           {playing || !live ? <Equalizer /> : <span />}
-          <PlayButton className="size-9" />
+          <PlayButton className="size-9" title={data.title} artist={data.author} />
         </div>
       </div>
     </WidgetFrame>
@@ -309,7 +340,7 @@ export function VideoWidgetV2({ w }: { w: Widget }) {
       {/* eslint-disable-next-line @next/next/no-img-element */}
       {data.thumbnailUrl && <img src={data.thumbnailUrl} alt="" className="size-full object-cover" />}
       <span className="absolute inset-0 flex items-center justify-center">
-        <PlayButton className="size-8 bg-white/90" />
+        <PlayIconBadge className="size-8 bg-white/90" />
       </span>
       <span className="absolute top-1.5 left-1.5">{data.live ? <LivePill viewers={data.viewers} /> : null}</span>
       <PlatformChip provider={provider} className="absolute right-1.5 bottom-1.5" />

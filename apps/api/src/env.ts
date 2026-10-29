@@ -22,6 +22,8 @@ const schema = z.object({
   ADMIN_API_KEY: z.string().default(""),
   // Dev login only (no Privy configured): wallet given to every dev user
   DEV_WALLET: z.string().default(""),
+  // Local only: keep the /dev test sessions working while Privy is configured (ignored in production)
+  DEV_LOGIN: z.enum(["1", "0", ""]).default("").transform((v) => v === "1"),
   // Dev login only: tier forced on dev users (none | starter | premium), to test gated features
   DEV_TIER: z.enum(["none", "starter", "premium"]).optional().or(z.literal("").transform(() => undefined)),
   // Shared with the web app's /api/track route (forwards visitor geo from Vercel)

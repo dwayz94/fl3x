@@ -2,7 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { createHash } from "node:crypto";
 import { and, count, countDistinct, desc, eq, gte, isNotNull, sql } from "drizzle-orm";
 import { z } from "zod";
-import { normalizeUsername, sourceOf, type AnalyticsSummary, type TrafficSource } from "@fl3x/shared";
+import { normalizeUsername, sourceOf, TIER_LIMITS, type AnalyticsSummary, type TrafficSource } from "@fl3x/shared";
 import { db, schema } from "../db";
 import { env } from "../env";
 import { requireUser } from "../lib/auth";
@@ -75,7 +75,9 @@ export async function analyticsRoutes(app: FastifyInstance) {
 
   app.get("/me/analytics", async (req): Promise<AnalyticsSummary> => {
     const user = await requireUser(req);
-    const { days } = z.object({ days: z.coerce.number().int().min(1).max(365).default(30) }).parse(req.query);
+    const asked = z.object({ days: z.coerce.number().int().min(1).max(365).default(30) }).parse(req.query).days;
+    // History depends on the tier (7 / 30 / 90 days).
+    const days = Math.min(asked, TIER_LIMITS[user.tier].analyticsDays);
     const from = new Date(Date.now() - days * 86_400_000);
     const e = schema.profileEvents;
     const mine = eq(e.profileUserId, user.id);

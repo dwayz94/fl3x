@@ -70,8 +70,8 @@ const tokens: Record<string, TokenData> = {
 };
 
 const communities: Record<string, CommunityData> = {
-  telegram: { platform: "telegram", name: "FL3X Community", iconUrl: IMG.fl3x, members: 11_972, online: 3_454, url: "#" },
-  discord: { platform: "discord", name: "FL3X Discord", iconUrl: IMG.fl3x, members: 11_972, online: 3_454, url: "#" },
+  telegram: { platform: "telegram", name: "FL3X Community", iconUrl: IMG.fl3x, members: 11_972, online: 3_454, url: "https://t.me/fl3xdotlol" },
+  discord: { platform: "discord", name: "FL3X Discord", iconUrl: IMG.fl3x, members: 11_972, online: 3_454, url: "https://discord.gg/fl3x" },
 };
 
 const media: Record<string, MediaData> = {

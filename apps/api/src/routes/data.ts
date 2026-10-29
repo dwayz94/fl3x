@@ -3,7 +3,7 @@ import { z } from "zod";
 import { CHAINS } from "@fl3x/shared";
 import { getCommunity } from "../lib/providers/community";
 import { getToken } from "../lib/providers/dexscreener";
-import { getChannel, getMedia } from "../lib/providers/media";
+import { getChannel, getMedia, getPreview } from "../lib/providers/media";
 import { notFound } from "../lib/errors";
 
 const httpUrl = z.url({ protocol: /^https?$/ });
@@ -36,6 +36,12 @@ export async function dataRoutes(app: FastifyInstance) {
     const data = await getMedia(url);
     if (!data) throw notFound("Unsupported media link");
     return data;
+  });
+
+  /** 30 s audio preview of a track, fetched when a visitor presses play on a music widget. */
+  app.get("/data/preview", opts, async (req) => {
+    const q = z.object({ title: z.string().min(1).max(200), artist: z.string().min(1).max(200) }).parse(req.query);
+    return getPreview(q.title, q.artist);
   });
 
   app.get("/data/channel", opts, async (req) => {

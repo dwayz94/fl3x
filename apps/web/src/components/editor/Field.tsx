@@ -20,15 +20,17 @@ function toLocalInput(iso: string) {
   return new Date(d.getTime() - d.getTimezoneOffset() * 60_000).toISOString().slice(0, 16);
 }
 
-export function Segmented({ options, value, onChange }: { options: readonly { id: string; label: string }[]; value: string; onChange: (v: string) => void }) {
+export function Segmented({ options, value, onChange }: { options: readonly { id: string; label: string; disabled?: boolean }[]; value: string; onChange: (v: string) => void }) {
   return (
     <div className="flex rounded-xl border border-white/10 bg-[#111] p-1">
       {options.map((o) => (
         <button
           key={o.id}
           type="button"
+          disabled={o.disabled}
+          title={o.disabled ? "Not included in your tier" : undefined}
           onClick={() => onChange(o.id)}
-          className={cn("flex-1 rounded-lg py-1.5 text-xs transition-colors", value === o.id ? "bg-brand text-bg" : "text-fg-2 hover:text-fg")}
+          className={cn("flex-1 rounded-lg py-1.5 text-xs transition-colors disabled:cursor-not-allowed disabled:opacity-30", value === o.id ? "bg-brand text-bg" : "text-fg-2 hover:text-fg")}
         >
           {o.label}
         </button>

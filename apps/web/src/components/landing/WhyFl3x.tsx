@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { ArrowDown01Icon, SparklesIcon } from "@hugeicons/core-free-icons";
+import { SparklesIcon } from "@hugeicons/core-free-icons";
 import { Brand, buttonClass, Icon } from "@/components/ui";
+import { Faq } from "./Faq";
 
 const faqs = [
   {
@@ -42,16 +43,8 @@ export function WhyFl3x() {
             Ready to FL3X?
           </Link>
         </div>
-        <div className="flex flex-1 flex-col gap-3">
-          {faqs.map((f) => (
-            <details key={f.q} className="group overflow-hidden rounded-2xl bg-surface">
-              <summary className="flex cursor-pointer list-none items-center justify-between gap-4 p-4 pl-6 [&::-webkit-details-marker]:hidden">
-                <span className="font-primary text-2xl">{f.q}</span>
-                <Icon icon={ArrowDown01Icon} className="shrink-0 text-fg-2 transition-transform group-open:rotate-180" />
-              </summary>
-              <p className="px-6 pb-4 text-sm text-fg-2">{f.a}</p>
-            </details>
-          ))}
+        <div className="flex-1">
+          <Faq items={faqs} />
         </div>
       </div>
     </section>

@@ -29,7 +29,7 @@ export function Hero() {
   return (
     <section className="relative min-h-[calc(100svh-75px)]">
       <Image src="/images/backgrounds/hero-bg.png" alt="" fill priority className="object-cover object-center" />
-      <div className="px-gutter relative grid min-h-[calc(100svh-75px)] items-center gap-12 py-16 xl:grid-cols-[minmax(0,1fr)_auto]">
+      <div className="px-gutter relative grid min-h-[calc(100svh-75px)] items-center gap-12 py-16 xl:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
         <div className="flex flex-col">
         <h1 className="mb-6 text-5xl md:text-6xl lg:text-7xl">PRove eveRythInG.</h1>
         <p className="mb-8 max-w-xl text-lg text-fg-2">
@@ -68,7 +68,8 @@ export function Hero() {
         <SocialLinks />
         </div>
         {/* What their profile will look like; follows the name they type. */}
-        <div className="hidden justify-center xl:flex" style={{ zoom: 0.72 }}>
+        {/* Bigger than the text column on purpose; bleeds toward the right edge like the Figma. */}
+        <div className="hidden justify-end xl:flex xl:-mr-[calc(var(--gutter)-40px)]" style={{ zoom: 0.92 }}>
           <HeroPreview username={availability && availability !== "checking" && availability.available ? name : undefined} />
         </div>
       </div>

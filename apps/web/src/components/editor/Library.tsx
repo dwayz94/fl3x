@@ -1,7 +1,7 @@
 "use client";
 
 import {
-  ArrowLeft01Icon, Award01Icon, Cursor01Icon, GridViewIcon, LockIcon, PaintBucketIcon, Search01Icon, TextFontIcon,
+  ArrowLeft01Icon, Award01Icon, Cursor01Icon, GridViewIcon, LockIcon, PaintBucketIcon, Search01Icon, TextFontIcon, ViewOffSlashIcon,
 } from "@hugeicons/core-free-icons";
 import { useState } from "react";
 import {
@@ -34,6 +34,7 @@ const SECTIONS = [
   { id: "cursor", kicker: "Effect", title: "Cursor", desc: "Give visitors a custom cursor", icon: Cursor01Icon },
   { id: "font", kicker: "Custom", title: "Font", desc: "Change your name's typeface", icon: TextFontIcon },
   { id: "color", kicker: "Custom", title: "Color", desc: "Your accent color", icon: PaintBucketIcon },
+  { id: "branding", kicker: "Premium", title: "Branding", desc: "Hide the FL3X mark", icon: ViewOffSlashIcon },
 ] as const;
 type Section = (typeof SECTIONS)[number]["id"];
 
@@ -228,6 +229,26 @@ export function Library(props: {
                 </OptionTile>
               ))}
             </div>
+          </PremiumGate>
+        )}
+
+        {section === "branding" && (
+          <PremiumGate locked={!premium} label="Hiding the FL3X mark">
+            <button
+              type="button"
+              role="switch"
+              aria-checked={theme.branding !== false}
+              onClick={() => props.onTheme({ branding: theme.branding === false })}
+              className="flex w-full items-center gap-3 rounded-2xl bg-[#141414] p-4 text-left"
+            >
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm">Show the FL3X mark</span>
+                <span className="block text-[11px] text-fg-3">The small logo under your card on your public page.</span>
+              </span>
+              <span className={cn("flex h-6 w-11 shrink-0 items-center rounded-full p-0.5 transition-colors", theme.branding !== false ? "bg-brand" : "bg-white/15")}>
+                <span className={cn("size-5 rounded-full bg-white shadow transition-transform", theme.branding !== false && "translate-x-5")} />
+              </span>
+            </button>
           </PremiumGate>
         )}
 

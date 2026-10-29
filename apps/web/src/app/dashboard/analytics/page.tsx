@@ -3,8 +3,9 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Cursor01Icon, Link01Icon } from "@hugeicons/core-free-icons";
-import { LINK_KINDS, TRAFFIC_SOURCES, type AnalyticsSummary, type LinkKind } from "@fl3x/shared";
-import { useAuth } from "@/components/auth/AuthProvider";
+import { LINK_KINDS, TIER_LIMITS, TRAFFIC_SOURCES, type AnalyticsSummary, type LinkKind } from "@fl3x/shared";
+import Link from "next/link";
+import { useAuth, useMe } from "@/components/auth/AuthProvider";
 import { LineChart } from "@/components/dashboard/LineChart";
 import { Chip, PageHeader, Panel, Spinner } from "@/components/dashboard/Panel";
 import { Segmented } from "@/components/editor/Field";
@@ -76,7 +77,12 @@ function RankList({ items, empty }: { items: { key: string; label: string; icon:
 
 export default function AnalyticsPage() {
   const { getToken } = useAuth();
-  const [days, setDays] = useState("30");
+  const { data: me } = useMe();
+  // History depends on the tier: longer ranges are locked below it.
+  const maxDays = me ? TIER_LIMITS[me.tier].analyticsDays : 7;
+  const [picked, setPicked] = useState("30");
+  const days = String(Math.min(Number(picked), maxDays));
+  const ranges = RANGES.map((r) => (Number(r.id) > maxDays ? { ...r, disabled: true } : r));
   const { data, isLoading } = useQuery({
     queryKey: ["analytics", days],
     queryFn: async () => api<AnalyticsSummary>(`/me/analytics?days=${days}`, { token: await getToken() }),
@@ -90,7 +96,16 @@ export default function AnalyticsPage() {
       <PageHeader
         title="ACC[o]UNT ANALYT[i]CS"
         subtitle="See exactly how far your profile reaches."
-        action={<div className="w-48"><Segmented options={RANGES} value={days} onChange={setDays} /></div>}
+        action={
+          <div className="flex flex-col items-end gap-1">
+            <div className="w-56"><Segmented options={ranges} value={days} onChange={(v) => Number(v) <= maxDays && setPicked(v)} /></div>
+            {maxDays < 90 && (
+              <Link href="/dashboard/premium" className="text-[11px] text-fg-3 hover:text-brand">
+                {maxDays === 7 ? "Starter unlocks 30 days, Premium 90" : "Premium unlocks 90 days"}
+              </Link>
+            )}
+          </div>
+        }
       />
       {isLoading || !data ? (
         <Spinner />
