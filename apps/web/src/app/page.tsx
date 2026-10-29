@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Footer, Navbar } from "@/components/shared";
-import { FamousCreators, Hero, HolderTiers, WhyFl3x } from "@/components/landing";
+import { FamousCreators, Hero, HolderTiers, StatusBanner, WhyFl3x } from "@/components/landing";
 import { site } from "@/config/site";
 import { getPublicConfig } from "@/lib/server-api";
 
@@ -33,6 +33,7 @@ export default async function LandingPage() {
     <main className="min-h-screen">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <Navbar />
+      <StatusBanner config={config} />
       <Hero />
       <FamousCreators />
       <HolderTiers config={config} />

@@ -5,6 +5,15 @@ export interface PublicConfig {
   phase: LaunchPhase;
   token: { symbol: string; mint: string | null };
   thresholds: { starter: number; premium: number };
+  /** Custom banner from the API env (BANNER_*): null = automatic text from the phase, "off" = hidden. */
+  banner: Banner | "off" | null;
+}
+
+/** The strip under the landing navbar: "message ∙ detail  Link". */
+export interface Banner {
+  text: string;
+  detail: string | null;
+  link: { label: string; url: string } | null;
 }
 
 export interface Me {

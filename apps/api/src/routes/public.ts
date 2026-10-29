@@ -15,6 +15,16 @@ export async function publicRoutes(app: FastifyInstance) {
     phase: env.LAUNCH_PHASE,
     token: { symbol: env.TOKEN_SYMBOL, mint: env.TOKEN_MINT },
     thresholds,
+    banner:
+      env.BANNER_TEXT === "off"
+        ? "off"
+        : env.BANNER_TEXT
+          ? {
+              text: env.BANNER_TEXT,
+              detail: env.BANNER_DETAIL || null,
+              link: env.BANNER_LINK_LABEL && env.BANNER_LINK_URL ? { label: env.BANNER_LINK_LABEL, url: env.BANNER_LINK_URL } : null,
+            }
+          : null,
   }));
 
   app.get<{ Params: { username: string } }>("/usernames/:username", async (req) => {

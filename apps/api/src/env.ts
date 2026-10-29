@@ -38,6 +38,11 @@ const schema = z.object({
   SPOTIFY_CLIENT_SECRET: z.string().default(""),
   // Optional: error reports to Sentry (sentry.io → project → Client Keys)
   SENTRY_DSN: z.string().default(""),
+  // Landing banner (under the navbar). Empty = automatic text from LAUNCH_PHASE / TOKEN_MINT; BANNER_TEXT=off hides it.
+  BANNER_TEXT: z.string().default(""),
+  BANNER_DETAIL: z.string().default(""),
+  BANNER_LINK_LABEL: z.string().default(""),
+  BANNER_LINK_URL: z.string().default(""),
   // Optional: live status for Twitch widgets
   TWITCH_CLIENT_ID: z.string().default(""),
   TWITCH_CLIENT_SECRET: z.string().default(""),
