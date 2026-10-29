@@ -11,7 +11,9 @@ export function LegalPage({ title, intro, sections }: { title: string; intro: Re
   return (
     <main className="min-h-screen">
       <Navbar />
-      <article className="px-gutter mx-auto max-w-[860px] py-16 md:py-24">
+      {/* Gutter outside, width cap inside: the gutter must not eat into the reading column. */}
+      <div className="px-gutter">
+      <article className="mx-auto max-w-[900px] py-16 md:py-24">
         <p className="text-sm text-fg-3">Last updated {LEGAL_UPDATED}</p>
         <h1 className="mt-2 text-5xl md:text-6xl">
           <Brand>{title}</Brand>
@@ -44,6 +46,7 @@ export function LegalPage({ title, intro, sections }: { title: string; intro: Re
           ))}
         </div>
       </article>
+      </div>
       <Footer />
     </main>
   );

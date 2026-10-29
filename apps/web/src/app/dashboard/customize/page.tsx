@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft01Icon, ViewIcon, ViewOffSlashIcon } from "@hugeicons/core-free-icons";
 import { useQueryClient } from "@tanstack/react-query";
+import { motion } from "motion/react";
 import { defaultSettings, type EditableProfile, type LinkedWallet, type ProfileTheme, type Tier, type Widget, type WidgetSize, type WidgetType } from "@fl3x/shared";
 import { useAuth, useMe } from "@/components/auth/AuthProvider";
 import { Spinner } from "@/components/dashboard/Panel";
@@ -18,6 +19,8 @@ import { api, ApiRequestError } from "@/lib/api";
 import { cn } from "@/lib/cn";
 import { pickImage, useUpload } from "@/lib/upload";
 import { useEditorProfile, type EditorPayload } from "@/lib/use-profile";
+
+const EASE = [0.22, 1, 0.36, 1] as const;
 
 export default function CustomizePage() {
   const { data: me } = useMe();
@@ -219,15 +222,28 @@ function Editor({ initial, tier, wallets }: { initial: EditorPayload; tier: Tier
   };
 
   // Leaving with unsaved changes shakes the bar instead of a browser prompt.
+  // Entering and leaving Customize animate (panels slide in from their side, the card zooms in).
+  const [leaving, setLeaving] = useState(false);
   const back = () => {
     if (dirty) return setNudge((n) => n + 1);
-    router.push("/dashboard/analytics");
+    setLeaving(true);
+    setTimeout(() => router.push("/dashboard/analytics"), 260);
   };
 
   return (
     // Full-screen customize mode: no dashboard sidebar, a back button instead.
-    <div className="fixed inset-0 z-30 flex flex-col overflow-y-auto bg-[#0b0b0b] lg:overflow-hidden">
-      <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-3 border-b border-white/10 bg-[#0b0b0b]/95 px-3 backdrop-blur md:px-4">
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: leaving ? 0 : 1 }}
+      transition={{ duration: 0.25, ease: EASE }}
+      className="fixed inset-0 z-30 flex flex-col overflow-y-auto bg-[#0b0b0b] lg:overflow-hidden"
+    >
+      <motion.header
+        initial={{ y: -24, opacity: 0 }}
+        animate={leaving ? { y: -24, opacity: 0 } : { y: 0, opacity: 1 }}
+        transition={{ duration: 0.4, ease: EASE }}
+        className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-3 border-b border-white/10 bg-[#0b0b0b]/95 px-3 backdrop-blur md:px-4"
+      >
         <button type="button" onClick={back} className="flex items-center gap-1.5 rounded-xl px-2 py-1.5 text-sm text-fg-2 transition-colors hover:bg-white/5 hover:text-fg">
           <Icon icon={ArrowLeft01Icon} size={18} />
           <span className="hidden sm:inline">Dashboard</span>
@@ -251,10 +267,16 @@ function Editor({ initial, tier, wallets }: { initial: EditorPayload; tier: Tier
             <span className="hidden sm:inline">{preview ? "Show panels" : "Hide panels"}</span>
           </button>
         </div>
-      </header>
+      </motion.header>
 
       <div className="flex flex-col lg:min-h-0 lg:flex-1 lg:flex-row">
-        <aside data-hidden={preview} className="border-white/10 bg-[#0b0b0b] p-4 data-[hidden=true]:hidden lg:w-[300px] lg:shrink-0 lg:overflow-y-auto lg:border-r">
+        <motion.aside
+          data-hidden={preview}
+          initial={{ x: -40, opacity: 0 }}
+          animate={leaving ? { x: -40, opacity: 0 } : { x: 0, opacity: 1 }}
+          transition={{ duration: 0.45, ease: EASE, delay: leaving ? 0 : 0.06 }}
+          className="border-white/10 bg-[#0b0b0b] p-4 data-[hidden=true]:hidden lg:w-[300px] lg:shrink-0 lg:overflow-y-auto lg:border-r"
+        >
           <Library
             draft={draft}
             tier={tier}
@@ -265,12 +287,19 @@ function Editor({ initial, tier, wallets }: { initial: EditorPayload; tier: Tier
             onTheme={(patch: Partial<ProfileTheme>) => setDraft((d) => ({ ...d, theme: { ...d.theme, ...patch } }))}
             onBadges={(badges) => setDraft((d) => ({ ...d, badges }))}
           />
-        </aside>
+        </motion.aside>
 
         <section className="relative flex min-h-[70svh] min-w-0 flex-1 flex-col bg-[#1a1a1a] lg:min-h-0" style={{ ...backdropStyle(draft.theme), cursor: cursorStyle(draft.theme) }}>
           <div className="flex flex-1 flex-col items-center overflow-y-auto px-4 py-8" onClick={() => setSelectedId(null)}>
             {/* my-auto centers when it fits, and scrolls from the top when it doesn't */}
-            <FitWidth onClick={(e) => e.stopPropagation()} className="my-auto">
+            <motion.div
+              // No scale: FitWidth measures the card's on-screen width to size the preview.
+              initial={{ y: 32, opacity: 0 }}
+              animate={leaving ? { y: 16, opacity: 0 } : { y: 0, opacity: 1 }}
+              transition={leaving ? { duration: 0.22, ease: EASE } : { type: "spring", stiffness: 260, damping: 28, delay: 0.12 }}
+              className="my-auto flex w-full justify-center"
+            >
+            <FitWidth onClick={(e) => e.stopPropagation()}>
               <ProfileView
                 profile={draft}
                 tier={tier}
@@ -285,10 +314,17 @@ function Editor({ initial, tier, wallets }: { initial: EditorPayload; tier: Tier
                 }}
               />
             </FitWidth>
+            </motion.div>
           </div>
         </section>
 
-        <aside data-hidden={preview} className="border-white/10 bg-[#0b0b0b] p-5 data-[hidden=true]:hidden lg:w-[300px] lg:shrink-0 lg:overflow-y-auto lg:border-l">
+        <motion.aside
+          data-hidden={preview}
+          initial={{ x: 40, opacity: 0 }}
+          animate={leaving ? { x: 40, opacity: 0 } : { x: 0, opacity: 1 }}
+          transition={{ duration: 0.45, ease: EASE, delay: leaving ? 0 : 0.1 }}
+          className="border-white/10 bg-[#0b0b0b] p-5 data-[hidden=true]:hidden lg:w-[300px] lg:shrink-0 lg:overflow-y-auto lg:border-l"
+        >
           <Inspector
             draft={draft}
             selected={selected}
@@ -300,11 +336,11 @@ function Editor({ initial, tier, wallets }: { initial: EditorPayload; tier: Tier
             }}
             onShift={shift}
           />
-        </aside>
+        </motion.aside>
       </div>
 
       <UnsavedBar dirty={dirty} saving={saving} savedFlash={savedFlash} error={error} nudge={nudge} onDiscard={discard} onSave={() => void save()} />
-    </div>
+    </motion.div>
   );
 }
 
