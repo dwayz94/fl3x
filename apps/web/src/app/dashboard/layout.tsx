@@ -11,8 +11,8 @@ import { useEditorProfile } from "@/lib/use-profile";
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
-  const { ready, authenticated } = useAuth();
-  const { data: me } = useMe();
+  const { ready, authenticated, logout } = useAuth();
+  const { data: me, isError: meError, refetch: refetchMe } = useMe();
   const { data: editor } = useEditorProfile();
 
   useEffect(() => {
@@ -20,6 +20,23 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     else if (me && !me.username) router.replace("/join");
   }, [ready, authenticated, me, router]);
 
+  if (meError) {
+    // Expired session or API down: say so instead of spinning forever.
+    return (
+      <div className="flex min-h-svh flex-col items-center justify-center gap-3 px-6 text-center">
+        <p className="font-primary text-3xl">Can&apos;t reach FL3X</p>
+        <p className="max-w-sm text-sm text-fg-3">Your session may have expired, or we&apos;re restarting. Try again in a moment.</p>
+        <div className="flex gap-2">
+          <button type="button" onClick={() => void refetchMe()} className="rounded-xl bg-brand px-4 py-2 text-sm text-bg">
+            Try again
+          </button>
+          <button type="button" onClick={() => void logout().then(() => router.replace("/"))} className="rounded-xl bg-white/[0.08] px-4 py-2 text-sm">
+            Sign out
+          </button>
+        </div>
+      </div>
+    );
+  }
   if (!me?.username) return <Spinner />;
 
   // Customize is a full-screen mode of its own (back button, no sidebar).

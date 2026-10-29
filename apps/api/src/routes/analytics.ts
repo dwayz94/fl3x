@@ -1,5 +1,5 @@
 import type { FastifyInstance } from "fastify";
-import { createHash, timingSafeEqual } from "node:crypto";
+import { createHash } from "node:crypto";
 import { and, count, countDistinct, desc, eq, gte, isNotNull, sql } from "drizzle-orm";
 import { z } from "zod";
 import { normalizeUsername, sourceOf, type AnalyticsSummary, type TrafficSource } from "@fl3x/shared";
@@ -7,6 +7,7 @@ import { db, schema } from "../db";
 import { env } from "../env";
 import { requireUser } from "../lib/auth";
 import { forbidden, notFound } from "../lib/errors";
+import { isInternalRequest } from "../lib/internal";
 
 const trackBody = z.object({
   username: z.string().max(32),
@@ -34,12 +35,6 @@ function referrerHost(ref?: string) {
   }
 }
 
-function isInternal(given: unknown) {
-  if (typeof given !== "string") return false;
-  const a = Buffer.from(given);
-  const b = Buffer.from(env.INTERNAL_API_KEY);
-  return a.length === b.length && timingSafeEqual(a, b);
-}
 
 export async function analyticsRoutes(app: FastifyInstance) {
   /**
@@ -47,7 +42,7 @@ export async function analyticsRoutes(app: FastifyInstance) {
    * the visitor's IP and country (Vercel geo headers).
    */
   app.post("/internal/track", async (req) => {
-    if (!isInternal(req.headers["x-internal-key"])) throw forbidden();
+    if (!isInternalRequest(req.headers["x-internal-key"])) throw forbidden();
     const body = trackBody.parse(req.body);
     if (/bot|crawl|spider|preview|facebookexternalhit|embedly/i.test(body.userAgent)) return { ok: true };
     const [owner] = await db
@@ -59,6 +54,13 @@ export async function analyticsRoutes(app: FastifyInstance) {
     // Daily rotating, salted hash: counts unique visitors without storing IPs.
     const day = new Date().toISOString().slice(0, 10);
     const visitorHash = createHash("sha256").update(`${env.ANALYTICS_SALT}:${day}:${body.ip}:${body.userAgent}`).digest("hex").slice(0, 32);
+    // The hash rotates daily, so this counts today only: one view per visitor and
+    // profile, and a cap on clicks. Keeps the public counter honest.
+    const [{ seen } = { seen: 0 }] = await db
+      .select({ seen: count() })
+      .from(schema.profileEvents)
+      .where(and(eq(schema.profileEvents.profileUserId, owner.id), eq(schema.profileEvents.visitorHash, visitorHash), eq(schema.profileEvents.kind, body.kind)));
+    if (body.kind === "view" ? seen > 0 : seen >= 30) return { ok: true };
     await db.insert(schema.profileEvents).values({
       profileUserId: owner.id,
       kind: body.kind,

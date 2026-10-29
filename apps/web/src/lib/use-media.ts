@@ -36,7 +36,8 @@ export function useMusic(w: Widget) {
     enabled: live && !demo,
     queryFn: async () => (host === "editor" ? api<MediaData>("/me/spotify", { token: await getToken() }) : api<MediaData>(`/data/spotify/${w.id}`)),
     staleTime: 20_000,
-    refetchInterval: 30_000,
+    // Public visitors poll less: the API caches now-playing for 20 s anyway.
+    refetchInterval: host === "editor" ? 30_000 : 60_000,
     retry: false,
   });
   if (!live) return { ...byLink, live, empty: !link };

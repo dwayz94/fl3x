@@ -56,7 +56,21 @@ export async function publicRoutes(app: FastifyInstance) {
     const stats = await badgeStats(row.user);
     // Only show badges still owned (a tier can drop, a granted badge can be taken back).
     const owned = new Set(await badgesFor(row.user, stats));
-    return { ...profile, badges: profile.badges.filter((b) => owned.has(b)), badgeStats: stats, tier: row.user.tier, xHandle: row.user.xHandle, views };
+    // Which wallets a widget adds up stays private: the page fetches values by widget id.
+    const widgets = profile.widgets.map((w) => {
+      if (!("wallets" in w.settings)) return w;
+      const { wallets: _hidden, ...settings } = w.settings;
+      return { ...w, settings };
+    });
+    return {
+      ...profile,
+      widgets,
+      badges: profile.badges.filter((b) => owned.has(b)),
+      badgeStats: stats,
+      tier: row.user.tier,
+      xHandle: row.user.xHandle,
+      views,
+    };
   });
 
   app.get<{ Params: { id: string } }>("/widgets/:id/reactions", async (req) => {

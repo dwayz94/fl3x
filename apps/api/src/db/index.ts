@@ -1,9 +1,12 @@
+import { existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { env } from "../env";
 import * as schema from "./schema";
 
-const migrationsFolder = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../drizzle");
+// apps/api/drizzle: two levels up from src/db in dev (tsx), one level up from dist/ once bundled.
+const here = path.dirname(fileURLToPath(import.meta.url));
+const migrationsFolder = [path.resolve(here, "../../drizzle"), path.resolve(here, "../drizzle")].find((p) => existsSync(path.join(p, "meta")))!;
 
 /**
  * Production: managed Postgres via DATABASE_URL (Render Postgres / Neon).

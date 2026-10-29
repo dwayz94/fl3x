@@ -6,10 +6,14 @@ import { z } from "zod";
 import { db, schema } from "../db";
 import { env } from "../env";
 import { requireUser } from "../lib/auth";
-import { badRequest, notFound } from "../lib/errors";
+import { badRequest, forbidden, HttpError, notFound } from "../lib/errors";
 
 const MAX_UPLOAD_BYTES = 8 * 1024 * 1024;
 const MAX_FILES_PER_USER = 100;
+// Decoding is memory hungry (25M px ≈ 100 MB of RGBA): a couple at a time keeps a small instance alive.
+const MAX_PIXELS = 25_000_000;
+const MAX_CONCURRENT_DECODES = 2;
+let decoding = 0;
 
 /** Output size per use: avatars are square, the rest keep their ratio. */
 const presets = {
@@ -37,6 +41,8 @@ export async function mediaRoutes(app: FastifyInstance) {
 
   app.post("/me/media", { config: { rateLimit: { max: 20, timeWindow: "1 minute" } } }, async (req) => {
     const user = await requireUser(req);
+    // Members only: waitlist accounts have no profile to put images on.
+    if (!user.username) throw forbidden("Claim a username first");
     const { kind } = z.object({ kind: z.enum(["avatar", "background", "widget"]) }).parse(req.query);
 
     const [{ value: used } = { value: 0 }] = await db.select({ value: count() }).from(schema.media).where(eq(schema.media.userId, user.id));
@@ -53,15 +59,19 @@ export async function mediaRoutes(app: FastifyInstance) {
     if (!sniff(input)) throw badRequest("Only PNG, JPG and WebP images", "bad_type");
 
     const p = presets[kind];
+    if (decoding >= MAX_CONCURRENT_DECODES) throw new HttpError(503, "busy", "Too many uploads right now, try again in a few seconds");
+    decoding++;
     let out: { data: Buffer; info: OutputInfo };
     try {
-      out = await sharp(input, { limitInputPixels: 50_000_000, failOn: "error" })
+      out = await sharp(input, { limitInputPixels: MAX_PIXELS, failOn: "error" })
         .rotate() // honour EXIF orientation before it is stripped
         .resize({ width: p.width, height: p.height, fit: p.fit, withoutEnlargement: true })
         .webp({ quality: 82 })
         .toBuffer({ resolveWithObject: true });
     } catch {
-      throw badRequest("This image could not be read", "bad_image");
+      throw badRequest("This image could not be read (max 25 megapixels)", "bad_image");
+    } finally {
+      decoding--;
     }
 
     const [row] = await db

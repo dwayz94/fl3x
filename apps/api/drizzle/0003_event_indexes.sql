@@ -1,0 +1,2 @@
+CREATE INDEX "profile_events_user_visitor_idx" ON "profile_events" USING btree ("profile_user_id","visitor_hash");--> statement-breakpoint
+CREATE INDEX "profile_events_user_kind_idx" ON "profile_events" USING btree ("profile_user_id","kind");

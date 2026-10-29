@@ -33,7 +33,17 @@ async function accessToken(userId: string): Promise<string | null> {
   const [c] = await db.select().from(schema.connections).where(and(eq(schema.connections.userId, userId), eq(schema.connections.provider, "spotify"))).limit(1);
   if (!c) return null;
   if (c.accessToken && c.expiresAt && c.expiresAt.getTime() > Date.now() + 30_000) return decrypt(c.accessToken);
-  const t = await spotifyToken({ grant_type: "refresh_token", refresh_token: decrypt(c.refreshToken) });
+  let t: TokenResponse;
+  try {
+    t = await spotifyToken({ grant_type: "refresh_token", refresh_token: decrypt(c.refreshToken) });
+  } catch (err) {
+    // 400 = the member revoked FL3X in Spotify: drop the connection instead of retrying on every view.
+    if (String(err).includes("token 400")) {
+      await db.delete(schema.connections).where(and(eq(schema.connections.userId, userId), eq(schema.connections.provider, "spotify")));
+      return null;
+    }
+    throw err;
+  }
   await db
     .update(schema.connections)
     .set({
@@ -139,8 +149,14 @@ export async function connectionRoutes(app: FastifyInstance) {
   /** Public: now playing for a profile's music widget. */
   app.get<{ Params: { widgetId: string } }>("/data/spotify/:widgetId", { config: { rateLimit: { max: 60, timeWindow: "1 minute" } } }, async (req) => {
     if (!z.uuid().safeParse(req.params.widgetId).success) throw notFound();
-    const [w] = await db.select({ userId: schema.widgets.userId, type: schema.widgets.type }).from(schema.widgets).where(eq(schema.widgets.id, req.params.widgetId)).limit(1);
-    if (!w || w.type !== "music") throw notFound();
+    const [w] = await db
+      .select({ userId: schema.widgets.userId, type: schema.widgets.type, settings: schema.widgets.settings })
+      .from(schema.widgets)
+      .where(eq(schema.widgets.id, req.params.widgetId))
+      .limit(1);
+    // Only widgets set to "My Spotify" expose what the member listens to (older ones with a link are link mode).
+    const source = w?.settings.source ?? (w?.settings.url ? "link" : "spotify");
+    if (!w || w.type !== "music" || source !== "spotify") throw notFound();
     const data = await nowPlaying(w.userId);
     if (!data) throw notFound("Nothing played yet");
     return data;

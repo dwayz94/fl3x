@@ -39,14 +39,18 @@ export function getMedia(rawUrl: string) {
   const host = url.hostname.replace(/^(www|m|open)\./, "");
 
   if (host === "youtube.com" || host === "youtu.be") {
-    return cached<MediaData>(`yt:${url.href}`, 3600, async () => {
-      const o = await fetchJson<OEmbed>(`https://www.youtube.com/oembed?format=json&url=${encodeURIComponent(url.href)}`);
-      return { provider: "youtube", title: o.title, author: o.author_name ?? null, thumbnailUrl: o.thumbnail_url ?? null, live: null, url: url.href };
+    // Keyed by video id: query strings (?si=, tracking, junk) don't create new entries or upstream calls.
+    const id = host === "youtu.be" ? url.pathname.slice(1) : (url.searchParams.get("v") ?? url.pathname.split("/").filter(Boolean).pop() ?? "");
+    if (!/^[\w-]{6,20}$/.test(id)) return Promise.reject(new Error("Not a YouTube video link"));
+    const clean = `https://www.youtube.com/watch?v=${id}`;
+    return cached<MediaData>(`yt:${id}`, 3600, async () => {
+      const o = await fetchJson<OEmbed>(`https://www.youtube.com/oembed?format=json&url=${encodeURIComponent(clean)}`);
+      return { provider: "youtube", title: o.title, author: o.author_name ?? null, thumbnailUrl: o.thumbnail_url ?? null, live: null, url: clean };
     });
   }
 
   if (host === "spotify.com") {
-    return cached<MediaData>(`spotify:${url.pathname}`, 3600, async () => {
+    return cached<MediaData>(`spotify:${url.pathname.replace(/^\/intl-[a-z-]+/, "")}`, 3600, async () => {
       const o = await fetchJson<OEmbed>(`https://open.spotify.com/oembed?url=${encodeURIComponent(url.href)}`);
       // oEmbed has no artist: the public page names it in its meta tags.
       const author = o.author_name ?? (await spotifyArtist(url.href));

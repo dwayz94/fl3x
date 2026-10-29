@@ -9,13 +9,14 @@ import { db, schema } from "../db";
 import { requireUser } from "../lib/auth";
 import { badRequest, forbidden } from "../lib/errors";
 import { badgesFor, loadProfile } from "../lib/profiles";
-import type { UserRow } from "../lib/users";
+import { refreshTier, type UserRow } from "../lib/users";
 import { verifiedWallets } from "../lib/wallets";
 
 async function requireMember(req: Parameters<typeof requireUser>[0]): Promise<UserRow> {
   const user = await requireUser(req);
   if (!user.username) throw forbidden("Claim a username first");
-  return user;
+  // Limits follow the tokens held right now (cached 10 minutes), not the last /me call.
+  return refreshTier(user);
 }
 
 export async function editorRoutes(app: FastifyInstance) {

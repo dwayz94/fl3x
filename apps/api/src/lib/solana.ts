@@ -16,7 +16,10 @@ async function balanceOf(owner: string, mint: string): Promise<number> {
       method: "getTokenAccountsByOwner",
       params: [owner, { mint }, { encoding: "jsonParsed", commitment: "confirmed" }],
     }),
+    // A hung RPC must not hang sign-in and /me.
+    signal: AbortSignal.timeout(8000),
   });
+  if (!res.ok) throw new Error(`Solana RPC: HTTP ${res.status}`);
   const json = (await res.json()) as ParsedTokenAccounts;
   if (json.error) throw new Error(`Solana RPC: ${json.error.message}`);
   return (json.result?.value ?? []).reduce(

@@ -22,6 +22,13 @@
       "when": 1793271743109,
       "tag": "0002_wallets_media_badges",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1793281723145,
+      "tag": "0003_event_indexes",
+      "breakpoints": true
     }
   ]
 }

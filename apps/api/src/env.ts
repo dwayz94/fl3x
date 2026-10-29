@@ -48,6 +48,13 @@ if (env.NODE_ENV === "production") {
   }
 }
 
-if (env.NODE_ENV === "production" && env.CONNECTIONS_SECRET.startsWith("dev-")) throw new Error("Set a real CONNECTIONS_SECRET");
+if (env.NODE_ENV === "production") {
+  // The defaults above only exist for local dev: never boot production on them.
+  for (const key of ["INTERNAL_API_KEY", "ANALYTICS_SALT", "CONNECTIONS_SECRET"] as const) {
+    if (env[key].startsWith("dev-") || env[key].length < 24) throw new Error(`Set a real ${key} (24+ random characters)`);
+  }
+  if (!env.API_PUBLIC_URL.startsWith("https://")) throw new Error("API_PUBLIC_URL must be the public https URL of the API");
+  if (/localhost|127\.0\.0\.1/.test(env.WEB_ORIGIN)) throw new Error("WEB_ORIGIN must list the production site origins");
+}
 
 export const thresholds = { starter: env.TIER_STARTER_MIN, premium: env.TIER_PREMIUM_MIN };

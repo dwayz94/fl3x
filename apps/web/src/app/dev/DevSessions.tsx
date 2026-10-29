@@ -44,7 +44,7 @@ export function DevSessions() {
       const { token } = await api<{ token: string }>("/dev/session", { json: { kind } });
       devSession.set(token.slice(4));
       // Full reload so the auth provider picks the new session up.
-      window.location.href = kind === "fresh" ? next : (params.get("next") ?? next);
+      window.location.href = kind === "fresh" ? next : (params.get("next")?.startsWith("/") && !params.get("next")!.startsWith("//") ? params.get("next")! : next);
     } catch (err) {
       setError(err instanceof ApiRequestError ? err.message : "Is the API running on :4000?");
       setBusy(null);

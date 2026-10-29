@@ -124,8 +124,11 @@ async function llamaPrices(keys: string[]): Promise<Record<string, number>> {
   return Object.fromEntries(Object.entries(res.coins).map(([k, v]) => [k, v.price]));
 }
 
-async function viaRpc(owner: string, networks: Network[]): Promise<EvmPosition[]> {
+type Read = { positions: EvmPosition[]; complete: boolean };
+
+async function viaRpc(owner: string, networks: Network[]): Promise<Read> {
   const results = await Promise.allSettled(networks.map((n) => balancesOn(n, owner)));
+  let complete = results.every((r) => r.status === "fulfilled");
   const held: { n: Network; key: string; symbol: string; name: string; icon: string; amount: number; id: string }[] = [];
   results.forEach((r, i) => {
     if (r.status !== "fulfilled") return; // one slow network shouldn't hide the others
@@ -137,10 +140,14 @@ async function viaRpc(owner: string, networks: Network[]): Promise<EvmPosition[]
       held.push({ n, key: priceKey ?? `${n.llama}:${address}`, symbol, name: symbol, icon: tokenIcon(n, address), amount: units(raw, decimals), id: `${n.id}:${address}` });
     });
   });
-  const prices = await llamaPrices([...new Set(held.map((h) => h.key))]);
-  return held
+  const prices = await llamaPrices([...new Set(held.map((h) => h.key))]).catch(() => {
+    complete = false;
+    return {} as Record<string, number>;
+  });
+  const positions = held
     .map((h) => ({ id: h.id, network: h.n.id, symbol: h.symbol, name: h.name, iconUrl: h.icon, amount: h.amount, valueUsd: h.amount * (prices[h.key] ?? 0) }))
     .filter((p) => p.valueUsd >= 0.01);
+  return { positions, complete };
 }
 
 type MoralisToken = {
@@ -148,7 +155,7 @@ type MoralisToken = {
   usd_value: number | null; native_token: boolean; possible_spam: boolean;
 };
 
-async function viaMoralis(owner: string, networks: Network[]): Promise<EvmPosition[]> {
+async function viaMoralis(owner: string, networks: Network[]): Promise<Read> {
   const results = await Promise.allSettled(
     networks.map((n) =>
       fetchJson<{ result: MoralisToken[] }>(`https://deep-index.moralis.io/api/v2.2/wallets/${owner}/tokens?chain=${n.moralis}&exclude_spam=true`, {
@@ -156,7 +163,7 @@ async function viaMoralis(owner: string, networks: Network[]): Promise<EvmPositi
       }).then((r) => ({ n, tokens: r.result })),
     ),
   );
-  return results.flatMap((r) =>
+  const positions = results.flatMap((r) =>
     r.status !== "fulfilled"
       ? []
       : r.value.tokens
@@ -171,16 +178,18 @@ async function viaMoralis(owner: string, networks: Network[]): Promise<EvmPositi
             valueUsd: t.usd_value ?? 0,
           })),
   );
+  return { positions, complete: results.every((r) => r.status === "fulfilled") };
 }
 
-export async function evmPositions(owner: string): Promise<EvmPosition[]> {
+/** Positions across every EVM network; `complete` is false when a network or the price feed failed. */
+export async function evmPositions(owner: string): Promise<Read> {
   if (!env.MORALIS_API_KEY) return viaRpc(owner, EVM_NETWORKS);
   // Moralis where it covers the network, our RPC reads elsewhere.
   const [a, b] = await Promise.all([
     viaMoralis(owner, EVM_NETWORKS.filter((n) => n.moralis)),
     viaRpc(owner, EVM_NETWORKS.filter((n) => !n.moralis)),
   ]);
-  return [...a, ...b];
+  return { positions: [...a.positions, ...b.positions], complete: a.complete && b.complete };
 }
 
 export const evmNetworkName = (id: string) => EVM_NETWORKS.find((n) => n.id === id)?.name ?? id;

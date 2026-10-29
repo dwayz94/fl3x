@@ -88,7 +88,12 @@ export const profileEvents = pgTable("profile_events", {
   device: text("device", { enum: ["desktop", "mobile", "tablet"] }).notNull(),
   referrer: text("referrer"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-}, (t) => [index("profile_events_user_time_idx").on(t.profileUserId, t.createdAt)]);
+}, (t) => [
+  index("profile_events_user_time_idx").on(t.profileUserId, t.createdAt),
+  // Dedup lookups (one view per visitor and day) and the public view count.
+  index("profile_events_user_visitor_idx").on(t.profileUserId, t.visitorHash),
+  index("profile_events_user_kind_idx").on(t.profileUserId, t.kind),
+]);
 
 export const widgetReactions = pgTable("widget_reactions", {
   widgetId: uuid("widget_id").notNull().references(() => widgets.id, { onDelete: "cascade" }),

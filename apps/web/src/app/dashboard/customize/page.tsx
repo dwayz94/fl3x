@@ -66,6 +66,9 @@ function Editor({ initial, tier, wallets }: { initial: EditorPayload; tier: Tier
    */
   const [incomingId, setIncomingId] = useState<string | null>(null);
   const justDragged = useRef(false);
+  // Leaving the page mid-drag must not leave listeners or the ghost behind.
+  const endDrag = useRef<(() => void) | null>(null);
+  useEffect(() => () => endDrag.current?.(), []);
   const dragFromLibrary = (type: WidgetType, size: WidgetSize, e: React.PointerEvent<HTMLElement>) => {
     if (e.button !== 0 || e.pointerType === "touch") return; // touch scrolls the library; a tap still adds
     const tile = e.currentTarget;
@@ -128,14 +131,19 @@ function Editor({ initial, tier, wallets }: { initial: EditorPayload; tier: Tier
       ev.preventDefault();
       if (!frame) frame = requestAnimationFrame(tick);
     };
-    const onUp = () => {
+    const detach = () => {
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerup", onUp);
       window.removeEventListener("pointercancel", onUp);
       cancelAnimationFrame(frame);
       document.body.style.cursor = "";
-      if (!ghost) return;
-      ghost.remove();
+      ghost?.remove();
+      endDrag.current = null;
+    };
+    const onUp = () => {
+      const dragged = !!ghost;
+      detach();
+      if (!dragged) return;
       justDragged.current = true;
       setTimeout(() => (justDragged.current = false), 0);
       setIncomingId(null);
@@ -144,6 +152,7 @@ function Editor({ initial, tier, wallets }: { initial: EditorPayload; tier: Tier
     window.addEventListener("pointermove", onMove, { passive: false });
     window.addEventListener("pointerup", onUp);
     window.addEventListener("pointercancel", onUp);
+    endDrag.current = detach;
   };
 
   const move = (fromId: string, toId: string) =>

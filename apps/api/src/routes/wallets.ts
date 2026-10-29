@@ -1,5 +1,5 @@
 import type { FastifyInstance } from "fastify";
-import { and, eq } from "drizzle-orm";
+import { and, arrayContains, eq, ne } from "drizzle-orm";
 import { z } from "zod";
 import { PERIODS, type PeriodId } from "@fl3x/shared";
 import { db, schema } from "../db";
@@ -49,7 +49,9 @@ export async function walletRoutes(app: FastifyInstance) {
     if (!ok) throw badRequest("The signature doesn't match this wallet", "bad_signature");
 
     const [taken] = await db.select().from(schema.wallets).where(and(eq(schema.wallets.chain, chain), eq(schema.wallets.address, addr))).limit(1);
-    if (taken) throw conflict("This wallet is linked to another FL3X account", "wallet_taken");
+    // Also someone else's sign-in wallet: the same tokens must not give two accounts a tier.
+    const [login] = taken ? [] : await db.select({ id: schema.users.id }).from(schema.users).where(and(arrayContains(schema.users.wallets, [body.address]), ne(schema.users.id, user.id))).limit(1);
+    if (taken || login) throw conflict("This wallet is linked to another FL3X account", "wallet_taken");
     await db.insert(schema.wallets).values({ userId: user.id, chain, address: addr });
     return toMe(await refreshTier(user, true));
   });

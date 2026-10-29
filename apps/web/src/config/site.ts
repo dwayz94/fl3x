@@ -1,3 +1,8 @@
+// Fail the production build instead of shipping a site that calls localhost.
+if (process.env.NODE_ENV === "production" && !process.env.NEXT_PUBLIC_API_URL && process.env.VERCEL) {
+  throw new Error("Set NEXT_PUBLIC_API_URL (and NEXT_PUBLIC_PRIVY_APP_ID) in Vercel");
+}
+
 export const site = {
   name: "FL3X",
   domain: "fl3x.lol",

@@ -4,9 +4,20 @@ import type { FullPublicProfile } from "@fl3x/shared";
 import { PublicProfile } from "@/components/profile/PublicProfile";
 import { site } from "@/config/site";
 
+/**
+ * null only when the profile really doesn't exist. Any other failure (API
+ * down, deploy, timeout) throws, so a real profile never turns into a 404.
+ * The internal key lets these server calls past the API's per-IP limit
+ * (every render comes from Vercel's shared IPs).
+ */
 async function getProfile(username: string): Promise<FullPublicProfile | null> {
-  const res = await fetch(`${site.apiUrl}/profiles/${encodeURIComponent(username)}`, { next: { revalidate: 30 } }).catch(() => null);
-  return res?.ok ? ((await res.json()) as FullPublicProfile) : null;
+  const res = await fetch(`${site.apiUrl}/profiles/${encodeURIComponent(username)}`, {
+    next: { revalidate: 30 },
+    headers: process.env.INTERNAL_API_KEY ? { "x-internal-key": process.env.INTERNAL_API_KEY } : undefined,
+  });
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error(`Profile API ${res.status}`);
+  return (await res.json()) as FullPublicProfile;
 }
 
 type Props = { params: Promise<{ username: string }> };
@@ -19,7 +30,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     title: `${name} (@${profile.username})`,
     description: profile.bio ?? `${name} on FL3X`,
     alternates: { canonical: `/@${profile.username}` },
-    openGraph: { images: profile.avatarUrl ? [profile.avatarUrl] : undefined },
+    openGraph: { title: `${name} on FL3X`, url: `/@${profile.username}`, images: profile.avatarUrl ? [profile.avatarUrl] : undefined },
+    twitter: { card: "summary", title: `${name} on FL3X`, images: profile.avatarUrl ? [profile.avatarUrl] : undefined },
   };
 }
 

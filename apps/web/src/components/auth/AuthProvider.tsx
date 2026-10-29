@@ -1,39 +1,16 @@
 "use client";
 
-import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { PrivyProvider, usePrivy } from "@privy-io/react-auth";
-import { toSolanaWalletConnectors } from "@privy-io/react-auth/solana";
+import dynamic from "next/dynamic";
+import { usePathname } from "next/navigation";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { QueryClient, QueryClientProvider, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Me } from "@fl3x/shared";
 import { site } from "@/config/site";
 import { api } from "@/lib/api";
 import { DEV_KEY } from "@/lib/dev-session";
+import { AuthContext, noop, useAuth, type AuthState } from "./auth-context";
 
-interface AuthState {
-  configured: boolean;
-  ready: boolean;
-  authenticated: boolean;
-  /** `xOnly` hides the wallet option (the waitlist needs an X account). */
-  login: (opts?: { xOnly?: boolean }) => void;
-  logout: () => Promise<void>;
-  linkTwitter: () => void;
-  getToken: () => Promise<string | null>;
-}
-
-const noop = () => {
-  console.warn("Privy is not configured: set NEXT_PUBLIC_PRIVY_APP_ID");
-};
-
-const AuthContext = createContext<AuthState>({
-  configured: false,
-  ready: true,
-  authenticated: false,
-  login: noop,
-  logout: async () => {},
-  linkTwitter: noop,
-  getToken: async () => null,
-});
-
+export { useAuth };
 
 /**
  * Local dev without a Privy app id: /dev hands out test sessions and the
@@ -73,33 +50,21 @@ function DevAuth({ children }: { children: ReactNode }) {
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
-export const useAuth = () => useContext(AuthContext);
 
-const solanaConnectors = toSolanaWalletConnectors();
+/** Public profiles don't sign anyone in: no Privy there, the page stays light. */
+const PrivyAuth = dynamic(() => import("./PrivyAuth"));
 
 export function Providers({ children }: { children: ReactNode }) {
   const queryClient = useMemo(() => new QueryClient({ defaultOptions: { queries: { staleTime: 30_000, retry: 1 } } }), []);
+  const pathname = usePathname();
+  const publicProfile = pathname.startsWith("/u/") || pathname.startsWith("/@");
 
   return (
     <QueryClientProvider client={queryClient}>
-      {site.privyAppId ? (
-        <PrivyProvider
-          appId={site.privyAppId}
-          config={{
-            loginMethods: ["twitter", "wallet"],
-            appearance: {
-              theme: "dark",
-              accentColor: "#FF97CB",
-              logo: `${site.url}/images/fl3x-logo.svg`,
-              landingHeader: "Sign in to FL3X",
-              walletChainType: "solana-only",
-            },
-            externalWallets: { solana: { connectors: solanaConnectors } },
-            embeddedWallets: { solana: { createOnLogin: "off" }, ethereum: { createOnLogin: "off" } },
-          }}
-        >
-          <PrivyBridge>{children}</PrivyBridge>
-        </PrivyProvider>
+      {publicProfile ? (
+        children
+      ) : site.privyAppId ? (
+        <PrivyAuth>{children}</PrivyAuth>
       ) : process.env.NODE_ENV !== "production" ? (
         <DevAuth>{children}</DevAuth>
       ) : (
@@ -107,42 +72,6 @@ export function Providers({ children }: { children: ReactNode }) {
       )}
     </QueryClientProvider>
   );
-}
-
-function PrivyBridge({ children }: { children: ReactNode }) {
-  const privy = usePrivy();
-  const queryClient = useQueryClient();
-  const synced = useRef<string | null>(null);
-
-  // Sync linked accounts (X handle, wallets) to our API whenever they change.
-  const accountsKey = privy.user?.linkedAccounts.map((a) => a.type + ("address" in a ? a.address : "")).join(",") ?? "";
-  useEffect(() => {
-    if (!privy.authenticated || synced.current === accountsKey) return;
-    synced.current = accountsKey;
-    void privy.getAccessToken().then(async (token) => {
-      const me = await api<Me>("/session", { method: "POST", token });
-      queryClient.setQueryData(["me"], me);
-    });
-  }, [privy.authenticated, accountsKey, privy, queryClient]);
-
-  const value = useMemo<AuthState>(
-    () => ({
-      configured: true,
-      ready: privy.ready,
-      authenticated: privy.authenticated,
-      login: (opts) => privy.login(opts?.xOnly ? { loginMethods: ["twitter"] } : undefined),
-      logout: async () => {
-        await privy.logout();
-        synced.current = null;
-        queryClient.removeQueries({ queryKey: ["me"] });
-      },
-      linkTwitter: () => privy.linkTwitter(),
-      getToken: () => privy.getAccessToken(),
-    }),
-    [privy, queryClient],
-  );
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export function useMe() {

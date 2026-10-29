@@ -13,6 +13,7 @@ import { devRoutes } from "./routes/dev";
 import { editorRoutes } from "./routes/editor";
 import { mediaRoutes } from "./routes/media";
 import { meRoutes } from "./routes/me";
+import { isInternalRequest } from "./lib/internal";
 import { publicRoutes } from "./routes/public";
 import { referralRoutes } from "./routes/referrals";
 import { walletRoutes } from "./routes/wallets";
@@ -30,7 +31,14 @@ export async function buildApp() {
     credentials: true,
   });
   await app.register(helmet, { global: true });
-  await app.register(rateLimit, { max: 120, timeWindow: "1 minute" });
+  await app.register(rateLimit, {
+    max: 120,
+    timeWindow: "1 minute",
+    // Render's edge (Cloudflare) sets the real client IP; X-Forwarded-For's first entry is client-controlled.
+    keyGenerator: (req) => String(req.headers["cf-connecting-ip"] ?? req.headers["true-client-ip"] ?? req.ip),
+    // Server-to-server calls from the web app (profile pages, analytics) all come from Vercel's shared IPs.
+    allowList: (req) => isInternalRequest(req.headers["x-internal-key"]),
+  });
 
   app.setErrorHandler((err, req, reply) => {
     if (err instanceof ZodError) {
@@ -38,6 +46,11 @@ export async function buildApp() {
     }
     if (err instanceof HttpError) {
       return reply.status(err.status).send({ error: err.code, message: err.message });
+    }
+    // Postgres unique violation: two requests raced for the same username, wallet…
+    const pg = (err as { code?: string; cause?: { code?: string } });
+    if (pg.code === "23505" || pg.cause?.code === "23505") {
+      return reply.status(409).send({ error: "conflict", message: "This is already taken, refresh and try again" });
     }
     const status = (err as { statusCode?: number }).statusCode;
     if (status && status < 500) {

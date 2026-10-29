@@ -82,7 +82,8 @@ export function CountdownWidget({ w }: { w: Widget }) {
   const sub = (
     <WMuted className="uppercase">
       {title ? `${title} · ` : "Ends "}
-      {when.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+      {/* Dates only after mount: the server's timezone isn't the visitor's. */}
+      {now ? when.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : ""}
     </WMuted>
   );
   const cta = ctaLabel && (
@@ -108,7 +109,7 @@ export function CountdownWidget({ w }: { w: Widget }) {
   return (
     <WidgetFrame size="large" opacity={opacity} className="items-center text-center">
       <p className="font-primary text-[40px] leading-none">{left}</p>
-      <WMuted className="uppercase">Ends {when.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" })}</WMuted>
+      <WMuted className="uppercase">Ends {now ? when.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" }) : ""}</WMuted>
       {title ? (
         <p className="my-auto line-clamp-2 font-primary text-2xl leading-none uppercase">{title}</p>
       ) : (

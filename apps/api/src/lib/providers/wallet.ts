@@ -26,8 +26,9 @@ const JUP = env.JUPITER_API_KEY ? "https://api.jup.ag" : "https://lite-api.jup.a
 const jupHeaders = (): Record<string, string> => (env.JUPITER_API_KEY ? { "x-api-key": env.JUPITER_API_KEY } : {});
 const MAX_PRICED_MINTS = 200; // spam-token wallets can hold thousands
 
-async function prices(mints: string[]): Promise<Record<string, number>> {
+async function prices(mints: string[]): Promise<{ prices: Record<string, number>; complete: boolean }> {
   const out: Record<string, number> = {};
+  let complete = true;
   const list = mints.slice(0, MAX_PRICED_MINTS);
   for (let i = 0; i < list.length; i += 50) {
     try {
@@ -36,9 +37,10 @@ async function prices(mints: string[]): Promise<Record<string, number>> {
     } catch (err) {
       // SOL is in the first batch: without it the value is meaningless.
       if (i === 0) throw err;
+      complete = false;
     }
   }
-  return out;
+  return { prices: out, complete };
 }
 
 /** A position in one wallet, before token metadata is attached. */
@@ -57,6 +59,8 @@ interface Valuation {
   /** Biggest positions by USD value. */
   top: Position[];
   networks: Record<string, number>;
+  /** False when part of the data failed (a network, a price batch): shown, but never snapshotted. */
+  complete: boolean;
 }
 
 const TOP_POSITIONS = 8;
@@ -75,7 +79,7 @@ async function solanaValuation(wallet: string): Promise<Valuation> {
   }
   // Largest balances first so the cap keeps what most likely matters.
   const mints = [...balances.entries()].sort((a, b) => (a[0] === SOL_MINT ? -1 : b[0] === SOL_MINT ? 1 : b[1] - a[1])).map(([m]) => m);
-  const p = await prices(mints);
+  const { prices: p, complete } = await prices(mints);
   const positions: Position[] = [];
   let total = 0;
   for (const [mint, amount] of balances) {
@@ -84,18 +88,19 @@ async function solanaValuation(wallet: string): Promise<Valuation> {
     if (valueUsd >= 1) positions.push({ id: mint, network: "solana", amount, valueUsd });
   }
   positions.sort((a, b) => b.valueUsd - a.valueUsd);
-  return { total, top: positions.slice(0, TOP_POSITIONS), networks: { solana: total } };
+  return { total, top: positions.slice(0, TOP_POSITIONS), networks: { solana: total }, complete };
 }
 
 async function evmValuation(wallet: string): Promise<Valuation> {
-  const positions = await evmPositions(wallet);
+  const { positions, complete } = await evmPositions(wallet);
   const networks: Record<string, number> = {};
   for (const p of positions) networks[p.network] = (networks[p.network] ?? 0) + p.valueUsd;
   positions.sort((a, b) => b.valueUsd - a.valueUsd);
-  return { total: positions.reduce((s, p) => s + p.valueUsd, 0), top: positions.slice(0, TOP_POSITIONS), networks };
+  return { total: positions.reduce((s, p) => s + p.valueUsd, 0), top: positions.slice(0, TOP_POSITIONS), networks, complete };
 }
 
-const SNAPSHOT_EVERY_MS = 60 * 60 * 1000;
+// A bit under an hour, so the hourly job never skips a run because the last one finished late.
+const SNAPSHOT_EVERY_MS = 55 * 60 * 1000;
 
 async function snapshot(wallet: string, valueUsd: number) {
   const [last] = await db
@@ -117,7 +122,8 @@ function valuate(wallet: string): Promise<Valuation> {
 export function currentValue(wallet: string) {
   return cached<Valuation>(`wallet-v3:${wallet}`, 120, async () => {
     const v = await valuate(wallet);
-    await snapshot(wallet, v.total);
+    // A half-failed read would show up as a fake loss in the history.
+    if (v.complete) await snapshot(wallet, v.total);
     return v;
   });
 }
@@ -142,14 +148,15 @@ async function solanaMetadata(mints: string[]): Promise<Map<string, JupToken>> {
 function combineHistory(rows: { wallet: string; at: Date; valueUsd: number }[], wallets: string[]) {
   const hour = (d: Date) => Math.floor(d.getTime() / 3_600_000);
   const buckets = [...new Set(rows.map((r) => hour(r.at)))].sort((a, b) => a - b);
-  const series = new Map(wallets.map((w) => [w, rows.filter((r) => r.wallet === w)]));
+  // One pass per wallet with a moving index (rows come sorted by time): linear, not quadratic.
+  const series = wallets.map((w) => rows.filter((r) => r.wallet === w).sort((a, b) => a.at.getTime() - b.at.getTime())).filter((s) => s.length > 0);
+  const cursor = series.map(() => 0);
   return buckets.map((b) => {
     let sum = 0;
-    for (const s of series.values()) {
-      if (s.length === 0) continue;
-      const before = s.filter((r) => hour(r.at) <= b);
-      sum += (before[before.length - 1] ?? s[0]!).valueUsd;
-    }
+    series.forEach((s, i) => {
+      while (cursor[i]! + 1 < s.length && hour(s[cursor[i]! + 1]!.at) <= b) cursor[i]!++;
+      sum += s[cursor[i]!]!.valueUsd; // before its first snapshot, a wallet counts with its first value
+    });
     return { at: new Date(b * 3_600_000), valueUsd: sum };
   });
 }
@@ -164,7 +171,19 @@ export async function getPortfolio(wallets: string[], period: PeriodId): Promise
   const valuations = settled.flatMap((r) => (r.status === "fulfilled" ? [r.value] : []));
   if (wallets.length > 0 && valuations.length === 0) throw (settled[0] as PromiseRejectedResult).reason;
 
-  const valueUsd = Math.round(valuations.reduce((s, v) => s + v.total, 0) * 100) / 100;
+  // A wallet that failed right now counts with its last snapshot, not as zero (a fake loss).
+  const failed = wallets.filter((_, i) => settled[i]!.status === "rejected");
+  let carried = 0;
+  for (const w of failed) {
+    const [last] = await db
+      .select({ valueUsd: schema.walletSnapshots.valueUsd })
+      .from(schema.walletSnapshots)
+      .where(eq(schema.walletSnapshots.wallet, w))
+      .orderBy(desc(schema.walletSnapshots.takenAt))
+      .limit(1);
+    carried += last?.valueUsd ?? 0;
+  }
+  const valueUsd = Math.round((valuations.reduce((s, v) => s + v.total, 0) + carried) * 100) / 100;
 
   // Same token across wallets is one holding.
   const merged = new Map<string, Position>();

@@ -41,7 +41,7 @@ export async function referralRoutes(app: FastifyInstance) {
         .limit(50),
     ]);
 
-    const mine = invited.length;
+    const [{ mine } = { mine: 0 }] = await db.select({ mine: count() }).from(u).where(eq(u.invitedById, user.id));
     // Rank: 1 + members with more referrals than you.
     const [{ ahead } = { ahead: 0 }] = await db.select({ ahead: count() }).from(counts).where(sql`${counts.n} > ${mine}`);
     // The smallest count above yours: how many more to climb one step.
