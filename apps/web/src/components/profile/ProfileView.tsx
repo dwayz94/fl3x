@@ -57,10 +57,10 @@ export function ProfileView({
 
   return (
     <article
-      // The accent recolors everything "brand" inside the card, plus a soft rim and glow.
-      style={{ "--cols": cols, "--color-brand": theme.accent, "--accent": theme.accent } as React.CSSProperties}
+      // The accent only recolors the buttons and highlights ("brand") inside the card.
+      style={{ "--cols": cols, "--color-brand": theme.accent } as React.CSSProperties}
       className={cn(
-        "w-full rounded-[40px] border border-[color-mix(in_srgb,var(--accent)_18%,transparent)] bg-[rgba(28,28,28,0.6)] p-5 shadow-[0_30px_80px_rgba(0,0,0,0.45),0_0_120px_-40px_var(--accent)] backdrop-blur-[40px] md:p-8",
+        "w-full rounded-[40px] bg-[rgba(28,28,28,0.6)] p-5 backdrop-blur-[40px] md:p-8",
         // Card hugs the grid: cols × 80px cells + 12px gaps + padding.
         editor
           ? "md:w-[calc(var(--cols)*80px+(var(--cols)-1)*12px+66px)] md:max-w-none"
@@ -70,7 +70,7 @@ export function ProfileView({
       <header className={cn("flex gap-4 md:gap-6", narrow ? "flex-col items-center text-center" : "items-center")}>
         <Avatar url={profile.avatarUrl} onEdit={editor?.onAvatar} />
         <div className={cn("flex min-w-0 flex-col gap-2", narrow && "items-center")}>
-          <h1 className={cn("flex max-w-full items-center gap-2 text-[34px] leading-none uppercase md:text-[44px]", fontClass[theme.font])}>
+          <h1 className={cn("flex max-w-full items-center gap-1.5 text-[34px] leading-none uppercase md:text-[44px]", fontClass[theme.font])}>
             {editor?.onIdentity ? (
               <InlineText
                 value={profile.displayName ?? ""}
@@ -128,14 +128,14 @@ export function ProfileView({
                 if (editor) e.preventDefault();
                 onLinkClick?.(l.kind === "custom" ? (l.label ?? "custom") : l.kind);
               }}
-              className="text-[var(--accent)] opacity-80 transition-opacity hover:opacity-100"
+              className="text-fg-2 transition-colors hover:text-fg"
             >
               <Icon icon={linkIcons[l.kind]} size={24} />
             </a>
           ))}
         </div>
         {views != null && (
-          <span className="flex items-center gap-1.5 font-primary text-xl text-[var(--accent)]">
+          <span className="flex items-center gap-1.5 font-primary text-xl text-fg-2">
             <Icon icon={EyeIcon} size={22} />
             {fmtNumber(views)}
           </span>
@@ -195,7 +195,7 @@ function InlineText({ value, placeholder, maxLength, onCommit, className }: { va
           }
         }}
         style={{ width: `${Math.max(6, text.length + 2)}ch` }}
-        className={cn("min-w-0 max-w-full rounded-lg bg-white/[0.06] px-1.5 uppercase outline-2 outline-[var(--accent)] [font:inherit]", className)}
+        className={cn("min-w-0 max-w-full rounded-lg bg-white/[0.06] px-1.5 uppercase outline-2 outline-brand [font:inherit]", className)}
       />
     );
   }
@@ -205,12 +205,15 @@ function InlineText({ value, placeholder, maxLength, onCommit, className }: { va
       onClick={() => setEditing(true)}
       title="Click to edit"
       className={cn(
-        "group/edit relative -mx-1.5 flex min-w-0 uppercase items-center gap-1.5 rounded-lg px-1.5 text-left outline-1 outline-transparent transition-[outline-color,background-color] [font:inherit] hover:bg-white/[0.04] hover:outline-dashed hover:outline-white/40",
+        "group/edit relative -ml-1.5 flex min-w-0 uppercase items-center rounded-lg pr-0.5 pl-1.5 text-left outline-1 outline-transparent transition-[outline-color,background-color] [font:inherit] hover:bg-white/[0.04] hover:outline-dashed hover:outline-white/40",
         className,
       )}
     >
       <span className={cn("truncate", !value && "opacity-40")}>{value || placeholder}</span>
-      <Icon icon={PencilEdit02Icon} size={14} className="shrink-0 text-fg-2 opacity-0 transition-opacity group-hover/edit:opacity-100" />
+      {/* No room taken until hover: the checkmark stays right next to the name. */}
+      <span className="flex w-0 shrink-0 justify-end overflow-hidden opacity-0 transition-all group-hover/edit:w-5 group-hover/edit:opacity-100">
+        <Icon icon={PencilEdit02Icon} size={14} className="shrink-0 text-fg-2" />
+      </span>
     </button>
   );
 }

@@ -16,7 +16,7 @@ export function CopyField({ value, display }: { value: string; display?: string 
         setCopied(true);
         setTimeout(() => setCopied(false), 1500);
       }}
-      className="group flex h-11 w-full items-center gap-2 rounded-xl border border-white/10 bg-[#111] px-3 text-left text-sm transition-colors hover:border-white/25"
+      className="group flex h-11 w-full items-center gap-2 rounded-xl bg-white/[0.04] px-3 text-left text-sm transition-colors hover:bg-white/[0.07]"
     >
       <span className="min-w-0 flex-1 truncate">{display ?? value}</span>
       <span className={cn("flex items-center gap-1 text-xs", copied ? "text-success" : "text-fg-3 group-hover:text-fg")}>

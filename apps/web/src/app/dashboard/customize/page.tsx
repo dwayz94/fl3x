@@ -1,10 +1,9 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft01Icon } from "@hugeicons/core-free-icons";
+import { ArrowLeft01Icon, ViewIcon, ViewOffSlashIcon } from "@hugeicons/core-free-icons";
 import { useQueryClient } from "@tanstack/react-query";
 import { defaultSettings, type EditableProfile, type LinkedWallet, type ProfileTheme, type Tier, type Widget, type WidgetSize, type WidgetType } from "@fl3x/shared";
 import { useAuth, useMe } from "@/components/auth/AuthProvider";
@@ -14,7 +13,7 @@ import { Inspector } from "@/components/editor/Inspector";
 import { Library } from "@/components/editor/Library";
 import { ProfileView } from "@/components/profile/ProfileView";
 import { backdropStyle, cursorStyle } from "@/components/profile/theme";
-import { buttonClass, FieldError, Icon } from "@/components/ui";
+import { FieldError, Icon } from "@/components/ui";
 import { api, ApiRequestError } from "@/lib/api";
 import { cn } from "@/lib/cn";
 import { pickImage, useUpload } from "@/lib/upload";
@@ -41,6 +40,7 @@ function Editor({ initial, tier, wallets }: { initial: EditorPayload; tier: Tier
   const selected = draft.widgets.find((w) => w.id === selectedId) ?? null;
 
   const [nudge, setNudge] = useState(0);
+  const [preview, setPreview] = useState(false);
   const [savedFlash, setSavedFlash] = useState(false);
 
   const setWidgets = (fn: (ws: Widget[]) => Widget[]) => setDraft((d) => ({ ...d, widgets: fn(d.widgets) }));
@@ -132,21 +132,26 @@ function Editor({ initial, tier, wallets }: { initial: EditorPayload; tier: Tier
         <span className="h-5 w-px bg-white/10" />
         <Image src="/images/fl3x-icon.svg" alt="" width={18} height={19} />
         <h1 className="font-primary text-xl leading-none">Customize</h1>
-        <span className="hidden items-center gap-1.5 rounded-full bg-brand/15 px-2.5 py-1 text-[11px] text-brand sm:flex">
-          <span className="size-1.5 animate-pulse rounded-full bg-brand" />
-          Editing @{draft.username}
-        </span>
         <div className="ml-auto flex items-center gap-2">
           {error && !dirty && <FieldError>{error}</FieldError>}
           {avatar.busy && <span className="text-xs text-fg-3">Uploading…</span>}
-          <Link href={`/@${draft.username}`} target="_blank" className={buttonClass({ variant: "secondary", size: "md" })}>
-            View profile
-          </Link>
+          {/* Hides both panels to see the card about as visitors will. */}
+          <button
+            type="button"
+            onClick={() => {
+              setPreview((p) => !p);
+              setSelectedId(null);
+            }}
+            className="flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-sm text-fg-2 transition-colors hover:bg-white/5 hover:text-fg"
+          >
+            <Icon icon={preview ? ViewOffSlashIcon : ViewIcon} size={18} />
+            <span className="hidden sm:inline">{preview ? "Show panels" : "Hide panels"}</span>
+          </button>
         </div>
       </header>
 
       <div className="flex flex-col lg:min-h-0 lg:flex-1 lg:flex-row">
-        <aside className="border-white/10 bg-[#0b0b0b] p-4 lg:w-[300px] lg:shrink-0 lg:overflow-y-auto lg:border-r">
+        <aside data-hidden={preview} className="border-white/10 bg-[#0b0b0b] p-4 data-[hidden=true]:hidden lg:w-[300px] lg:shrink-0 lg:overflow-y-auto lg:border-r">
           <Library
             draft={draft}
             tier={tier}
@@ -178,7 +183,7 @@ function Editor({ initial, tier, wallets }: { initial: EditorPayload; tier: Tier
           </div>
         </section>
 
-        <aside className="border-white/10 bg-[#0b0b0b] p-5 lg:w-[300px] lg:shrink-0 lg:overflow-y-auto lg:border-l">
+        <aside data-hidden={preview} className="border-white/10 bg-[#0b0b0b] p-5 data-[hidden=true]:hidden lg:w-[300px] lg:shrink-0 lg:overflow-y-auto lg:border-l">
           <Inspector
             draft={draft}
             selected={selected}

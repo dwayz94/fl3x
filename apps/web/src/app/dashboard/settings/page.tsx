@@ -1,12 +1,9 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Suspense, useEffect, useState, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import {
-  ArrowRight01Icon, Crown02Icon, Link04Icon, Logout01Icon, NewTwitterIcon, Plug01Icon, UserAdd01Icon, UserCircleIcon, Wallet01Icon,
-} from "@hugeicons/core-free-icons";
+import { Logout01Icon, NewTwitterIcon } from "@hugeicons/core-free-icons";
 import type { EditableProfile, Me } from "@fl3x/shared";
 import { useAuth, useMe } from "@/components/auth/AuthProvider";
 import { PageHeader, Spinner } from "@/components/dashboard/Panel";
@@ -15,196 +12,88 @@ import { CopyField } from "@/components/dashboard/CopyField";
 import { UnsavedBar } from "@/components/dashboard/UnsavedBar";
 import { WalletsPanel } from "@/components/dashboard/WalletsPanel";
 import { inputClass } from "@/components/editor/Field";
-import { Button, Icon, ImageInput, Verified } from "@/components/ui";
+import { Icon, ImageInput, Verified } from "@/components/ui";
 import { site } from "@/config/site";
 import { api, ApiRequestError } from "@/lib/api";
-import { cn } from "@/lib/cn";
-import { fmtNumber, referralLink } from "@/lib/format";
 import { useEditorProfile, type EditorPayload } from "@/lib/use-profile";
 
-const SECTIONS = [
-  { id: "profile", label: "Profile", icon: UserCircleIcon },
-  { id: "account", label: "Account", icon: NewTwitterIcon },
-  { id: "wallets", label: "Wallets", icon: Wallet01Icon },
-  { id: "connections", label: "Connections", icon: Plug01Icon },
-  { id: "session", label: "Session", icon: Logout01Icon },
-] as const;
-
-const TIER_LABEL = { none: "Free", starter: "Starter", premium: "Premium" } as const;
-
+/** Settings fit one screen on desktop: profile on the left, wallets and accounts on the right. */
 export default function SettingsPage() {
   const { data: me } = useMe();
-  const [active, setActive] = useState<string>("profile");
-
-  // Highlight the section in view.
-  useEffect(() => {
-    const io = new IntersectionObserver(
-      (entries) => {
-        const top = entries.filter((e) => e.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0];
-        if (top) setActive(top.target.id);
-      },
-      { rootMargin: "-20% 0px -60% 0px" },
-    );
-    for (const s of SECTIONS) {
-      const el = document.getElementById(s.id);
-      if (el) io.observe(el);
-    }
-    return () => io.disconnect();
-  }, [me]);
-
   if (!me) return <Spinner />;
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-10 pb-32 md:px-10">
-      <PageHeader title="S[e]TT[i]NGS" subtitle="Your profile, linked accounts and session." />
-      <div className="grid gap-8 md:grid-cols-[180px_minmax(0,1fr)]">
-        <nav className="hidden md:block">
-          <ul className="sticky top-8 flex flex-col gap-0.5">
-            {SECTIONS.map((s) => (
-              <li key={s.id}>
-                <a
-                  href={`#${s.id}`}
-                  className={cn(
-                    "flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm transition-colors",
-                    active === s.id ? "bg-white/10 text-fg" : "text-fg-3 hover:bg-white/5 hover:text-fg",
-                  )}
-                >
-                  <Icon icon={s.icon} size={16} className={active === s.id ? "text-brand" : undefined} />
-                  {s.label}
-                </a>
-              </li>
-            ))}
-          </ul>
-        </nav>
+    <div className="flex flex-col px-4 py-8 md:px-8 lg:h-svh lg:py-6">
+      <PageHeader title="S[e]TT[i]NGS" subtitle="Your profile, wallets and connected accounts." />
+      <div className="grid gap-4 lg:min-h-0 lg:flex-1 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
+        <Card title="Profile" desc="What visitors see at the top of your card.">
+          <IdentityForm me={me} />
+        </Card>
 
-        <div className="flex min-w-0 flex-col gap-10">
-          <Section id="profile" title="Profile" desc="What visitors see on your card. You can also edit it right on the card in Customize.">
-            <IdentityForm me={me} />
-          </Section>
-
-          <Section id="account" title="Account" desc="Your sign-in, your plan and your invites.">
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Tile
-                icon={NewTwitterIcon}
-                label="X account"
-                value={me.xHandle ? `@${me.xHandle}` : "Not linked"}
-                action={!me.xHandle && <LinkX />}
-                hint="Used to sign in and to join the waitlist."
-              />
-              <Tile
-                icon={Crown02Icon}
-                label="Plan"
-                value={
-                  <span className="flex items-center gap-1.5">
-                    {TIER_LABEL[me.tier]}
-                    {me.tier === "premium" && <Verified size={16} />}
-                  </span>
-                }
-                hint={`${fmtNumber(me.tokenBalance)} tokens held across your wallets.`}
-                action={
-                  <Link href="/dashboard/premium" className="text-xs text-brand hover:underline">
-                    {me.tier === "premium" ? "Perks" : "Upgrade"}
-                  </Link>
-                }
-              />
-              <Tile
-                icon={UserAdd01Icon}
-                label="Referrals"
-                value={`${me.referrals} joined`}
-                hint={referralLink(me.username ?? "").replace(/^https?:\/\//, "")}
-                action={
-                  <Link href="/dashboard/referral" className="flex items-center gap-0.5 text-xs text-brand hover:underline">
-                    Open <Icon icon={ArrowRight01Icon} size={12} />
-                  </Link>
-                }
-              />
-              <Tile icon={Link04Icon} label="Profile link" value={`${site.domain}/@${me.username}`} hint="Your username is permanent for now." />
-            </div>
-          </Section>
-
-          <Section id="wallets" title="Wallets" desc="Each wallet is proven with a free signature. Wallet widgets add them all up; Solana wallets also count toward your tier.">
+        <div className="flex flex-col gap-4 lg:min-h-0">
+          <Card title="Wallets" desc="Proven with a free signature. Wallet widgets add them all up." className="lg:min-h-0 lg:flex-1" scroll>
             <WalletsPanel me={me} />
-          </Section>
-
-          <Section id="connections" title="Connections" desc="Accounts that keep widgets up to date on their own.">
+          </Card>
+          <Card title="Connections" desc="Keeps your music widget playing what you listen to.">
             <Suspense>
               <ConnectionsPanel />
             </Suspense>
-            <p className="mt-3 text-[11px] text-fg-3">YouTube and Twitch need no connection: put your channel in the Video widget and it follows your lives and uploads.</p>
-          </Section>
-
-          <Section id="session" title="Session" desc="Signed in on this device.">
-            <SignOut />
-          </Section>
+          </Card>
+          <Account me={me} />
         </div>
       </div>
     </div>
   );
 }
 
-function Section({ id, title, desc, children }: { id: string; title: string; desc: string; children: ReactNode }) {
+function Card({ title, desc, children, className, scroll }: { title: string; desc: string; children: ReactNode; className?: string; scroll?: boolean }) {
   return (
-    <section id={id} className="scroll-mt-8">
+    <section className={`flex flex-col rounded-3xl bg-[#0d0d0d] p-5 ${className ?? ""}`}>
       <div className="mb-4">
         <h2 className="font-primary text-2xl leading-none">{title}</h2>
         <p className="mt-1 text-xs text-fg-3">{desc}</p>
       </div>
-      <div className="rounded-3xl border border-white/10 bg-[#0d0d0d] p-5">{children}</div>
+      <div className={scroll ? "-mr-2 min-h-0 flex-1 overflow-y-auto pr-2" : "flex-1"}>{children}</div>
     </section>
   );
 }
 
-function Tile({ icon, label, value, hint, action }: { icon: typeof Wallet01Icon; label: string; value: ReactNode; hint?: string; action?: ReactNode }) {
-  return (
-    <div className="flex gap-3 rounded-2xl bg-white/[0.03] p-4">
-      <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-white/5">
-        <Icon icon={icon} size={18} className="text-fg-2" />
-      </span>
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center justify-between gap-2">
-          <p className="text-[11px] text-fg-3">{label}</p>
-          {action}
-        </div>
-        <div className="mt-0.5 truncate text-[15px] leading-tight text-fg">{value}</div>
-        {hint && <p className="mt-0.5 truncate text-[11px] text-fg-3">{hint}</p>}
-      </div>
-    </div>
-  );
-}
-
-function LinkX() {
-  const { linkTwitter } = useAuth();
-  return (
-    <button type="button" onClick={linkTwitter} className="text-xs text-brand hover:underline">
-      Link
-    </button>
-  );
-}
-
-function SignOut() {
+/** Sign-in account and log out, on one line. */
+function Account({ me }: { me: Me }) {
   const router = useRouter();
-  const { logout } = useAuth();
+  const { logout, linkTwitter } = useAuth();
   const [busy, setBusy] = useState(false);
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3">
-      <p className="text-sm text-fg-2">Log out of FL3X on this browser. Your profile stays online.</p>
-      <Button
-        size="md"
-        variant="secondary"
-        loading={busy}
+    <section className="flex items-center gap-3 rounded-3xl bg-[#0d0d0d] px-5 py-4">
+      <span className="flex size-9 items-center justify-center rounded-xl bg-white/5">
+        <Icon icon={NewTwitterIcon} size={16} />
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm">{me.xHandle ? `@${me.xHandle}` : "X not linked"}</p>
+        <p className="text-[11px] text-fg-3">Signed in with X</p>
+      </div>
+      {!me.xHandle && (
+        <button type="button" onClick={linkTwitter} className="rounded-xl px-3 py-2 text-sm text-brand hover:bg-white/5">
+          Link X
+        </button>
+      )}
+      <button
+        type="button"
+        disabled={busy}
         onClick={() => {
           setBusy(true);
           void logout().then(() => router.push("/"));
         }}
-        leftIcon={<Icon icon={Logout01Icon} size={16} />}
+        className="flex items-center gap-2 rounded-xl bg-danger/10 px-3.5 py-2 text-sm text-danger transition-colors hover:bg-danger/20 disabled:opacity-50"
       >
+        <Icon icon={Logout01Icon} size={16} />
         Log out
-      </Button>
-    </div>
+      </button>
+    </section>
   );
 }
 
-/** Avatar, display name and bio. The avatar saves on upload; text changes go through the unsaved bar. */
+/** Avatar, display name and bio, with a live preview. The avatar saves on upload; text goes through the unsaved bar. */
 function IdentityForm({ me }: { me: Me }) {
   const { getToken } = useAuth();
   const qc = useQueryClient();
@@ -239,23 +128,32 @@ function IdentityForm({ me }: { me: Me }) {
     }
   };
   const dirty = name !== (data.profile.displayName ?? "") || bio !== (data.profile.bio ?? "");
+  const username = me.username ?? "";
 
   return (
-    <div className="flex flex-col gap-5 sm:flex-row sm:gap-6">
-      <div className="flex flex-col items-center gap-2">
+    <div className="flex h-full flex-col gap-5">
+      {/* Live preview of the card header, as visitors see it. */}
+      <div className="flex items-center gap-5 rounded-2xl bg-white/[0.03] p-5">
         <ImageInput kind="avatar" round value={data.profile.avatarUrl ?? undefined} onChange={(url) => void patch({ avatarUrl: url })} />
+        <div className="min-w-0">
+          <p className="flex items-center gap-1.5 font-primary text-3xl leading-none uppercase">
+            <span className="truncate">{name || username}</span>
+            {me.tier === "premium" && <Verified size={20} />}
+          </p>
+          <p className="mt-2 line-clamp-2 text-xs uppercase text-fg-2">{bio || <span className="text-fg-3">No bio yet</span>}</p>
+        </div>
       </div>
-      <div className="flex min-w-0 flex-1 flex-col gap-4">
-        <Field label="Display name" count={`${name.length}/32`}>
-          <input className={inputClass} maxLength={32} value={name} onChange={(e) => setName(e.target.value)} placeholder={me.username ?? ""} />
-        </Field>
-        <Field label="Bio" count={`${bio.length}/160`}>
-          <textarea className={`${inputClass} h-24 resize-none py-2.5`} maxLength={160} value={bio} onChange={(e) => setBio(e.target.value)} placeholder="FL3X on all screens!" />
-        </Field>
-        <Field label="Profile link">
-          <CopyField value={`${site.url}/@${me.username}`} display={`${site.domain}/@${me.username}`} />
-        </Field>
-      </div>
+
+      <Field label="Display name" count={`${name.length}/32`}>
+        <input className={inputClass} maxLength={32} value={name} onChange={(e) => setName(e.target.value)} placeholder={username} />
+      </Field>
+      <Field label="Bio" count={`${bio.length}/160`}>
+        <textarea className={`${inputClass} h-24 resize-none py-2.5`} maxLength={160} value={bio} onChange={(e) => setBio(e.target.value)} placeholder="FL3X on all screens!" />
+      </Field>
+      <Field label="Your profile">
+        <CopyField value={`${site.url}/@${username}`} display={`${site.domain}/@${username}`} />
+      </Field>
+      <p className="mt-auto text-[11px] text-fg-3">Tip: you can also click your name or bio on the card in Customize.</p>
       <UnsavedBar dirty={dirty} saving={saving} savedFlash={savedFlash} error={error} nudge={0} onDiscard={reset} onSave={() => void patch({ displayName: name, bio })} />
     </div>
   );

@@ -31,7 +31,7 @@ function Bars({ items }: { items: { label: string; count: number }[] }) {
   return (
     <div className="grid flex-1 gap-3" style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}>
       {items.map((it, i) => (
-        <div key={it.label} className="flex min-h-40 flex-col border-r border-dashed border-white/10 pr-3 last:border-0">
+        <div key={it.label} className="flex min-h-24 flex-col border-r border-dashed border-white/10 pr-3 last:border-0">
           <p className="truncate text-xs text-fg-2 capitalize">{it.label}</p>
           <p className="font-primary text-xl">{share(it.count, total)}%</p>
           <p className="mt-auto text-[11px] text-fg-3">{fmtNumber(it.count)}</p>
@@ -59,7 +59,7 @@ function RankList({ items, empty }: { items: { key: string; label: string; icon:
   const max = Math.max(1, ...items.map((i) => i.count));
   if (!items.length) return <p className="py-10 text-center text-sm text-fg-3">{empty}</p>;
   return (
-    <ul className="flex flex-col gap-1.5">
+    <ul className="-mr-2 flex min-h-0 flex-col gap-1.5 overflow-y-auto pr-2">
       {items.map((it, i) => (
         <li key={it.key} className="relative flex h-10 items-center gap-2.5 overflow-hidden rounded-xl bg-white/[0.03] px-3 text-sm">
           <span className="absolute inset-y-0 left-0 rounded-xl opacity-20" style={{ width: `${(it.count / max) * 100}%`, background: BAR_COLORS[i % BAR_COLORS.length] }} />
@@ -82,8 +82,10 @@ export default function AnalyticsPage() {
     refetchInterval: 30_000,
   });
 
+  const clicksTotal = data ? data.clicks.reduce((a, b) => a + b.count, 0) : 0;
   return (
-    <div className="mx-auto max-w-6xl px-4 py-10 md:px-10">
+    // Fits one screen on desktop: views and geography on top, links, sources and devices below.
+    <div className="flex flex-col px-4 py-8 md:px-8 lg:h-svh lg:py-6">
       <PageHeader
         title="ACC[o]UNT ANALYT[i]CS"
         subtitle="See exactly how far your profile reaches."
@@ -92,29 +94,27 @@ export default function AnalyticsPage() {
       {isLoading || !data ? (
         <Spinner />
       ) : (
-        <div className="grid gap-4 lg:grid-cols-12">
+        <div className="grid gap-4 lg:min-h-0 lg:flex-1 lg:grid-cols-12 lg:grid-rows-[minmax(0,1.1fr)_minmax(0,1fr)] [&>section]:lg:min-h-0 [&>section]:lg:overflow-hidden">
           <Panel
-            className="lg:col-span-5"
-            label="Most clicked links"
-            title={
-              <>
-                {data.clicks[0] ? linkLabel(data.clicks[0].target).label : "No clicks yet"}
-                {data.clicks[0] && <Chip>{share(data.clicks[0].count, data.clicks.reduce((a, b) => a + b.count, 0))}%</Chip>}
-              </>
+            className="lg:col-span-8"
+            label="Total views"
+            title={fmtNumber(data.totalViews)}
+            aside={
+              <dl className="flex gap-6 text-right text-xs">
+                <div><dt className="text-fg-3">Live now</dt><dd className="font-primary text-lg text-success">{fmtNumber(data.realtime)}</dd></div>
+                <div><dt className="text-fg-3">Unique</dt><dd className="font-primary text-lg">{fmtNumber(data.uniqueVisitors)}</dd></div>
+                <div><dt className="text-fg-3">Link clicks</dt><dd className="font-primary text-lg">{fmtNumber(clicksTotal)}</dd></div>
+              </dl>
             }
           >
-            <RankList
-              empty="Clicks on the links under your card show up here."
-              items={data.clicks.slice(0, 6).map((c) => ({ key: c.target, ...linkLabel(c.target), count: c.count }))}
-            />
-          </Panel>
-
-          <Panel className="lg:col-span-3" label="Real-time visitors" title={<>{fmtNumber(data.realtime)} <Chip tone="success">live</Chip></>}>
-            <dl className="mt-auto grid gap-3 text-sm">
-              <div className="flex justify-between"><dt className="text-fg-2">Views</dt><dd className="font-primary text-lg">{fmtNumber(data.totalViews)}</dd></div>
-              <div className="flex justify-between"><dt className="text-fg-2">Unique visitors</dt><dd className="font-primary text-lg">{fmtNumber(data.uniqueVisitors)}</dd></div>
-              <div className="flex justify-between"><dt className="text-fg-2">Link clicks</dt><dd className="font-primary text-lg">{fmtNumber(data.clicks.reduce((a, b) => a + b.count, 0))}</dd></div>
-            </dl>
+            <div className="flex min-h-0 flex-1 items-end [&_svg]:max-h-full">
+              <LineChart
+                points={data.daily.map((d) => ({
+                  label: new Date(d.date).toLocaleDateString("en-US", { day: "numeric", month: "short" }),
+                  value: d.views,
+                }))}
+              />
+            </div>
           </Panel>
 
           <Panel
@@ -131,8 +131,8 @@ export default function AnalyticsPage() {
               )
             }
           >
-            <ul className="flex flex-col gap-2">
-              {data.countries.slice(0, 6).map((c) => (
+            <ul className="-mr-2 flex min-h-0 flex-col gap-2 overflow-y-auto pr-2">
+              {data.countries.slice(0, 10).map((c) => (
                 <li key={c.country} className="flex items-center gap-2 text-sm">
                   <Flag country={c.country} className="h-3.5 w-5 rounded-sm" />
                   <span className="flex-1 truncate text-fg-2">{regionName.of(c.country)}</span>
@@ -142,23 +142,24 @@ export default function AnalyticsPage() {
             </ul>
           </Panel>
 
-          {(() => {
-            // Tablets and anything unusual count as "other".
-            const devices = (["desktop", "mobile", "other"] as const).map((d) => ({
-              label: d,
-              count: data.devices.filter((x) => (d === "other" ? x.device !== "desktop" && x.device !== "mobile" : x.device === d)).reduce((a, b) => a + b.count, 0),
-            }));
-            const total = devices.reduce((a, b) => a + b.count, 0);
-            const top = [...devices].sort((a, b) => b.count - a.count)[0]!;
-            return (
-              <Panel className="lg:col-span-5" label="Visitor devices" title={total ? <>{top.label}<Chip>{share(top.count, total)}%</Chip></> : "No data yet"}>
-                <Bars items={devices} />
-              </Panel>
-            );
-          })()}
+          <Panel
+            className="lg:col-span-4"
+            label="Most clicked links"
+            title={
+              <>
+                {data.clicks[0] ? linkLabel(data.clicks[0].target).label : "No clicks yet"}
+                {data.clicks[0] && <Chip>{share(data.clicks[0].count, clicksTotal)}%</Chip>}
+              </>
+            }
+          >
+            <RankList
+              empty="Clicks on the links under your card show up here."
+              items={data.clicks.slice(0, 6).map((c) => ({ key: c.target, ...linkLabel(c.target), count: c.count }))}
+            />
+          </Panel>
 
           <Panel
-            className="lg:col-span-7"
+            className="lg:col-span-4"
             label="Where visitors come from"
             title={
               data.sources[0] ? (
@@ -182,14 +183,20 @@ export default function AnalyticsPage() {
             />
           </Panel>
 
-          <Panel className="lg:col-span-12" label="Total views" title={fmtNumber(data.totalViews)}>
-            <LineChart
-              points={data.daily.map((d) => ({
-                label: new Date(d.date).toLocaleDateString("en-US", { day: "numeric", month: "short" }),
-                value: d.views,
-              }))}
-            />
-          </Panel>
+          {(() => {
+            // Tablets and anything unusual count as "other".
+            const devices = (["desktop", "mobile", "other"] as const).map((d) => ({
+              label: d,
+              count: data.devices.filter((x) => (d === "other" ? x.device !== "desktop" && x.device !== "mobile" : x.device === d)).reduce((a, b) => a + b.count, 0),
+            }));
+            const total = devices.reduce((a, b) => a + b.count, 0);
+            const top = [...devices].sort((a, b) => b.count - a.count)[0]!;
+            return (
+              <Panel className="lg:col-span-4" label="Visitor devices" title={total ? <>{top.label}<Chip>{share(top.count, total)}%</Chip></> : "No data yet"}>
+                <Bars items={devices} />
+              </Panel>
+            );
+          })()}
         </div>
       )}
     </div>

@@ -48,7 +48,9 @@ export function getMedia(rawUrl: string) {
   if (host === "spotify.com") {
     return cached<MediaData>(`spotify:${url.pathname}`, 3600, async () => {
       const o = await fetchJson<OEmbed>(`https://open.spotify.com/oembed?url=${encodeURIComponent(url.href)}`);
-      return { provider: "spotify", title: o.title, author: o.author_name ?? null, thumbnailUrl: o.thumbnail_url ?? null, live: null, url: url.href };
+      // oEmbed has no artist: the public page names it in its meta tags.
+      const author = o.author_name ?? (await spotifyArtist(url.href));
+      return { provider: "spotify", title: o.title, author, thumbnailUrl: o.thumbnail_url ?? null, live: null, url: url.href };
     });
   }
 
@@ -169,4 +171,19 @@ function twitchChannel(login: string) {
 
 export function getChannel(platform: "youtube" | "twitch", handle: string) {
   return platform === "youtube" ? youtubeChannel(handle) : twitchChannel(handle);
+}
+
+/** "Kanye West" from the track page (music:musician_description, or the first part of og:description). */
+async function spotifyArtist(href: string): Promise<string | null> {
+  try {
+    const res = await fetch(href, { headers: { "user-agent": "Mozilla/5.0 (compatible; FL3X/1.0)" }, signal: AbortSignal.timeout(5000) });
+    if (!res.ok) return null;
+    const page = await res.text();
+    const musician = page.match(/name="music:musician_description" content="([^"]+)"/)?.[1];
+    const desc = page.match(/property="og:description" content="([^"]+)"/)?.[1];
+    const raw = musician ?? desc?.split(" · ")[0];
+    return raw ? raw.replace(/&amp;/g, "&").replace(/&#x27;|&#39;/g, "'").replace(/&quot;/g, '"') : null;
+  } catch {
+    return null;
+  }
 }

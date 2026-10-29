@@ -96,6 +96,9 @@ for name, content in files.items():
     with open(os.path.join(out, name), "w") as f:
         f.write(content)
     print(name, len(content))
+# The Founder badge is the logo's bag.
+with open(os.path.join(out, "..", "images", "badges", "founder.svg"), "w") as f:
+    f.write(svg(32, 32, f'<path fill="{PINK}" transform="translate(1 0)" d="{bag_path()}"/>', title="Founder"))
 # The site uses these two from /images.
 for name in ("fl3x-logo.svg", "fl3x-icon.svg"):
     with open(os.path.join(out, "..", "images", name), "w") as f:

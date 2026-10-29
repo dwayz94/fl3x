@@ -30,7 +30,7 @@ export function WalletsPanel({ me }: { me: Me }) {
   return (
     <div className="flex flex-col gap-2">
       {me.linkedWallets.map((w) => (
-        <div key={w.id} className="flex h-11 items-center gap-2 rounded-xl border border-white/10 bg-[#111] px-3 text-sm">
+        <div key={w.id} className="flex h-11 items-center gap-2 rounded-xl bg-white/[0.04] px-3 text-sm">
           <ChainDot chain={w.chain} />
           <span className="min-w-0 flex-1 truncate font-mono text-xs">
             {shortAddress(w.address)} <span className="text-fg-3">· {w.address}</span>

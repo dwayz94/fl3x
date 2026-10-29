@@ -15,26 +15,9 @@ import {
 } from "@/lib/pending-invite";
 import { useConfig } from "@/lib/use-config";
 import { WaitlistForm, wantsWaitlist } from "./WaitlistForm";
+import { useAvailability } from "@/lib/use-availability";
 
 type InviteCheck = { valid: boolean; inviter: string | null };
-type Availability = { available: boolean; reason: string | null };
-
-/** Live username check: local rules first, then the API, debounced. */
-function useAvailability(username: string) {
-  const [state, setState] = useState<Availability | "checking" | null>(null);
-  useEffect(() => {
-    setState(null);
-    if (!username) return;
-    const local = validateUsername(username);
-    if (!local.valid) return setState({ available: false, reason: local.message });
-    setState("checking");
-    const t = setTimeout(() => {
-      api<Availability>(`/usernames/${encodeURIComponent(username)}`).then(setState).catch(() => setState(null));
-    }, 300);
-    return () => clearTimeout(t);
-  }, [username]);
-  return state;
-}
 
 function useInvite(code: string) {
   const [invite, setInvite] = useState<InviteCheck | "checking" | null>(null);

@@ -7,14 +7,23 @@ import type { CommunityData, MediaData, TokenData } from "./types";
  * the same for everyone and never hit the API or a real wallet.
  */
 
+/** Generic art only (scripts/demo-art.py): no real people in demos. */
 const IMG = {
-  solamies: "/images/creators/solamies.jpg",
-  bi0: "/images/creators/bi0.jpg",
-  swifzui: "/images/creators/swifzui.jpg",
-  yash: "/images/creators/yash.jpg",
+  avatar: "/images/demo/avatar-1.svg",
+  avatar2: "/images/demo/avatar-2.svg",
+  avatar3: "/images/demo/avatar-3.svg",
+  avatar4: "/images/demo/avatar-4.svg",
+  cover: "/images/demo/cover-1.svg",
+  cover2: "/images/demo/cover-2.svg",
+  cover3: "/images/demo/cover-3.svg",
+  cover4: "/images/demo/cover-4.svg",
+  fl3x: "/brand/fl3x-app-icon-pink.svg",
   hero: "/images/backgrounds/hero-bg.png",
   sign: "/images/backgrounds/sign-bg.png",
 };
+
+/** A real track (Spotify page + cover); title and artist come from Spotify. */
+export const DEMO_TRACK_URL = "https://open.spotify.com/track/0j2T0R9dR9qdJYsB7ciXhf";
 
 function history(points: number, start: number, end: number, seed: number) {
   // Seeded random walk bent toward the end value, so the chart looks like a real wallet.
@@ -46,7 +55,7 @@ const wallet: PortfolioData = {
     { id: "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263", chain: "solana", symbol: "BONK", name: "Bonk", iconUrl: "https://arweave.net/hQiPZOsRZXGXBJd_82PhVdlM_hACsT_q6wqwf5cSY7I", amount: 1_118_903_310, valueUsd: 31_420, change24h: 12.1 },
     { id: "demo-eth", chain: "ethereum", symbol: "ETH", name: "Ether", iconUrl: "https://icons.llamao.fi/icons/chains/rsz_ethereum?w=48&h=48", amount: 9.4, valueUsd: 21_800, change24h: 3.1 },
     { id: "demo-fl3x", chain: "solana", symbol: "FL3X", name: "FL3X", iconUrl: "/images/fl3x-icon.svg", amount: 2_400_000, valueUsd: 21_800, change24h: 73 },
-    { id: "demo-pingu", chain: "solana", symbol: "PINGU", name: "Pingu", iconUrl: IMG.swifzui, amount: 860_000, valueUsd: 10_228, change24h: -4.2 },
+    { id: "demo-nova", chain: "solana", symbol: "NOVA", name: "Nova", iconUrl: IMG.avatar3, amount: 860_000, valueUsd: 10_228, change24h: -4.2 },
   ],
   networks: [
     { id: "solana", name: "Solana", valueUsd: 112_748.73 },
@@ -56,19 +65,26 @@ const wallet: PortfolioData = {
 };
 
 const tokens: Record<string, TokenData> = {
-  pingu: { chain: "solana", address: "pingu", name: "Pingu Nietzschean", symbol: "PINGU", priceUsd: 0.0005, marketCap: 500_000, change24h: 18, imageUrl: IMG.swifzui, url: "#" },
+  nova: { chain: "solana", address: "nova", name: "Nova", symbol: "NOVA", priceUsd: 0.0005, marketCap: 500_000, change24h: 18, imageUrl: IMG.avatar3, url: "#" },
   fl3x: { chain: "solana", address: "fl3x", name: "FL3X", symbol: "FL3X", priceUsd: 0.0021, marketCap: 2_100_000, change24h: 42, imageUrl: "/images/fl3x-icon.svg", url: "#" },
 };
 
 const communities: Record<string, CommunityData> = {
-  telegram: { platform: "telegram", name: "FL3X Commxnity", iconUrl: IMG.bi0, members: 11_972, online: 3_454, url: "#" },
-  discord: { platform: "discord", name: "FL3X Discord", iconUrl: IMG.yash, members: 11_972, online: 3_454, url: "#" },
+  telegram: { platform: "telegram", name: "FL3X Community", iconUrl: IMG.fl3x, members: 11_972, online: 3_454, url: "#" },
+  discord: { platform: "discord", name: "FL3X Discord", iconUrl: IMG.fl3x, members: 11_972, online: 3_454, url: "#" },
 };
 
 const media: Record<string, MediaData> = {
-  youtube: { provider: "youtube", title: "How I made 7K this month day trading", author: "Solamies", thumbnailUrl: IMG.hero, live: false, url: "#" },
-  twitch: { provider: "twitch", title: "Pingu Nietzschean live: memecoin hunting", author: "solamies", thumbnailUrl: IMG.yash, avatarUrl: IMG.solamies, live: true, viewers: 1840, url: "#" },
-  spotify: { provider: "spotify", title: "Ça tire", author: "JUL, Houari, Kalash", thumbnailUrl: IMG.bi0, live: null, url: "#" },
+  youtube: { provider: "youtube", title: "What a month of on-chain trading taught me", author: "Nova", thumbnailUrl: IMG.cover2, live: false, url: "#" },
+  twitch: { provider: "twitch", title: "Late-night memecoin hunting", author: "nova", thumbnailUrl: IMG.cover4, avatarUrl: IMG.avatar, live: true, viewers: 1840, url: "#" },
+  spotify: {
+    provider: "spotify",
+    title: "Stronger",
+    author: "Kanye West",
+    thumbnailUrl: "https://image-cdn-fa.spotifycdn.com/image/ab67616d00001e0226f7f19c7f0381e56156c94a",
+    live: null,
+    url: DEMO_TRACK_URL,
+  },
 };
 
 /** Resolver for DemoDataProvider: every widget param starting with "demo:" maps to fixed data. */
@@ -83,7 +99,7 @@ export function resolveDemo(path: string, params: Record<string, string | undefi
     case "media":
       return media[params.url?.replace("demo:", "") ?? ""];
     case "channel":
-      return params.platform === "twitch" ? media.twitch : { ...media.youtube, avatarUrl: IMG.solamies, publishedAt: "2026-10-26T18:00:00.000Z" };
+      return params.platform === "twitch" ? media.twitch : { ...media.youtube, avatarUrl: IMG.avatar, publishedAt: "2026-10-26T18:00:00.000Z" };
     case "spotify-now":
       return { ...media.spotify, nowPlaying: true };
   }
@@ -91,25 +107,25 @@ export function resolveDemo(path: string, params: Record<string, string | undefi
 }
 
 const LOREM =
-  "It will go much higher when mack shares it on Binance futures. x10 from here, easy. Kept a journal of every trade this month, wins and the painful ones.";
+  "Kept a journal of every trade this month, the wins and the painful ones. Small size, clear entries, no revenge trades.";
 
 /** Showcase settings per widget type (one entry per variant shown on /widgets). */
 export const DEMO_WIDGETS: { type: WidgetType; label?: string; settings: WidgetSettings }[] = [
   { type: "pnl", settings: { period: "1m" } },
   { type: "portfolio", settings: { period: "7d" } },
   { type: "holdings", settings: {} },
-  { type: "token", settings: { chain: "solana", address: "demo:pingu", note: "It will go much higher when mack shares it on Binance futures, x10 from here easy" } },
+  { type: "token", settings: { chain: "solana", address: "demo:nova", note: "My main bag this cycle. Not financial advice." } },
   { type: "community", label: "Telegram", settings: { platform: "telegram", invite: "fl3x" } },
   { type: "community", label: "Discord", settings: { platform: "discord", invite: "fl3x" } },
-  { type: "followers", settings: { platform: "x", handle: "solamies", count: 1_675_434 } },
-  { type: "video", label: "YouTube, latest upload", settings: { platform: "youtube", channel: "solamies" } },
-  { type: "video", label: "Twitch, live now", settings: { platform: "twitch", channel: "solamies" } },
+  { type: "followers", settings: { platform: "x", handle: "nova", count: 48_210 } },
+  { type: "video", label: "YouTube, latest upload", settings: { platform: "youtube", channel: "nova" } },
+  { type: "video", label: "Twitch, live now", settings: { platform: "twitch", channel: "nova" } },
   { type: "music", label: "My Spotify, now playing", settings: { source: "spotify" } },
-  { type: "image", settings: { url: IMG.swifzui } },
-  { type: "link", label: "With button", settings: { image: IMG.swifzui, title: "Pingu NFT drop", body: LOREM, ctaLabel: "Mint now", url: "https://fl3x.lol" } },
-  { type: "link", label: "Journal (no button)", settings: { image: IMG.bi0, title: "Today journal", body: LOREM + " " + LOREM } },
+  { type: "image", settings: { url: IMG.cover } },
+  { type: "link", label: "With button", settings: { image: IMG.cover3, title: "Genesis pass drop", body: LOREM, ctaLabel: "Mint now", url: "https://fl3x.lol" } },
+  { type: "link", label: "Journal (no button)", settings: { image: IMG.cover2, title: "Trading journal", body: LOREM + " " + LOREM } },
   { type: "clock", settings: { timezone: "Asia/Dubai", city: "Dubai,", country: "AE" } },
-  { type: "countdown", settings: { title: "Launch of new Pingu NFT!", target: "2026-11-29T18:00:00.000Z", country: "AE", ctaLabel: "View more", ctaUrl: "https://fl3x.lol" } },
+  { type: "countdown", settings: { title: "Season 2 drop", target: "2026-11-29T18:00:00.000Z", country: "AE", ctaLabel: "View more", ctaUrl: "https://fl3x.lol" } },
   { type: "reactions", settings: { emojis: "🤑😈💀🤡🤖🐳" } },
   { type: "text", settings: { title: "Gm", body: LOREM } },
 ];
@@ -177,10 +193,10 @@ export const DEMO_LAYOUTS: { id: string; label: string; widgets: Widget[] }[] = 
 
 export function demoProfile(widgets: Widget[], backgroundUrl: string | null = DEMO_BACKGROUNDS[0]!.url): FullPublicProfile {
   return {
-    username: "solamies",
-    displayName: "Solamies",
+    username: "nova",
+    displayName: "Nova",
     bio: "FL3X on all screen!",
-    avatarUrl: IMG.solamies,
+    avatarUrl: IMG.avatar,
     badges: BADGES.map((b) => b.id),
     theme: backgroundUrl ? { ...DEFAULT_THEME, background: "image", backgroundUrl } : { ...DEFAULT_THEME, background: "plain" },
     widgets,
@@ -191,7 +207,7 @@ export function demoProfile(widgets: Widget[], backgroundUrl: string | null = DE
       { id: "l4", kind: "telegram", url: "https://t.me/fl3x", label: null },
     ],
     tier: "premium",
-    xHandle: "solamies",
+    xHandle: "nova",
     views: 456_432,
   };
 }

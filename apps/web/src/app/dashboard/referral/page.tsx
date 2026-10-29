@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import { Crown02Icon, NewTwitterIcon, UserGroupIcon } from "@hugeicons/core-free-icons";
 import type { ReferralSummary } from "@fl3x/shared";
 import { useAuth, useMe } from "@/components/auth/AuthProvider";
@@ -18,6 +19,7 @@ export default function ReferralPage() {
   const { getToken } = useAuth();
   const { data: editor } = useEditorProfile();
   const { data: me } = useMe();
+  const [tab, setTab] = useState<"board" | "crew">("board");
   const { data, isLoading } = useQuery({
     queryKey: ["referrals"],
     queryFn: async () => api<ReferralSummary>("/me/referrals", { token: await getToken() }),
@@ -32,12 +34,12 @@ export default function ReferralPage() {
   const progress = data.toNextRank ? data.referrals / (data.referrals + data.toNextRank) : 1;
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-10 md:px-10">
+    <div className="flex flex-col px-4 py-8 md:px-8 lg:h-svh lg:py-6">
       <PageHeader title="R[e]F[e]RRAL" subtitle="Bring your friends to FL3X. Every member who joins with your link counts." />
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_380px]">
+      <div className="grid gap-4 lg:min-h-0 lg:flex-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
         <div className="flex flex-col gap-4">
           {/* Rank card */}
-          <section className="relative overflow-hidden rounded-3xl border border-white/10 bg-[#0d0d0d] p-5 md:p-6">
+          <section className="relative overflow-hidden rounded-3xl bg-[#0d0d0d] p-5 md:p-6">
             <div className="pointer-events-none absolute -top-24 -right-16 size-64 rounded-full bg-brand/15 blur-3xl" />
             <div className="relative flex items-center gap-4">
               <div className="size-14 shrink-0 overflow-hidden rounded-full bg-white/10 md:size-16">
@@ -82,7 +84,7 @@ export default function ReferralPage() {
           </section>
 
           {/* Link card */}
-          <section className="rounded-3xl border border-white/10 bg-[#0d0d0d] p-5 md:p-6">
+          <section className="rounded-3xl bg-[#0d0d0d] p-5 md:p-6">
             <p className="text-xs text-fg-3">Share it everywhere</p>
             <h2 className="mt-0.5 font-primary text-2xl leading-none">Your referral link</h2>
             <div className="mt-5 border-t border-white/10 pt-5">
@@ -100,15 +102,43 @@ export default function ReferralPage() {
             </div>
           </section>
 
-          {/* People you brought */}
-          <section className="rounded-3xl border border-white/10 bg-[#0d0d0d] p-5 md:p-6">
-            <p className="text-xs text-fg-3">Joined with your link</p>
-            <h2 className="mt-0.5 font-primary text-2xl leading-none">Your crew · {data.invited.length}</h2>
-            {data.invited.length ? (
-              <ul className="mt-4 grid gap-2 sm:grid-cols-2">
+          <section className="grid gap-3 rounded-3xl bg-[#0d0d0d] p-5 sm:grid-cols-3 lg:flex-1">
+            {[
+              ["1", "Share your link", "Post it on X, drop it in your Discord or your bio."],
+              ["2", "They claim a name", "Friends pick a username and set up their card."],
+              ["3", "You climb", "Every member counts. 3 unlock the Contributor badge."],
+            ].map(([n, t, d]) => (
+              <div key={n} className="flex flex-col gap-2 rounded-2xl bg-white/[0.03] p-4">
+                <span className="font-primary text-3xl leading-none text-brand">{n}</span>
+                <p className="font-primary text-lg leading-none">{t}</p>
+                <p className="text-xs text-fg-3">{d}</p>
+              </div>
+            ))}
+          </section>
+        </div>
+
+        {/* Leaderboard */}
+        <aside className="flex flex-col rounded-3xl bg-[#0d0d0d] p-5 lg:min-h-0">
+          <div className="mb-4 flex items-center gap-1 border-b border-white/10 pb-4">
+            {(["board", "crew"] as const).map((t) => (
+              <button
+                key={t}
+                type="button"
+                onClick={() => setTab(t)}
+                className={cn("rounded-xl px-3 py-1.5 font-primary text-xl leading-none transition-colors", tab === t ? "bg-white/10 text-fg" : "text-fg-3 hover:text-fg")}
+              >
+                {t === "board" ? "Leaderboard" : `Your crew · ${data.invited.length}`}
+              </button>
+            ))}
+            <Icon icon={Crown02Icon} size={24} className="ml-auto text-brand" />
+          </div>
+          <div className="-mr-2 min-h-0 flex-1 overflow-y-auto pr-2">
+          {tab === "crew" ? (
+            data.invited.length ? (
+              <ul className="flex flex-col gap-1">
                 {data.invited.map((i) => (
                   <li key={i.username}>
-                    <a href={`/@${i.username}`} target="_blank" className="flex items-center gap-3 rounded-xl bg-white/[0.03] p-2.5 transition-colors hover:bg-white/[0.06]">
+                    <a href={`/@${i.username}`} target="_blank" className="flex items-center gap-3 rounded-xl px-2.5 py-2 transition-colors hover:bg-white/[0.04]">
                       <Avatar url={i.avatarUrl} />
                       <span className="min-w-0 flex-1">
                         <span className="block truncate font-primary text-base leading-none">{i.displayName || i.username}</span>
@@ -120,21 +150,9 @@ export default function ReferralPage() {
                 ))}
               </ul>
             ) : (
-              <p className="mt-4 rounded-xl border border-dashed border-white/10 p-6 text-center text-sm text-fg-3">Nobody yet. Your first referral shows up here.</p>
-            )}
-          </section>
-        </div>
-
-        {/* Leaderboard */}
-        <aside className="h-fit rounded-3xl border border-white/10 bg-[#0d0d0d] p-5 lg:sticky lg:top-6">
-          <div className="mb-4 flex items-center justify-between border-b border-white/10 pb-4">
-            <div>
-              <p className="text-xs text-fg-3">Top recruiters</p>
-              <h2 className="mt-0.5 font-primary text-2xl leading-none">Leaderboard</h2>
-            </div>
-            <Icon icon={Crown02Icon} size={26} className="text-brand" />
-          </div>
-          {data.leaderboard.length ? (
+              <p className="py-10 text-center text-sm text-fg-3">Nobody yet. Your first referral shows up here.</p>
+            )
+          ) : data.leaderboard.length ? (
             <ol className="flex flex-col gap-1">
               {data.leaderboard.map((l) => (
                 <li
@@ -160,7 +178,8 @@ export default function ReferralPage() {
           ) : (
             <p className="py-10 text-center text-sm text-fg-3">No referrals yet. Be the first on the board.</p>
           )}
-          {data.referrals > 0 && !data.leaderboard.some((l) => l.you) && (
+          </div>
+          {tab === "board" && data.referrals > 0 && !data.leaderboard.some((l) => l.you) && (
             <div className="mt-2 flex items-center gap-3 rounded-xl bg-brand/10 px-2.5 py-2 ring-1 ring-brand/40">
               <span className="w-6 text-center font-primary text-lg leading-none text-fg-2">{data.rank}</span>
               <span className="flex-1 font-primary text-base">You</span>

@@ -41,7 +41,7 @@ export function ConnectionsPanel() {
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex h-12 items-center gap-3 rounded-xl border border-white/10 bg-[#111] px-3 text-sm">
+      <div className="flex h-12 items-center gap-3 rounded-xl bg-white/[0.04] px-3 text-sm">
         <Icon icon={SpotifyIcon} size={20} className="text-[#1DB954]" />
         <span className="min-w-0 flex-1 truncate">
           Spotify {spotify ? <span className="text-fg-3">· {spotify.accountName}</span> : <span className="text-fg-3">· not connected</span>}

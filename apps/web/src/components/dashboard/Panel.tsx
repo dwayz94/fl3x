@@ -18,7 +18,7 @@ export function PageHeader({ title, subtitle, action }: { title: string; subtitl
 
 export function Panel({ label, title, aside, children, className }: { label?: string; title?: ReactNode; aside?: ReactNode; children?: ReactNode; className?: string }) {
   return (
-    <section className={cn("flex flex-col rounded-2xl border border-white/10 bg-[#0d0d0d] p-5", className)}>
+    <section className={cn("flex flex-col rounded-2xl bg-[#0d0d0d] p-5", className)}>
       {(label || title) && (
         <div className="mb-4 flex items-start justify-between gap-3 border-b border-white/10 pb-4">
           <div>
