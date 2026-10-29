@@ -10,7 +10,6 @@ import { resolveInviteCode } from "../lib/invites";
 import { isUsernameTaken } from "../lib/users";
 
 export async function publicRoutes(app: FastifyInstance) {
-  app.get("/health", async () => ({ ok: true }));
 
   app.get("/config", async (): Promise<PublicConfig> => ({
     phase: env.LAUNCH_PHASE,

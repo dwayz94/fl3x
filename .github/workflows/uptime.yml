@@ -1,0 +1,24 @@
+# Uptime check every 10 minutes: the API (and its database) and the website.
+# A failed run makes GitHub email the repo admins (Settings → Notifications → Actions).
+name: Uptime
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: API and database
+        run: |
+          body=$(curl -fsS --max-time 20 --retry 2 --retry-delay 10 https://api.fl3x.lol/health)
+          echo "$body"
+          echo "$body" | grep -q '"db":true'
+      - name: Website
+        run: curl -fsS --max-time 20 --retry 2 --retry-delay 10 -o /dev/null -w "%{http_code}\n" https://fl3x.lol/
+      - name: A public profile renders
+        if: ${{ vars.UPTIME_PROFILE != '' }}
+        run: curl -fsS --max-time 20 --retry 2 --retry-delay 10 -o /dev/null "https://fl3x.lol/@${{ vars.UPTIME_PROFILE }}"

@@ -67,3 +67,5 @@ services:
         sync: false
       - key: TOKEN_MINT
         sync: false
+      - key: SENTRY_DSN
+        sync: false

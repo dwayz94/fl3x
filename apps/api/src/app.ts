@@ -14,6 +14,9 @@ import { editorRoutes } from "./routes/editor";
 import { mediaRoutes } from "./routes/media";
 import { meRoutes } from "./routes/me";
 import { isInternalRequest } from "./lib/internal";
+import { captureError } from "./lib/monitoring";
+import { db } from "./db";
+import { sql } from "drizzle-orm";
 import { publicRoutes } from "./routes/public";
 import { referralRoutes } from "./routes/referrals";
 import { walletRoutes } from "./routes/wallets";
@@ -57,7 +60,20 @@ export async function buildApp() {
       return reply.status(status).send({ error: "request_error", message: (err as Error).message });
     }
     req.log.error(err);
+    captureError(err, { method: req.method, route: req.routeOptions.url });
     return reply.status(500).send({ error: "internal", message: "Something went wrong" });
+  });
+
+  /** Uptime checks (Render health check, external monitors): the API answers and the database too. */
+  const started = Date.now();
+  app.get("/health", { config: { rateLimit: false } }, async (_req, reply) => {
+    try {
+      await db.execute(sql`select 1`);
+      return { ok: true, db: true, uptimeSeconds: Math.round((Date.now() - started) / 1000) };
+    } catch (err) {
+      captureError(err, { check: "health" });
+      return reply.status(503).send({ ok: false, db: false });
+    }
   });
 
   await app.register(publicRoutes);

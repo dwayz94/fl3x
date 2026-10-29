@@ -13,6 +13,7 @@
     "@hugeicons/core-free-icons": "^4.3.5",
     "@hugeicons/react": "^1.1.10",
     "@privy-io/react-auth": "^3.51.0",
+    "@sentry/nextjs": "^11.10.0",
     "@solana-program/memo": "*",
     "@solana-program/system": "*",
     "@solana-program/token": "*",

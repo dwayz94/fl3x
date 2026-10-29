@@ -67,3 +67,14 @@ Without `NEXT_PUBLIC_PRIVY_APP_ID`, local dev uses test sessions instead of Priv
 **Web → Vercel**: import the repo, Root Directory `apps/web`. Env: `NEXT_PUBLIC_API_URL=https://api.fl3x.lol`, `NEXT_PUBLIC_SITE_URL=https://fl3x.lol`, `NEXT_PUBLIC_PRIVY_APP_ID`, `INTERNAL_API_KEY` (same as the API). Domain `fl3x.lol`.
 
 **Privy dashboard**: enable Twitter + Solana external wallets. Allowed origins: `https://fl3x.lol`, `http://localhost:3000`.
+
+## Monitoring
+
+- **Health**: `GET https://api.fl3x.lol/health` answers `{"ok":true,"db":true}` when the API and its database are up (503 otherwise). Render uses it as its health check (`render.yaml`) and restarts the service when it fails.
+- **Uptime**: `.github/workflows/uptime.yml` checks the API, the site and (if the repo variable `UPTIME_PROFILE` is set, e.g. `fl3x`) one public profile every 10 minutes. A failure emails the repo admins. For alerts by SMS/Telegram and a status page, add the same URLs to a free monitor (Better Stack or UptimeRobot).
+- **Errors**: set `SENTRY_DSN` on Render and `SENTRY_DSN` + `NEXT_PUBLIC_SENTRY_DSN` on Vercel (one Sentry project is enough). Without them nothing is loaded. API 500s, the hourly job, SSR/route errors and browser crashes are reported; tokens and request bodies are not.
+- **Logs**: Render → service → Logs (JSON, one line per request). Add a log stream (Better Stack, Datadog…) in Render settings to keep them longer than Render's retention.
+
+## Legal
+
+`/terms` and `/privacy` (contact `support@fl3x.lol`). Update `LEGAL_UPDATED` in `components/shared/LegalPage.tsx` when they change. Not reviewed by a lawyer yet.

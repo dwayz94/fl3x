@@ -35,6 +35,8 @@ const schema = z.object({
   // Optional: Spotify "now playing" (developer.spotify.com). Redirect URI: <API_PUBLIC_URL>/connections/spotify/callback
   SPOTIFY_CLIENT_ID: z.string().default(""),
   SPOTIFY_CLIENT_SECRET: z.string().default(""),
+  // Optional: error reports to Sentry (sentry.io → project → Client Keys)
+  SENTRY_DSN: z.string().default(""),
   // Optional: live status for Twitch widgets
   TWITCH_CLIENT_ID: z.string().default(""),
   TWITCH_CLIENT_SECRET: z.string().default(""),

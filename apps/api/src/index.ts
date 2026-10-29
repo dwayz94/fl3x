@@ -1,5 +1,7 @@
 import { ne } from "drizzle-orm";
+import "./lib/monitoring"; // first, so Sentry sees everything that follows
 import { buildApp } from "./app";
+import { captureError } from "./lib/monitoring";
 import { db, schema } from "./db";
 import { env } from "./env";
 import { purgeExpiredCache } from "./lib/cache";
@@ -27,6 +29,7 @@ async function hourly() {
     await purgeExpiredCache();
   } catch (err) {
     app.log.error(err);
+    captureError(err, { job: "hourly" });
   } finally {
     running = false;
   }
