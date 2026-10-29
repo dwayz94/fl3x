@@ -1,12 +1,14 @@
 import type { Metadata } from "next";
+import { notFound } from "next/navigation";
 import { WidgetsGallery } from "./WidgetsGallery";
 
 export const metadata: Metadata = {
   title: "Widgets",
-  description: "Every FL3X widget: PnL, portfolio, holdings, tokens, music, followers, community, video, clock and countdown, in large and long sizes.",
-  alternates: { canonical: "/widgets" },
+  robots: { index: false, follow: false },
 };
 
+// Local gallery with demo data only: never served in production (no fake data on the site).
 export default function WidgetsPage() {
+  if (process.env.NODE_ENV === "production") notFound();
   return <WidgetsGallery />;
 }
