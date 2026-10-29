@@ -3,6 +3,7 @@
 databases:
   - name: fl3x-db
     plan: basic-256mb
+    region: frankfurt # same region as the API: the internal hostname only resolves there
     databaseName: fl3x
     user: fl3x
 
