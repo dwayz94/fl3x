@@ -22,8 +22,8 @@ async function rpc<T>(method: string, params: unknown[]): Promise<T> {
 type TokenAccounts = { value: { account: { data: { parsed: { info: { mint: string; tokenAmount: { uiAmount: number | null } } } } } }[] };
 
 // Jupiter Price API v3 / Tokens API v2. Free host without a key; api.jup.ag with JUPITER_API_KEY.
-const JUP = env.JUPITER_API_KEY ? "https://api.jup.ag" : "https://lite-api.jup.ag";
-const jupHeaders = (): Record<string, string> => (env.JUPITER_API_KEY ? { "x-api-key": env.JUPITER_API_KEY } : {});
+export const JUP = env.JUPITER_API_KEY ? "https://api.jup.ag" : "https://lite-api.jup.ag";
+export const jupHeaders = (): Record<string, string> => (env.JUPITER_API_KEY ? { "x-api-key": env.JUPITER_API_KEY } : {});
 const MAX_PRICED_MINTS = 200; // spam-token wallets can hold thousands
 
 async function prices(mints: string[]): Promise<{ prices: Record<string, number>; complete: boolean }> {

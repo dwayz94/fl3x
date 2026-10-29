@@ -17,6 +17,8 @@ export async function cached<T>(key: string, ttlSeconds: number, load: () => Pro
   const p = (async () => {
     try {
       const value = await load();
+      // "Nothing found" isn't stored (the column is NOT NULL): the next request asks again.
+      if (value == null) return value;
       const expiresAt = new Date(Date.now() + ttlSeconds * 1000);
       await db
         .insert(schema.dataCache)
