@@ -12,6 +12,7 @@ Images : `docs/x-kit/images/` (PNG 2x, logo en bas à gauche, `fl3x.lol` en bas 
 | `banner.png` | 1500×500 | Bannière du profil, coins du bas laissés vides (photo de profil à gauche, boutons sur mobile à droite) |
 | `launch.png` | 1200×675 | Tweet épinglé |
 | `article-cover.png` | 1500×600 (5:2) | Couverture de l'article |
+| Les autres | 1200×675 (16:9) | Tweets. Persona de démo « Nova », images abstraites génériques (`scripts/demo-art.py`), aucune vraie personne. Le son de démo est un vrai titre (Kanye West, « Stronger ») avec sa pochette Spotify |
 | Les autres | 1200×675 (16:9) | Tweets, voir ci-dessous |
 
 ---
@@ -156,14 +157,14 @@ Your profile comes with analytics.
 Views, link clicks, countries, devices, and the site each visitor came from.
 ```
 
-**12.** Sans image
+**12.** Image : `before-after.png`
 ```
 Send this to the friend whose bio is still a Linktree.
 ```
 
 ## 6. Après l'ouverture (à recycler, jamais le même texte deux fois)
 
-**13.** Image : `widgets.png` (puis de vrais profils de membres, avec leur accord)
+**13.** Image : `phone.png` (puis de vrais profils de membres, avec leur accord)
 ```
 Profile of the day.
 

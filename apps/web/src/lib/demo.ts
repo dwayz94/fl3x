@@ -195,7 +195,7 @@ export function demoProfile(widgets: Widget[], backgroundUrl: string | null = DE
   return {
     username: "nova",
     displayName: "Nova",
-    bio: "FL3X on all screen!",
+    bio: "FL3X on all screens!",
     avatarUrl: IMG.avatar,
     badges: BADGES.map((b) => b.id),
     theme: backgroundUrl ? { ...DEFAULT_THEME, background: "image", backgroundUrl } : { ...DEFAULT_THEME, background: "plain" },
