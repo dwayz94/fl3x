@@ -46,8 +46,8 @@ export interface WidgetDef {
 }
 
 const accent: FieldDef = { key: "accent", label: "Color", kind: "color", default: "#2FE3AC" };
-/** Design version. V2 renderers sit next to the originals; saved widgets without it stay V1. */
-const style: FieldDef = { key: "style", label: "Style", kind: "segmented", options: [{ id: "v1", label: "V1" }, { id: "v2", label: "V2" }], default: "v1" };
+/** Design version. V2 is the default (kept on 2026-10-29); V1 stays available for whoever prefers it. */
+const style: FieldDef = { key: "style", label: "Style", kind: "segmented", options: [{ id: "v2", label: "V2" }, { id: "v1", label: "V1" }], default: "v2" };
 export const V2_WIDGETS = ["portfolio", "music", "clock", "followers"] as const;
 const opacity: FieldDef = { key: "bgOpacity", label: "Background opacity", kind: "range", min: 20, max: 100, default: 100 };
 

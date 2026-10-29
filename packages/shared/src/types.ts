@@ -5,6 +5,8 @@ export interface PublicConfig {
   phase: LaunchPhase;
   token: { symbol: string; mint: string | null };
   thresholds: { starter: number; premium: number };
+  /** Claimed profiles, shown on the join page. */
+  members: number;
 }
 
 export interface Me {

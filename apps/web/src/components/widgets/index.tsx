@@ -10,7 +10,7 @@ export { sizeClass } from "./WidgetFrame";
 
 /** Renders any widget by type. `interactive` is false in the editor preview. */
 export function WidgetView({ w, interactive = true }: { w: Widget; interactive?: boolean }) {
-  if (w.settings.style === "v2") {
+  if (w.settings.style !== "v1") {
     switch (w.type) {
       case "portfolio": return <PortfolioWidgetV2 w={w} />;
       case "music": return <MusicWidgetV2 w={w} />;

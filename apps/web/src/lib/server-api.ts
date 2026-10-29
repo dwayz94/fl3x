@@ -5,6 +5,7 @@ const fallbackConfig: PublicConfig = {
   phase: "invite_only",
   token: { symbol: "FL3X", mint: null },
   thresholds: { starter: 100_000, premium: 1_000_000 },
+  members: 0,
 };
 
 /** Server-side fetch of the public config, cached 5 min. Never breaks the landing page. */

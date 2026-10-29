@@ -1,14 +1,18 @@
 "use client";
 
 import { useState } from "react";
-import { Brand, Button, FieldError, Input } from "@/components/ui";
+import { Mail01Icon } from "@hugeicons/core-free-icons";
+import { AuthHeader } from "@/components/shared";
+import { Button, FieldError, Icon, Input } from "@/components/ui";
 import { api, ApiRequestError } from "@/lib/api";
+
+type Result = { total: number; position: number };
 
 export function WaitlistForm({ desiredUsername, onBack }: { desiredUsername: string; onBack: () => void }) {
   const [xHandle, setXHandle] = useState("");
   const [email, setEmail] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [done, setDone] = useState<number | null>(null);
+  const [done, setDone] = useState<Result | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   const submit = async (e: React.FormEvent) => {
@@ -16,14 +20,15 @@ export function WaitlistForm({ desiredUsername, onBack }: { desiredUsername: str
     setError(null);
     setSubmitting(true);
     try {
-      const res = await api<{ total: number }>("/waitlist", {
-        json: {
-          xHandle: xHandle || undefined,
-          email: email || undefined,
-          desiredUsername: desiredUsername || undefined,
-        },
-      });
-      setDone(res.total);
+      setDone(
+        await api<Result>("/waitlist", {
+          json: {
+            xHandle: xHandle || undefined,
+            email: email || undefined,
+            desiredUsername: desiredUsername || undefined,
+          },
+        }),
+      );
     } catch (err) {
       setError(err instanceof ApiRequestError ? err.message : "Something went wrong");
     } finally {
@@ -31,37 +36,51 @@ export function WaitlistForm({ desiredUsername, onBack }: { desiredUsername: str
     }
   };
 
-  if (done !== null) {
+  if (done) {
     return (
-      <div className="flex flex-col gap-4 text-center">
-        <h1 className="text-5xl">
-          <Brand>YOU'Re [i]N LIN[e]</Brand>
-        </h1>
-        <p className="text-fg-2">
-          {done.toLocaleString()} people are waiting. We'll reach out on X or by email when a spot opens.
-        </p>
-        <Button variant="secondary" onClick={onBack}>
-          I got an invite
+      <>
+        <AuthHeader title="You're in line" subtitle="We'll reach out on X or by email as soon as a spot opens." />
+        <div className="w-full rounded-[24px] bg-[#121212] p-5">
+          <div className="flex items-end justify-between gap-4">
+            <div className="min-w-0">
+              <p className="truncate font-primary text-2xl leading-none">{xHandle ? `@${xHandle.replace(/^@/, "")}` : email}</p>
+              {desiredUsername && <p className="mt-1 truncate text-xs text-fg-3">wants fl3x.lol/@{desiredUsername}</p>}
+            </div>
+            <p className="shrink-0 font-primary text-4xl leading-none">
+              #{done.position.toLocaleString("en-US")}
+              <span className="text-base text-fg-3">/{done.total.toLocaleString("en-US")}</span>
+            </p>
+          </div>
+          <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-white/10">
+            <div className="h-full rounded-full bg-brand" style={{ width: `${Math.max(4, 100 - (done.position / Math.max(1, done.total)) * 100)}%` }} />
+          </div>
+          <p className="mt-3 text-xs text-fg-2">Got an invite from a friend? You can skip the line.</p>
+        </div>
+        <Button variant="secondary" className="mt-4 w-full" onClick={onBack}>
+          I have an invite code
         </Button>
-      </div>
+      </>
     );
   }
 
   return (
-    <form onSubmit={submit} className="flex flex-col gap-6">
-      <div>
-        <h1 className="mb-2 text-5xl">
-          <Brand>W[a]ITL[i]ST</Brand>
-        </h1>
-        <p className="text-fg-2">Leave your X handle or email and we'll send you an invite before launch.</p>
+    <form onSubmit={submit} className="flex w-full flex-col items-center">
+      <AuthHeader title="Join the waitlist" subtitle="Leave your X handle or email. We'll send you an invite before launch." />
+      <div className="flex w-full flex-col gap-3">
+        <Input placeholder="X handle" value={xHandle} onChange={(e) => setXHandle(e.target.value.trim())} leftElement={<span className="text-fg-2">@</span>} />
+        <Input
+          placeholder="Email"
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value.trim())}
+          leftElement={<Icon icon={Mail01Icon} size={18} className="text-fg-2" />}
+        />
       </div>
-      <Input placeholder="X handle" value={xHandle} onChange={(e) => setXHandle(e.target.value)} leftElement={<span className="text-fg-2">@</span>} />
-      <Input placeholder="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
-      {error && <FieldError>{error}</FieldError>}
-      <Button type="submit" loading={submitting} disabled={!xHandle && !email}>
+      {error && <div className="mt-3 w-full"><FieldError>{error}</FieldError></div>}
+      <Button type="submit" className="mt-6 w-full" loading={submitting} disabled={!xHandle && !email}>
         Join the waitlist
       </Button>
-      <button type="button" onClick={onBack} className="text-sm text-fg-2 hover:text-fg">
+      <button type="button" onClick={onBack} className="mt-6 text-sm text-fg-2 hover:text-fg">
         ← I have an invite code
       </button>
     </form>
