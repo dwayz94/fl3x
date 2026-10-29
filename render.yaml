@@ -44,7 +44,7 @@ services:
       - key: CONNECTIONS_SECRET
         generateValue: true
       - key: API_PUBLIC_URL
-        sync: false
+        value: https://api.fl3x.lol
       - key: MORALIS_API_KEY
         sync: false
       - key: SPOTIFY_CLIENT_ID
