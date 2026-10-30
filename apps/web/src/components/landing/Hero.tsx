@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { CheckmarkCircle02Icon, Loading03Icon, TagsIcon } from "@hugeicons/core-free-icons";
 import { validateUsername } from "@fl3x/shared";
 import { Button, Icon, Input } from "@/components/ui";
@@ -86,13 +86,15 @@ export function Hero() {
 /**
  * Scales its child down to the column's width (never above `max`), so the card
  * shrinks with the window or the browser zoom instead of covering the form.
+ * Measured before the first paint and hidden until then: no visible jump on load.
+ * (Hidden, not faded: a translucent ancestor would switch off the card's backdrop blur.)
  */
 function FitWidth({ max, children }: { max: number; children: ReactNode }) {
   const box = useRef<HTMLDivElement>(null);
   const inner = useRef<HTMLDivElement>(null);
   const [fit, setFit] = useState({ scale: max, width: 0, height: 0 });
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const cell = box.current?.parentElement;
     const el = inner.current;
     if (!cell || !el) return;
@@ -112,7 +114,7 @@ function FitWidth({ max, children }: { max: number; children: ReactNode }) {
   }, [max]);
 
   return (
-    <div ref={box} style={fit.width ? { width: fit.width, height: fit.height } : undefined}>
+    <div ref={box} style={fit.width ? { width: fit.width, height: fit.height } : { visibility: "hidden" }}>
       <div ref={inner} className="w-max origin-top-left" style={{ transform: `scale(${fit.scale})` }}>
         {children}
       </div>

@@ -237,12 +237,16 @@ function Editor({ initial, tier, wallets }: { initial: EditorPayload; tier: Tier
 
   return (
     // Full-screen customize mode: no dashboard sidebar, a back button instead.
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: shown ? 1 : 0 }}
-      transition={{ duration: 0.25, ease: EASE }}
-      className="fixed inset-0 z-30 flex flex-col overflow-y-auto bg-[#0b0b0b] lg:overflow-hidden"
-    >
+    // No opacity on this wrapper or the card's: browsers turn off the card's backdrop blur
+    // under a translucent ancestor, so it would snap on at the end. A curtain fades instead.
+    <div className="fixed inset-0 z-30 flex flex-col overflow-y-auto bg-[#0b0b0b] lg:overflow-hidden">
+      <motion.div
+        aria-hidden
+        className="pointer-events-none fixed inset-0 z-[39] bg-[#0b0b0b]"
+        initial={{ opacity: 1 }}
+        animate={{ opacity: shown ? 0 : 1 }}
+        transition={{ duration: shown ? 0.45 : 0.22, ease: EASE }}
+      />
       <motion.header
         initial={{ y: -24, opacity: 0 }}
         animate={shown ? { y: 0, opacity: 1 } : { y: -24, opacity: 0 }}
@@ -300,8 +304,8 @@ function Editor({ initial, tier, wallets }: { initial: EditorPayload; tier: Tier
             {/* my-auto centers when it fits, and scrolls from the top when it doesn't */}
             <motion.div
               // No scale: FitWidth measures the card's on-screen width to size the preview.
-              initial={{ y: 32, opacity: 0 }}
-              animate={shown ? { y: 0, opacity: 1 } : { y: 16, opacity: 0 }}
+              initial={{ y: 32 }}
+              animate={shown ? { y: 0 } : { y: 16 }}
               transition={leaving ? { duration: 0.22, ease: EASE } : { type: "spring", stiffness: 260, damping: 28 }}
               className="my-auto flex w-full justify-center"
             >
@@ -347,7 +351,7 @@ function Editor({ initial, tier, wallets }: { initial: EditorPayload; tier: Tier
 
       {!ready && <CustomizeLoader />}
       <UnsavedBar dirty={dirty} saving={saving} savedFlash={savedFlash} error={error} nudge={nudge} onDiscard={discard} onSave={() => void save()} />
-    </motion.div>
+    </div>
   );
 }
 

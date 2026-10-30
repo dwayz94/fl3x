@@ -8,6 +8,7 @@ import { env } from "../env";
 import { generateCode } from "../lib/codes";
 import { forbidden, notFound } from "../lib/errors";
 import { getSettings, saveSettings } from "../lib/settings";
+import { refreshTier } from "../lib/users";
 
 const createInvites = z.object({
   count: z.number().int().min(1).max(500).default(1),
@@ -24,6 +25,33 @@ function isAdminKey(given: unknown) {
 
 const grantable = BADGES.filter((b) => b.unlock.kind === "granted").map((b) => b.id) as [string, ...string[]];
 const grantBadge = z.object({ username: z.string().min(1), badge: z.enum(grantable), granted: z.boolean().default(true) });
+
+const memberUpdate = z.object({
+  founder: z.boolean().optional(),
+  tierOverride: z.enum(["starter", "premium"]).nullable().optional(),
+  badges: z.array(z.enum(grantable)).max(grantable.length).optional(),
+});
+
+/** What /admin shows about a member. */
+async function adminUser(u: typeof schema.users.$inferSelect) {
+  const [profile] = await db.select().from(schema.profiles).where(eq(schema.profiles.userId, u.id)).limit(1);
+  const wallets = await db.select({ chain: schema.wallets.chain, address: schema.wallets.address }).from(schema.wallets).where(eq(schema.wallets.userId, u.id));
+  return {
+    id: u.id,
+    username: u.username,
+    xHandle: u.xHandle,
+    tier: u.tier,
+    tierOverride: u.tierOverride,
+    founder: u.role === "admin",
+    badges: u.grantedBadges,
+    tokenBalance: u.tokenBalance,
+    createdAt: u.createdAt,
+    onboardedAt: u.onboardedAt,
+    signInWallets: u.wallets,
+    linkedWallets: wallets,
+    profile: profile ? { displayName: profile.displayName, avatarUrl: profile.avatarUrl ?? u.xAvatarUrl, published: profile.isPublished } : null,
+  };
+}
 
 export async function adminRoutes(app: FastifyInstance) {
   app.addHook("onRequest", async (req) => {
@@ -53,23 +81,37 @@ export async function adminRoutes(app: FastifyInstance) {
         ),
       )
       .limit(10);
-    return Promise.all(
-      users.map(async (u) => {
-        const [profile] = await db.select().from(schema.profiles).where(eq(schema.profiles.userId, u.id)).limit(1);
-        const wallets = await db.select({ chain: schema.wallets.chain, address: schema.wallets.address }).from(schema.wallets).where(eq(schema.wallets.userId, u.id));
-        return {
-          id: u.id,
-          username: u.username,
-          xHandle: u.xHandle,
-          tier: u.tier,
-          createdAt: u.createdAt,
-          onboardedAt: u.onboardedAt,
-          signInWallets: u.wallets,
-          linkedWallets: wallets,
-          profile: profile ? { displayName: profile.displayName, published: profile.isPublished } : null,
-        };
-      }),
-    );
+    return Promise.all(users.map(adminUser));
+  });
+
+  /**
+   * Team controls on a member: Founder (staff role), a gifted tier and the
+   * team badges. Takes effect at once (the tier is recomputed right away).
+   */
+  app.patch<{ Params: { id: string } }>("/admin/users/:id", async (req) => {
+    if (!z.uuid().safeParse(req.params.id).success) throw notFound("No such user");
+    const body = memberUpdate.parse(req.body);
+    const [user] = await db.select().from(schema.users).where(eq(schema.users.id, req.params.id)).limit(1);
+    if (!user) throw notFound("No such user");
+    const [row] = await db
+      .update(schema.users)
+      .set({
+        ...(body.founder !== undefined && { role: body.founder ? ("admin" as const) : ("user" as const) }),
+        ...(body.tierOverride !== undefined && { tierOverride: body.tierOverride }),
+        ...(body.badges !== undefined && { grantedBadges: body.badges }),
+      })
+      .where(eq(schema.users.id, user.id))
+      .returning();
+    // What the team just handed out shows on the profile right away (the member can still hide it in Badges).
+    const added = [...(body.founder && user.role !== "admin" ? ["founder"] : []), ...(body.badges ?? []).filter((b) => !user.grantedBadges.includes(b))];
+    const [profile] = added.length ? await db.select({ badges: schema.profiles.badges }).from(schema.profiles).where(eq(schema.profiles.userId, user.id)).limit(1) : [];
+    if (profile) {
+      await db
+        .update(schema.profiles)
+        .set({ badges: [...new Set([...profile.badges, ...added])] })
+        .where(eq(schema.profiles.userId, user.id));
+    }
+    return adminUser(body.tierOverride !== undefined ? await refreshTier(row!, true) : row!);
   });
 
   /** Live site settings (phase, token mint, thresholds, banner): edited from /admin, applied without a restart. */

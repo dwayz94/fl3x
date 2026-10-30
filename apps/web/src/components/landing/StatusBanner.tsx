@@ -28,8 +28,9 @@ const DISMISSED = "fl3x:banner-dismissed";
 export function StatusBanner({ config, preview }: { config: PublicConfig; preview?: boolean }) {
   const banner = config.banner === "off" ? null : (config.banner ?? launchBanner(config));
   const key = banner ? `${banner.text}|${banner.detail ?? ""}` : "";
-  // Hidden until we know it wasn't closed, so it never flashes in and out.
-  const [dismissed, setDismissed] = useState(true);
+  // Shown from the first paint (rendered on the server): appearing after load would push the
+  // whole hero down. Only visitors who closed it see it go away once the page is up.
+  const [dismissed, setDismissed] = useState(false);
   useEffect(() => {
     try {
       setDismissed(!preview && localStorage.getItem(DISMISSED) === key);

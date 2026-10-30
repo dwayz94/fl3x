@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState, type ReactNode } from "react";
-import { LAUNCH_PHASES, siteSettingsSchema, type LaunchPhase, type SiteSettings } from "@fl3x/shared";
+import { BADGES, LAUNCH_PHASES, siteSettingsSchema, type LaunchPhase, type SiteSettings, type Tier } from "@fl3x/shared";
 import { UnsavedBar } from "@/components/dashboard/UnsavedBar";
 import { inputClass } from "@/components/editor/Field";
 import { StatusBanner } from "@/components/landing/StatusBanner";
@@ -173,6 +173,8 @@ export function AdminPanel() {
         </div>
       </Card>
 
+      <Members adminKey={key} />
+
       <Invites adminKey={key} />
 
       <UnsavedBar dirty={dirty} saving={saving} savedFlash={flash} error={error} nudge={nudge} onDiscard={() => setDraft(toDraft(saved))} onSave={() => void save()} />
@@ -200,6 +202,155 @@ function Unlock({ onUnlock, error }: { onUnlock: (key: string) => void; error: s
         </Button>
       </form>
     </main>
+  );
+}
+
+type Member = {
+  id: string;
+  username: string | null;
+  xHandle: string | null;
+  tier: Tier;
+  tierOverride: "starter" | "premium" | null;
+  founder: boolean;
+  badges: string[];
+  profile: { displayName: string | null; avatarUrl: string | null } | null;
+};
+const TEAM_BADGES = BADGES.filter((b) => b.unlock.kind === "granted");
+
+/** Find a member, then make them Founder, gift a tier or hand out team badges. Each change saves at once. */
+function Members({ adminKey }: { adminKey: string }) {
+  const [q, setQ] = useState("");
+  const [results, setResults] = useState<Member[] | null>(null);
+  const [member, setMember] = useState<Member | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const headers = { "x-admin-key": adminKey };
+
+  const search = async () => {
+    if (q.trim().length < 2) return;
+    setError(null);
+    try {
+      const found = await api<Member[]>(`/admin/users/lookup?q=${encodeURIComponent(q.trim())}`, { headers });
+      setResults(found);
+      setMember(found.length === 1 ? found[0]! : null);
+    } catch (err) {
+      setError(err instanceof ApiRequestError ? err.message : "Search failed");
+    }
+  };
+  const update = async (patch: Partial<Pick<Member, "founder" | "tierOverride" | "badges">>) => {
+    if (!member) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const next = await api<Member>(`/admin/users/${member.id}`, { method: "PATCH", headers, json: patch });
+      setMember(next);
+      setResults((r) => r?.map((m) => (m.id === next.id ? next : m)) ?? null);
+    } catch (err) {
+      setError(err instanceof ApiRequestError ? err.message : "Could not save");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Card title="Members" desc="Search by username, X handle, wallet or internal ID. Changes save at once and show on the profile right away.">
+      <form
+        className="flex gap-2"
+        onSubmit={(e) => {
+          e.preventDefault();
+          void search();
+        }}
+      >
+        <input className={inputClass} placeholder="@username, X handle, wallet…" value={q} onChange={(e) => setQ(e.target.value)} spellCheck={false} />
+        <Button type="submit" size="md" className="shrink-0">
+          Search
+        </Button>
+      </form>
+      {error && <p className="mt-2 text-sm text-danger">{error}</p>}
+      {results && results.length === 0 && <p className="mt-3 text-sm text-fg-3">Nobody found.</p>}
+      {results && results.length > 1 && (
+        <ul className="mt-3 flex flex-col gap-1">
+          {results.map((m) => (
+            <li key={m.id}>
+              <button type="button" onClick={() => setMember(m)} className={cn("w-full rounded-xl px-3 py-2 text-left text-sm hover:bg-white/[0.06]", member?.id === m.id && "bg-white/[0.06]")}>
+                {m.profile?.displayName || m.username || m.xHandle} <span className="text-fg-3">@{m.username ?? "no username"}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {member && (
+        <div className={cn("mt-4 flex flex-col gap-5 rounded-2xl bg-white/[0.03] p-4", busy && "opacity-60")}>
+          <div className="flex items-center gap-3">
+            <span className="size-11 shrink-0 overflow-hidden rounded-full bg-white/10">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              {member.profile?.avatarUrl && <img src={member.profile.avatarUrl} alt="" className="size-full object-cover" />}
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="truncate font-primary text-xl leading-none uppercase">{member.profile?.displayName || member.username || "No profile yet"}</p>
+              <p className="mt-1 text-xs text-fg-3">
+                {member.username ? `@${member.username}` : "No username"}
+                {member.xHandle && ` · X @${member.xHandle}`} · tier <span className="text-fg-2">{member.tier}</span>
+              </p>
+            </div>
+            {member.username && (
+              <Link href={`/@${member.username}`} target="_blank" className="shrink-0 text-xs text-brand hover:underline">
+                Profile ↗
+              </Link>
+            )}
+          </div>
+
+          <div>
+            <p className="mb-2 text-xs text-fg-2">Tier</p>
+            <Segmented
+              value={member.tierOverride ?? "holdings"}
+              options={[
+                { id: "holdings", label: "From holdings" },
+                { id: "starter", label: "Gift Starter" },
+                { id: "premium", label: "Gift Premium" },
+              ]}
+              onChange={(v) => void update({ tierOverride: v === "holdings" ? null : (v as "starter" | "premium") })}
+            />
+            <p className="mt-1.5 text-[11px] text-fg-3">A gifted tier is a minimum: holding more $FL3X still counts.</p>
+          </div>
+
+          <div>
+            <p className="mb-2 text-xs text-fg-2">Badges</p>
+            <div className="flex flex-wrap gap-2">
+              <BadgeToggle id="founder" name="Founder (team)" on={member.founder} onClick={() => void update({ founder: !member.founder })} />
+              {TEAM_BADGES.map((b) => {
+                const on = member.badges.includes(b.id);
+                return (
+                  <BadgeToggle
+                    key={b.id}
+                    id={b.id}
+                    name={b.name}
+                    on={on}
+                    onClick={() => void update({ badges: on ? member.badges.filter((x) => x !== b.id) : [...member.badges, b.id] })}
+                  />
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+    </Card>
+  );
+}
+
+function BadgeToggle({ id, name, on, onClick }: { id: string; name: string; on: boolean; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={on}
+      className={cn("flex items-center gap-2 rounded-xl border px-3 py-1.5 text-sm transition-colors", on ? "border-brand/60 bg-brand/10 text-fg" : "border-white/10 text-fg-3 hover:text-fg")}
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={`/images/badges/${id}.svg`} alt="" className={cn("size-4", !on && "opacity-40 grayscale")} />
+      {name}
+    </button>
   );
 }
 

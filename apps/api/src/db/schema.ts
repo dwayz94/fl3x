@@ -16,6 +16,8 @@ export const users = pgTable("users", {
   wallets: text("wallets").array().notNull().default(sql`'{}'::text[]`),
   role: text("role", { enum: ["user", "admin"] }).notNull().default("user"),
   tier: text("tier", { enum: ["none", "starter", "premium"] }).notNull().default("none"),
+  /** Tier given by the team from /admin (gift, partner): the member gets at least this, whatever they hold. */
+  tierOverride: text("tier_override", { enum: ["starter", "premium"] }),
   tokenBalance: doublePrecision("token_balance").notNull().default(0),
   tierCheckedAt: timestamp("tier_checked_at", { withTimezone: true }),
   /** Badges handed out by the team (see BADGES with unlock "granted"). */
