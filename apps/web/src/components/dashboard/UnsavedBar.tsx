@@ -5,7 +5,19 @@ import { Button } from "@/components/ui";
 import { cn } from "@/lib/cn";
 
 export /** Bottom bar while there are unsaved changes: discard or save. Shakes when you try to leave. */
-function UnsavedBar(props: { dirty: boolean; saving: boolean; savedFlash: boolean; error: string | null; nudge: number; onDiscard: () => void; onSave: () => void }) {
+function UnsavedBar(props: {
+  dirty: boolean;
+  saving: boolean;
+  savedFlash: boolean;
+  error: string | null;
+  nudge: number;
+  onDiscard: () => void;
+  onSave: () => void;
+  /** Why saving isn't possible yet (an unfinished widget…): shown instead, Save disabled. */
+  blocked?: string | null;
+  /** Clicked while blocked: e.g. jump to what needs fixing. */
+  onBlocked?: () => void;
+}) {
   const show = props.dirty || props.savedFlash;
   return (
     <AnimatePresence>
@@ -32,7 +44,9 @@ function UnsavedBar(props: { dirty: boolean; saving: boolean; savedFlash: boolea
               <>
                 <span className={cn("size-2 shrink-0 rounded-full", props.nudge ? "bg-danger" : "bg-brand")} />
                 <span className="min-w-0 flex-1 text-sm leading-tight">
-                  {props.error ? (
+                  {props.blocked ? (
+                    <span className="text-[#FFB547]">{props.blocked}</span>
+                  ) : props.error ? (
                     <span className="text-danger">{props.error}</span>
                   ) : props.nudge ? (
                     "Careful, you have unsaved changes!"
@@ -43,9 +57,15 @@ function UnsavedBar(props: { dirty: boolean; saving: boolean; savedFlash: boolea
                 <Button size="md" variant="ghost" onClick={props.onDiscard} disabled={props.saving}>
                   Discard
                 </Button>
-                <Button size="md" onClick={props.onSave} loading={props.saving}>
-                  Save changes
-                </Button>
+                {props.blocked ? (
+                  <Button size="md" variant="secondary" onClick={props.onBlocked}>
+                    Show me
+                  </Button>
+                ) : (
+                  <Button size="md" onClick={props.onSave} loading={props.saving}>
+                    Save changes
+                  </Button>
+                )}
               </>
             )}
           </motion.div>

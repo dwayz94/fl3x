@@ -1,4 +1,4 @@
-import type { CSSProperties, ReactNode } from "react";
+import { createContext, useContext, type CSSProperties, type ReactNode } from "react";
 import type { WidgetSize } from "@fl3x/shared";
 import { cn } from "@/lib/cn";
 
@@ -7,6 +7,14 @@ export const sizeClass: Record<WidgetSize, string> = {
   large: "col-span-2 row-span-2",
   long: "col-span-4 row-span-1",
 };
+
+/**
+ * The widget's chosen background (`surface` / `surfaceColor` settings), set once by
+ * WidgetView so every widget built on WidgetFrame gets it without doing anything.
+ */
+export const WidgetSurface = createContext<{ surface?: string; color?: string }>({});
+/** The profile's tier, where it's known (profile, editor): color backgrounds need Premium. */
+export const WidgetTier = createContext<string | null>(null);
 
 export function WidgetFrame({
   size,
@@ -31,7 +39,13 @@ export function WidgetFrame({
     className,
   );
   // A white veil rather than a flat grey, so widgets read as glass over image backgrounds.
-  const s = { background: `rgba(255, 255, 255, ${(0.1 * opacity) / 100})`, ...style };
+  const look = useContext(WidgetSurface);
+  const s: CSSProperties = { background: `rgba(255, 255, 255, ${(0.1 * opacity) / 100})`, ...style };
+  if (look.surface === "color" && look.color) {
+    // The color fades into near-black at the bottom so white text stays readable on any shade.
+    const c = look.color;
+    s.background = `linear-gradient(160deg, color-mix(in srgb, ${c} ${opacity}%, transparent) 0%, color-mix(in srgb, ${c} ${Math.round(opacity * 0.55)}%, #0b0b0b) 100%)`;
+  }
   if (href) {
     return (
       <a href={href} target="_blank" rel="noopener noreferrer" className={classes} style={s} onClick={onLinkClick}>

@@ -127,7 +127,7 @@ export function PortfolioWidgetV2({ w }: { w: Widget }) {
     return (
       <WidgetFrame size="long" opacity={opacity} className="items-stretch">
         <div className="relative z-10 flex flex-col justify-center gap-1.5">
-          <WMuted className="font-primary text-xs uppercase">Portfolio · {label}</WMuted>
+          <WMuted className="font-primary text-sm uppercase">Portfolio · {label}</WMuted>
           {value}
           <ChangePill usd={change} pct={data.changePct} />
         </div>
@@ -143,7 +143,7 @@ export function PortfolioWidgetV2({ w }: { w: Widget }) {
     <WidgetFrame size="large" opacity={opacity}>
       <div className="relative z-10 flex items-center justify-between">
         <WMuted className="font-primary text-xs uppercase">Portfolio</WMuted>
-        <span className="rounded-full bg-white/10 px-2 py-0.5 font-primary text-[10px] leading-none text-fg-2">{label}</span>
+        <span className="rounded-full bg-white/10 px-2.5 py-1 font-primary text-xs leading-none text-fg-2">{label}</span>
       </div>
       <div className="relative z-10 mt-2 flex flex-col gap-1.5">
         {value}

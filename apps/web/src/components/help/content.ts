@@ -379,7 +379,7 @@ export const HELP_GROUPS: HelpGroup[] = [
             blocks: [
               {
                 type: "p",
-                text: "P&L, Portfolio and Holdings need at least one linked wallet. By default they add up every wallet you linked; you can pick specific ones in the widget's settings. Addresses never appear on your profile. See [Wallet privacy](/help/wallet-privacy).",
+                text: "P&L, Portfolio and Holdings need at least one linked wallet. By default they add up every wallet you linked; you can pick specific ones in the widget's settings. The P&L card shows one network at a time: pick **Solana** or **EVM** (Ethereum, Base, BNB Chain, Arbitrum, Robinhood Chain) and it counts only those wallets. Addresses never appear on your profile. See [Wallet privacy](/help/wallet-privacy).",
               },
               {
                 type: "p",
@@ -397,6 +397,19 @@ export const HELP_GROUPS: HelpGroup[] = [
                   "**Currently listening**: shows the track you're playing, or the last one you played. Connect Spotify in [Settings](/dashboard/settings) under Connections.",
                   "**A track**: paste a Spotify track link (open.spotify.com/track/…) to show that track.",
                   "Visitors can play a 30-second preview when one is available.",
+                ],
+              },
+            ],
+          },
+          {
+            id: "widget-look",
+            heading: "Widget backgrounds and finishing a widget",
+            blocks: [
+              {
+                type: "list",
+                items: [
+                  "**Glass** is every widget's default background. **Color** (Premium) gives a widget a color of your choice, set per widget in its settings.",
+                  "Some widgets need something before they can go live (a token address, an image, a link…). Until it's filled in, the widget is outlined in orange and **Save changes** waits: the bar tells you what's missing and **Show me** opens it.",
                 ],
               },
             ],

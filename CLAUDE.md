@@ -16,6 +16,9 @@ Profiles with live widgets for crypto people. The founder speaks French: reply i
 - Widgets are added by click or by dragging a library tile onto the card (`dragFromLibrary` in Customize). Profile links are reordered by drag or arrows on the Links page (order = `position`).
 - Music widgets play a 30 s preview from Deezer (`/data/preview`, looked up by title + artist on click; links expire after ~15 min).
 - Reactions widget is hidden from the library (kept for existing profiles).
+- Widget fields can be `when` (shown only for some value of another field) and `premium` (`true` or a list of Premium-only option values): the inspector locks them for non-Premium, `stripPremium` drops them on save. Widget backgrounds: `...surface` adds Glass (default) / Color (Premium) to a widget; `WidgetFrame` draws it from the `WidgetSurface` context, set by `WidgetView`, and only while the profile is Premium (`WidgetTier`).
+- Saving is blocked while a widget misses something: `widgetProblems` (shared, same rules as the API) drives the orange outline, the inspector box and the save bar's "Show me".
+- P&L card: a `network` field (Solana / EVM) limits its wallets (`onNetwork`), in the picker, the hook and the API; green up / red down, no color setting.
 - NFT Gallery widget (`nfts`): NFTs of the member's verified Solana wallets via DAS `searchAssets` with `compressed: false` (compressed spam inlines base64 images: `getAssetsByOwner` returned 350 MB for one wallet). Needs a DAS-capable RPC (Helius). Fetched by widget id like the portfolio.
 - Clock widget: country (flag picker) → time zone limited to that country (auto when it has one) → city name (`shared/timezones.ts`, `resolveClock`, also applied by the API). Old clocks infer the country from their zone.
 - Wallet linking: one modal (`components/wallet/ConnectWalletModal.tsx`, modelled on getrekt's) used by Settings, the join flow and the Customize inspector of wallet widgets.

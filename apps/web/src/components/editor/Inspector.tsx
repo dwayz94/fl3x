@@ -1,8 +1,9 @@
 "use client";
 
 import { ArrowDown02Icon, ArrowUp02Icon, CursorEdit01Icon, Delete02Icon, DragDropIcon, Image01Icon, PlusSignIcon, TextIcon } from "@hugeicons/core-free-icons";
-import { WIDGETS, fieldShown, type EditableProfile, type FieldDef, type LinkedWallet, type Widget, type WidgetSize } from "@fl3x/shared";
+import { WIDGETS, fieldShown, widgetProblems, type EditableProfile, type FieldDef, type LinkedWallet, type Widget, type WidgetSize } from "@fl3x/shared";
 import { Brand, Icon } from "@/components/ui";
+import { WidgetHost } from "@/lib/use-portfolio";
 import { WidgetView } from "@/components/widgets";
 import { cn } from "@/lib/cn";
 import { Field, Label, Segmented } from "./Field";
@@ -19,6 +20,8 @@ export function Inspector(props: {
   draft: EditableProfile;
   selected: Widget | null;
   wallets: LinkedWallet[];
+  /** Premium unlocks the Premium-only widget options (color backgrounds…). */
+  premium: boolean;
   onWidget: (patch: Partial<Widget>) => void;
   onRemove: () => void;
   onShift: (dir: -1 | 1) => void;
@@ -47,6 +50,7 @@ export function Inspector(props: {
   }
 
   const def = WIDGETS[w.type];
+  const problems = widgetProblems(w);
   return (
     <div className="flex flex-col gap-5">
       <div className="flex items-center justify-between border-b border-white/10 pb-5">
@@ -59,9 +63,23 @@ export function Inspector(props: {
       </div>
       <div className="pointer-events-none mx-auto grid w-full max-w-[240px] auto-rows-[56px] grid-cols-4 gap-1.5">
         <div className={w.size === "large" ? "col-span-2 col-start-2 row-span-3" : "col-span-4 row-span-2"}>
-          <WidgetView w={w} interactive={false} />
+          {/* "editor": unsaved widgets read the member's own wallets, like the card in the middle. */}
+          <WidgetHost.Provider value="editor">
+            <WidgetView w={w} interactive={false} />
+          </WidgetHost.Provider>
         </div>
       </div>
+      {problems.length > 0 && (
+        // Until this is filled in, the profile can't be saved.
+        <div className="rounded-xl border border-[#FFB547]/40 bg-[#FFB547]/10 px-3 py-2.5 text-xs text-[#FFD08A]">
+          <p className="font-primary text-sm text-[#FFB547]">To finish this widget</p>
+          <ul className="mt-1 list-disc pl-4">
+            {problems.map((p) => (
+              <li key={p}>{p}</li>
+            ))}
+          </ul>
+        </div>
+      )}
       <div className="border-b border-dashed border-white/10 pb-5">
         <Label>Size</Label>
         <Segmented options={[{ id: "long", label: "Long card" }, { id: "large", label: "Large card" }]} value={w.size} onChange={(v) => props.onWidget({ size: v as WidgetSize })} />
@@ -74,6 +92,7 @@ export function Inspector(props: {
           value={w.settings[f.key]}
           settings={w.settings}
           wallets={props.wallets}
+          premium={props.premium}
           onChange={(v) => props.onWidget({ settings: { ...w.settings, [f.key]: v } })}
         />
       ))}

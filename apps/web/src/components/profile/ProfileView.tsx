@@ -4,7 +4,7 @@ import { EyeIcon, PencilEdit02Icon } from "@hugeicons/core-free-icons";
 import { useEffect, useRef, useState } from "react";
 import type { EditableProfile, FullPublicProfile, Tier, Widget } from "@fl3x/shared";
 import { Icon, Verified } from "@/components/ui";
-import { WidgetView, sizeClass } from "@/components/widgets";
+import { WidgetTier, WidgetView, sizeClass } from "@/components/widgets";
 import { fmtNumber } from "@/lib/format";
 import { WidgetHost } from "@/lib/use-portfolio";
 import { cn } from "@/lib/cn";
@@ -100,6 +100,7 @@ export function ProfileView({
       </header>
 
       {profile.widgets.length > 0 && (
+        <WidgetTier.Provider value={tier}>
         <WidgetHost.Provider value={editor ? "editor" : "public"}>
           {editor ? (
             <EditableGrid widgets={profile.widgets} editor={editor} className={GRID} />
@@ -113,6 +114,7 @@ export function ProfileView({
             </div>
           )}
         </WidgetHost.Provider>
+        </WidgetTier.Provider>
       )}
 
       <footer className="mt-7 flex items-center justify-between gap-4">

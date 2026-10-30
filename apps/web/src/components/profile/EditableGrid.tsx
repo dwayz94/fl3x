@@ -15,6 +15,8 @@ export interface EditorHooks {
   onAvatar?: () => void;
   /** A widget being dragged in from the library: shown as its empty slot. */
   incomingId?: string | null;
+  /** Widgets that can't be saved yet (missing settings): outlined. */
+  incompleteIds?: string[];
   /** Inline edit of the display name and bio, right on the card. */
   onIdentity?: (patch: { displayName?: string | null; bio?: string | null }) => void;
 }
@@ -163,6 +165,7 @@ export function EditableGrid({ widgets, editor, className, style }: { widgets: W
             key={w.id}
             w={w}
             selected={editor.selectedId === w.id}
+            incomplete={!!editor.incompleteIds?.includes(w.id)}
             lifted={drag?.id === w.id || editor.incomingId === w.id}
             dragging={!!drag || !!editor.incomingId}
           />
@@ -197,7 +200,7 @@ export function EditableGrid({ widgets, editor, className, style }: { widgets: W
 }
 
 /** One widget of the grid. Memoized: a drag only re-renders the slots that change. */
-const Slot = memo(function Slot({ w, selected, lifted, dragging }: { w: Widget; selected: boolean; lifted: boolean; dragging: boolean }) {
+const Slot = memo(function Slot({ w, selected, lifted, dragging, incomplete }: { w: Widget; selected: boolean; lifted: boolean; dragging: boolean; incomplete?: boolean }) {
   return (
     <motion.div
       data-slot={w.id}
@@ -224,7 +227,7 @@ const Slot = memo(function Slot({ w, selected, lifted, dragging }: { w: Widget; 
           transition={SPRING}
           className={cn(
             "pointer-events-none size-full rounded-[28px] transition-shadow",
-            selected ? "shadow-[0_0_0_2px_#fff,0_10px_30px_rgba(0,0,0,0.5)]" : "hover:shadow-[0_0_0_1px_rgba(255,255,255,0.3)]",
+            selected ? "shadow-[0_0_0_2px_#fff,0_10px_30px_rgba(0,0,0,0.5)]" : incomplete ? "shadow-[0_0_0_2px_#FFB547]" : "hover:shadow-[0_0_0_1px_rgba(255,255,255,0.3)]",
           )}
         >
           {/* The jiggle lives on its own node so it never fights the layout transform. */}

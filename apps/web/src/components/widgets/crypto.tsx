@@ -6,18 +6,12 @@ import type { TokenData } from "@/lib/types";
 import { useData } from "@/lib/use-data";
 import { useNfts } from "@/lib/use-nfts";
 import { usePortfolio } from "@/lib/use-portfolio";
+import { Icon } from "@/components/ui";
+import { CHAINS } from "@/components/wallet/chain";
 import { Avatar, WEmpty, WidgetFrame, WMuted, WPill, WSkeleton, WTitle } from "./WidgetFrame";
 
 const num = (v: unknown, d: number) => (typeof v === "number" ? v : d);
 const str = (v: unknown) => (typeof v === "string" ? v : "");
-
-function SolMark({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 20" className={className} aria-hidden fill="currentColor">
-      <path d="M4 15h18l-3 4H1zM4 1h18l-3 4H1zM1 8h18l3 4H4z" />
-    </svg>
-  );
-}
 
 function periodLabel(id: string) {
   return { "1d": "Today", "7d": "This week", "14d": "Last 14 days", "1m": "This month", "1y": "This year" }[id] ?? id;
@@ -25,18 +19,19 @@ function periodLabel(id: string) {
 
 export function PnlWidget({ w }: { w: Widget }) {
   const period = str(w.settings.period) || "1m";
-  const accent = str(w.settings.accent) || "#2FE3AC";
+  const network = w.settings.network === "evm" ? "evm" : "solana";
   const opacity = num(w.settings.bgOpacity, 100);
   const { data, isLoading } = usePortfolio(w, period);
   if (isLoading) return <WSkeleton size={w.size} />;
-  if (!data || data.wallets === 0) return <WEmpty size={w.size} label="Link a wallet in Settings" />;
+  if (!data || data.wallets === 0) return <WEmpty size={w.size} label={network === "evm" ? "Link an EVM wallet" : "Link a Solana wallet"} />;
 
+  // Green when up, red when down: the color is the information, not a setting.
   const change = data.changeUsd ?? 0;
   const positive = change >= 0;
-  const color = positive ? accent : "#FF4D4D";
+  const color = positive ? "#2FE3AC" : "#FF4D4D";
   const badge = (
     <div className="flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-bg" style={{ background: color }}>
-      <SolMark className="h-4 w-5" />
+      <Icon icon={CHAINS[network].icon} size={18} />
       <span className="font-primary text-2xl leading-none whitespace-nowrap">
         {positive ? "+" : "−"}
         {fmtUsd(Math.abs(change)).replace("$", "")}
@@ -44,7 +39,7 @@ export function PnlWidget({ w }: { w: Widget }) {
     </div>
   );
   const rows = (
-    <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 font-primary text-sm">
+    <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 font-primary text-base leading-tight">
       <dt className="text-fg-2">P&amp;L</dt>
       <dd className="text-right" style={{ color }}>{data.changePct != null ? fmtPct(data.changePct) : "—"}</dd>
       <dt className="text-fg-2">Start</dt>
@@ -53,21 +48,27 @@ export function PnlWidget({ w }: { w: Widget }) {
       <dd className="text-right">{fmtUsdCompact(data.valueUsd)}</dd>
     </dl>
   );
+  const label = (
+    <p className="flex items-center gap-1.5 text-xs text-fg-2">
+      <Icon icon={CHAINS[network].icon} size={13} />
+      {periodLabel(period)}
+    </p>
+  );
 
   if (w.size === "long") {
     return (
       <WidgetFrame size="long" opacity={opacity}>
         <div className="flex flex-col gap-1.5">
-          <WMuted>{periodLabel(period)}</WMuted>
+          {label}
           {badge}
         </div>
-        <div className="ml-auto w-28">{rows}</div>
+        <div className="ml-auto w-32">{rows}</div>
       </WidgetFrame>
     );
   }
   return (
     <WidgetFrame size="large" opacity={opacity} className="items-center gap-2">
-      <WMuted className="text-xs">{periodLabel(period)}</WMuted>
+      {label}
       {badge}
       <div className="mt-auto w-full px-1">{rows}</div>
     </WidgetFrame>
@@ -144,7 +145,7 @@ export function HoldingsWidget({ w }: { w: Widget }) {
         {whole}
         <span className="text-fg-3">{cents}</span>
       </p>
-      <p className="mt-1 font-primary text-xs">
+      <p className="mt-1 font-primary text-sm">
         <span className={change >= 0 ? "text-success" : "text-danger"}>
           {change >= 0 ? "+" : "−"}
           {fmtUsd(Math.abs(change))}
@@ -159,13 +160,13 @@ export function HoldingsWidget({ w }: { w: Widget }) {
         <li key={h.id} className="flex items-center gap-2">
           <Avatar src={h.iconUrl} className="size-7 rounded-full" />
           <div className="min-w-0 flex-1">
-            <p className="truncate font-primary text-sm leading-none uppercase">{h.symbol}</p>
-            <p className="text-[9px] leading-tight text-fg-2">{amount.format(h.amount)}</p>
+            <p className="truncate font-primary text-base leading-none uppercase">{h.symbol}</p>
+            <p className="text-[11px] leading-tight text-fg-2">{amount.format(h.amount)}</p>
           </div>
           <div className="text-right">
-            <p className="font-primary text-sm leading-none">{fmtUsdCompact(h.valueUsd)}</p>
+            <p className="font-primary text-base leading-none">{fmtUsdCompact(h.valueUsd)}</p>
             {h.change24h != null && (
-              <p className={`text-[9px] leading-tight ${h.change24h >= 0 ? "text-success" : "text-danger"}`}>{fmtPct(h.change24h)}</p>
+              <p className={`text-[11px] leading-tight ${h.change24h >= 0 ? "text-success" : "text-danger"}`}>{fmtPct(h.change24h)}</p>
             )}
           </div>
         </li>

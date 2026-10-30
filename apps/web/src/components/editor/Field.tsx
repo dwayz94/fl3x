@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { FieldDef, LinkedWallet } from "@fl3x/shared";
+import { addressNetwork, premiumLocked, type FieldDef, type LinkedWallet } from "@fl3x/shared";
 import { ImageInput } from "@/components/ui";
 import { CityInput, CountryPicker, ZonePicker } from "./ClockPlace";
 import { shortAddress } from "@/lib/format";
@@ -49,9 +49,12 @@ export function Field({
   onChange,
   wallets,
   settings,
+  premium = true,
 }: {
   def: FieldDef;
   settings: Record<string, unknown>;
+  /** The member is Premium: Premium-only fields and options are unlocked. */
+  premium?: boolean;
   value: string | number | undefined;
   onChange: (v: string | number | undefined) => void;
   wallets: LinkedWallet[];
@@ -87,10 +90,24 @@ export function Field({
       );
       break;
     case "segmented":
-      control = <Segmented options={def.options} value={str || def.default} onChange={onChange} />;
+      control = (
+        <Segmented
+          // Premium-only options (a color background…) stay visible but locked.
+          options={def.options.map((o) => ({ ...o, disabled: !premium && premiumLocked(def, o.id), label: !premium && premiumLocked(def, o.id) ? `${o.label} · Premium` : o.label }))}
+          value={str || def.default}
+          onChange={onChange}
+        />
+      );
       break;
     case "wallets":
-      control = <WalletsPicker value={str || def.default} onChange={onChange} wallets={wallets} />;
+      control = (
+        <WalletsPicker
+          value={str || def.default}
+          onChange={onChange}
+          // Limited to the widget's network when it has one (P&L: Solana or EVM).
+          wallets={def.network ? wallets.filter((w) => addressNetwork(w.address) === (settings[def.network!] ?? "solana")) : wallets}
+        />
+      );
       break;
     case "country":
       control = <CountryPicker settings={settings} onChange={onChange} />;
@@ -167,7 +184,7 @@ export function Field({
   return (
     <div className="border-b border-dashed border-white/10 pb-5">
       <Label>{def.label}</Label>
-      {control}
+      {!premium && def.premium === true ? <p className="text-xs text-fg-3">Premium only.</p> : control}
     </div>
   );
 }

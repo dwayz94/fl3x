@@ -1,7 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { and, arrayContains, eq, ne } from "drizzle-orm";
 import { z } from "zod";
-import { PERIODS, type PeriodId } from "@fl3x/shared";
+import { onNetwork, PERIODS, type PeriodId } from "@fl3x/shared";
 import { db, schema } from "../db";
 import { requireUser } from "../lib/auth";
 import { badRequest, conflict, notFound } from "../lib/errors";
@@ -88,8 +88,8 @@ export async function walletRoutes(app: FastifyInstance) {
   /** Editor preview: own verified wallets only. */
   app.get("/me/portfolio", async (req) => {
     const user = await requireUser(req);
-    const q = z.object({ wallets: z.string().max(1000).default("all"), period }).parse(req.query);
-    return getPortfolio(resolveWidgetWallets(q.wallets, await verifiedWallets(user)), q.period);
+    const q = z.object({ wallets: z.string().max(1000).default("all"), period, network: z.enum(["solana", "evm"]).optional() }).parse(req.query);
+    return getPortfolio(onNetwork(resolveWidgetWallets(q.wallets, await verifiedWallets(user)), q.network), q.period);
   });
 
   /**
@@ -106,6 +106,7 @@ export async function walletRoutes(app: FastifyInstance) {
       .where(eq(schema.widgets.id, req.params.widgetId))
       .limit(1);
     if (!row || !["pnl", "portfolio", "holdings"].includes(row.widget.type)) throw notFound();
-    return getPortfolio(resolveWidgetWallets(row.widget.settings.wallets, await verifiedWallets(row.user)), q.period);
+    // A P&L card counts only the wallets of its network (Solana or EVM).
+    return getPortfolio(onNetwork(resolveWidgetWallets(row.widget.settings.wallets, await verifiedWallets(row.user)), row.widget.settings.network), q.period);
   });
 }

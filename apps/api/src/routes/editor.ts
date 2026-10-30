@@ -2,7 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { and, count, eq, notInArray, sql } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 import {
-  DEFAULT_THEME, PREMIUM_THEME_KEYS, TIER_LIMITS, isPremiumBackground, identityInput, linksInput, profileInput, widgetsInput,
+  DEFAULT_THEME, PREMIUM_THEME_KEYS, TIER_LIMITS, isPremiumBackground, identityInput, linksInput, profileInput, stripPremium, widgetsInput,
   type ProfileTheme,
 } from "@fl3x/shared";
 import { db, schema } from "../db";
@@ -74,7 +74,8 @@ export async function editorRoutes(app: FastifyInstance) {
   /** Replaces the whole widget layout (the editor saves it as one unit). */
   app.put("/me/widgets", async (req) => {
     const user = await requireMember(req);
-    const widgets = widgetsInput.parse(req.body);
+    // Premium-only widget looks (color backgrounds…) fall back to the defaults for everyone else.
+    const widgets = widgetsInput.parse(req.body).map((w) => (user.tier === "premium" ? w : { ...w, settings: stripPremium(w.type, w.settings) }));
     const limit = TIER_LIMITS[user.tier].widgets;
     // Over the limit (tier dropped, limits lowered) you can still edit and remove, just not add.
     const [{ current } = { current: 0 }] = await db.select({ current: count() }).from(schema.widgets).where(eq(schema.widgets.userId, user.id));

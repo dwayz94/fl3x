@@ -19,13 +19,15 @@ export function usePortfolio(w: Widget, period: string) {
   const demo = useIsDemo();
   const { getToken } = useAuth();
   const wallets = typeof w.settings.wallets === "string" ? w.settings.wallets : "all";
+  // P&L cards count one family of wallets (Solana or EVM); other widgets count them all.
+  const network = w.settings.network === "solana" || w.settings.network === "evm" ? w.settings.network : undefined;
   const demoData = useData<PortfolioData>("portfolio", { wallets, period }, demo);
   const live = useQuery({
-    queryKey: ["portfolio", host, host === "editor" ? wallets : w.id, period],
+    queryKey: ["portfolio", host, host === "editor" ? `${wallets}|${network ?? ""}` : `${w.id}|${network ?? ""}`, period],
     enabled: !demo,
     queryFn: async () =>
       host === "editor"
-        ? api<PortfolioData>(`/me/portfolio?wallets=${encodeURIComponent(wallets)}&period=${period}`, { token: await getToken() })
+        ? api<PortfolioData>(`/me/portfolio?wallets=${encodeURIComponent(wallets)}&period=${period}${network ? `&network=${network}` : ""}`, { token: await getToken() })
         : api<PortfolioData>(`/data/portfolio/${w.id}?period=${period}`),
     staleTime: 60_000,
     refetchInterval: 120_000,

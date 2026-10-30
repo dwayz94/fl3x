@@ -6,7 +6,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft01Icon, ViewIcon, ViewOffSlashIcon } from "@hugeicons/core-free-icons";
 import { useIsFetching, useQueryClient } from "@tanstack/react-query";
 import { motion } from "motion/react";
-import { defaultSettings, type EditableProfile, type LinkedWallet, type ProfileTheme, type Tier, type Widget, type WidgetSize, type WidgetType } from "@fl3x/shared";
+import { defaultSettings, WIDGETS, widgetProblems, type EditableProfile, type LinkedWallet, type ProfileTheme, type Tier, type Widget, type WidgetSize, type WidgetType } from "@fl3x/shared";
 import { useAuth, useMe } from "@/components/auth/AuthProvider";
 import { UnsavedBar } from "@/components/dashboard/UnsavedBar";
 import { Inspector } from "@/components/editor/Inspector";
@@ -40,6 +40,9 @@ function Editor({ initial, tier, wallets }: { initial: EditorPayload; tier: Tier
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const dirty = useMemo(() => JSON.stringify(draft) !== JSON.stringify(saved), [draft, saved]);
+  // Widgets that still miss something: the profile can't be saved until they're filled in.
+  const incomplete = useMemo(() => draft.widgets.filter((w) => widgetProblems(w).length > 0), [draft.widgets]);
+  const blocked = incomplete[0] ? `Finish your ${WIDGETS[incomplete[0].type].name} widget: ${widgetProblems(incomplete[0])[0]}` : null;
   const selected = draft.widgets.find((w) => w.id === selectedId) ?? null;
 
   const [nudge, setNudge] = useState(0);
@@ -321,6 +324,7 @@ function Editor({ initial, tier, wallets }: { initial: EditorPayload; tier: Tier
                   onAvatar: () => void changeAvatar(),
                   onIdentity: (patch) => setDraft((d) => ({ ...d, ...patch })),
                   incomingId,
+                  incompleteIds: incomplete.map((w) => w.id),
                 }}
               />
             </FitWidth>
@@ -339,6 +343,7 @@ function Editor({ initial, tier, wallets }: { initial: EditorPayload; tier: Tier
             draft={draft}
             selected={selected}
             wallets={wallets}
+            premium={tier === "premium"}
             onWidget={(patch) => setWidgets((ws) => ws.map((w) => (w.id === selectedId ? { ...w, ...patch } : w)))}
             onRemove={() => {
               setWidgets((ws) => ws.filter((w) => w.id !== selectedId));
@@ -350,7 +355,17 @@ function Editor({ initial, tier, wallets }: { initial: EditorPayload; tier: Tier
       </div>
 
       {!ready && <CustomizeLoader />}
-      <UnsavedBar dirty={dirty} saving={saving} savedFlash={savedFlash} error={error} nudge={nudge} onDiscard={discard} onSave={() => void save()} />
+      <UnsavedBar
+        dirty={dirty}
+        saving={saving}
+        savedFlash={savedFlash}
+        error={error}
+        nudge={nudge}
+        onDiscard={discard}
+        onSave={() => void save()}
+        blocked={blocked}
+        onBlocked={() => setSelectedId(incomplete[0]?.id ?? null)}
+      />
     </div>
   );
 }

@@ -105,14 +105,25 @@ export function Library(props: {
             <DemoDataProvider resolve={resolveDemo}>
               <div className={cn("grid gap-2", size === "large" ? "grid-cols-2" : "grid-cols-1")}>
                 {LIBRARY.filter((l) => match(WIDGETS[l.type].name) || match(WIDGETS[l.type].description)).map((l) => (
-                  <button
+                  // A div acting as a button: the tile holds real widgets, and a music widget's play button can't sit inside a <button>.
+                  <div
                     key={l.type}
-                    type="button"
-                    disabled={full}
+                    role="button"
+                    tabIndex={full ? -1 : 0}
+                    aria-disabled={full}
                     title={WIDGETS[l.type].description}
-                    onClick={() => props.onAddWidget(l.type, size)}
+                    onClick={() => !full && props.onAddWidget(l.type, size)}
+                    onKeyDown={(e) => {
+                      if (!full && (e.key === "Enter" || e.key === " ")) {
+                        e.preventDefault();
+                        props.onAddWidget(l.type, size);
+                      }
+                    }}
                     onPointerDown={(e) => !full && props.onDragWidget?.(l.type, size, e)}
-                    className="group flex cursor-grab touch-pan-y select-none flex-col gap-1.5 rounded-2xl bg-[#141414] p-2 text-left transition-colors hover:bg-[#1c1c1c] active:cursor-grabbing disabled:opacity-40"
+                    className={cn(
+                      "group flex cursor-grab touch-pan-y select-none flex-col gap-1.5 rounded-2xl bg-[#141414] p-2 text-left transition-colors hover:bg-[#1c1c1c] active:cursor-grabbing",
+                      full && "cursor-not-allowed opacity-40",
+                    )}
                   >
                     <div className="pointer-events-none overflow-hidden rounded-xl transition-transform group-hover:scale-[1.03]">
                       <div style={{ zoom: size === "large" ? 0.66 : 0.68 }} className={size === "large" ? "h-[204px] w-[172px]" : "h-[96px] w-[356px]"}>
@@ -120,7 +131,7 @@ export function Library(props: {
                       </div>
                     </div>
                     <span className="px-1 font-primary text-sm leading-none">{WIDGETS[l.type].name}</span>
-                  </button>
+                  </div>
                 ))}
               </div>
             </DemoDataProvider>

@@ -35,7 +35,14 @@ type Opt = { id: string; label: string };
  * Shown (and required, if it is) only while another field has one of these values:
  * e.g. the color picker only when "Background" is "Color". Hidden values are kept, not validated.
  */
-type ShowWhen = { when?: { key: string; is: readonly string[] } };
+type ShowWhen = {
+  when?: { key: string; is: readonly string[] };
+  /**
+   * Premium-only: `true` locks the whole field, a list locks only those options.
+   * Others keep the default (the editor shows a lock, the API resets it on save).
+   */
+  premium?: true | readonly string[];
+};
 
 export type FieldDef = ShowWhen & (
   | { key: string; label: string; kind: "text" | "textarea"; placeholder?: string; max?: number; required?: boolean }
@@ -50,8 +57,11 @@ export type FieldDef = ShowWhen & (
   | { key: string; label: string; kind: "image"; required?: boolean }
   | { key: string; label: string; kind: "number"; min?: number; max?: number }
   | { key: string; label: string; kind: "select" | "segmented"; options: readonly Opt[]; default: string }
-  /** "all" (every verified wallet, the default) or a comma-separated list of addresses. */
-  | { key: string; label: string; kind: "wallets"; default: string }
+  /**
+   * "all" (every verified wallet, the default) or a comma-separated list of addresses.
+   * `network` names a field ("solana" | "evm") that limits which wallets count.
+   */
+  | { key: string; label: string; kind: "wallets"; default: string; network?: string }
   | { key: string; label: string; kind: "datetime"; required?: boolean }
   /** Country picker (ISO code, flag + name). */
   | { key: string; label: string; kind: "country" }
@@ -72,27 +82,54 @@ export interface WidgetDef {
   hidden?: boolean;
 }
 
-const wallets: FieldDef = { key: "wallets", label: "Wallets", kind: "wallets", default: "all" };
-const accent: FieldDef = { key: "accent", label: "Color", kind: "color", default: "#2FE3AC" };
+const wallets = { key: "wallets", label: "Wallets", kind: "wallets", default: "all" } as const satisfies FieldDef;
+
+/** Wallet families a widget can be limited to (EVM covers Ethereum, Base, BNB, Arbitrum, Robinhood…). */
+export const NETWORKS = [
+  { id: "solana", label: "Solana" },
+  { id: "evm", label: "EVM" },
+] as const;
+export type Network = (typeof NETWORKS)[number]["id"];
+/** Which family an address belongs to (EVM addresses are 0x…, Solana ones base58). */
+export const addressNetwork = (address: string): Network => (address.startsWith("0x") ? "evm" : "solana");
+/** Keeps the addresses of one family; any other value (unset) keeps them all. */
+export const onNetwork = (addresses: string[], network: unknown) =>
+  network === "solana" || network === "evm" ? addresses.filter((a) => addressNetwork(a) === network) : addresses;
 /** Design version. V2 is the default (kept on 2026-10-29); V1 stays available for whoever prefers it. */
 /** Media widgets: blurred cover colors behind (default), plain glass, or a color. */
 const background: FieldDef = {
   key: "background", label: "Background", kind: "segmented", default: "cover",
   options: [{ id: "cover", label: "Cover colors" }, { id: "glass", label: "Glass" }, { id: "color", label: "Color" }],
+  premium: ["color"],
 };
-const tint: FieldDef = { key: "tint", label: "Color", kind: "color", default: "#7B5CFF", when: { key: "background", is: ["color"] } };
+
+/**
+ * Widget background, the same two fields on every compatible widget (Premium):
+ * frosted glass (default) or a color of your choice. Drawn by WidgetFrame, so a new
+ * widget gets it by adding `...surface` to its fields.
+ */
+export const SURFACES = [
+  { id: "glass", label: "Glass" },
+  { id: "color", label: "Color" },
+] as const;
+const surface: FieldDef[] = [
+  { key: "surface", label: "Background", kind: "segmented", options: SURFACES, default: "glass", premium: ["color"] },
+  { key: "surfaceColor", label: "Background color", kind: "color", default: "#FF97CB", when: { key: "surface", is: ["color"] }, premium: true },
+];
+const tint: FieldDef = { key: "tint", label: "Color", kind: "color", default: "#7B5CFF", when: { key: "background", is: ["color"] }, premium: true };
 const opacity: FieldDef = { key: "bgOpacity", label: "Background opacity", kind: "range", min: 20, max: 100, default: 100 };
 
 export const WIDGETS = {
   pnl: {
     name: "P&L Card",
-    description: "Profit and loss of a verified wallet over a period",
+    description: "Profit and loss of your Solana or EVM wallets over a period",
     category: "crypto",
     fields: [
-      wallets,
+      { key: "network", label: "Network", kind: "segmented", options: NETWORKS, default: "solana" },
+      { ...wallets, network: "network" },
       { key: "period", label: "Time", kind: "segmented", options: PERIODS, default: "1m" },
-      accent,
       opacity,
+      ...surface,
     ],
   },
   portfolio: {
@@ -103,19 +140,20 @@ export const WIDGETS = {
       wallets,
       { key: "period", label: "Time", kind: "segmented", options: PERIODS, default: "7d" },
       opacity,
+      ...surface,
     ],
   },
   holdings: {
     name: "Holdings",
     description: "Wallet value and its biggest bags",
     category: "crypto",
-    fields: [wallets, opacity],
+    fields: [wallets, opacity, ...surface],
   },
   nfts: {
     name: "NFT Gallery",
     description: "NFTs from your verified Solana wallets",
     category: "crypto",
-    fields: [wallets, opacity],
+    fields: [wallets, opacity, ...surface],
   },
   token: {
     name: "Token",
@@ -126,6 +164,7 @@ export const WIDGETS = {
       { key: "address", label: "Token address", kind: "text", placeholder: "Mint / contract address", max: 64, required: true },
       { key: "note", label: "Your take", kind: "textarea", placeholder: "Why you like it", max: 140 },
       opacity,
+      ...surface,
     ],
   },
   community: {
@@ -136,6 +175,7 @@ export const WIDGETS = {
       { key: "platform", label: "Platform", kind: "segmented", options: [{ id: "discord", label: "Discord" }, { id: "telegram", label: "Telegram" }], default: "discord" },
       { key: "invite", label: "Invite", kind: "handle", from: "platform", prefixes: { discord: "discord.gg/", telegram: "t.me/" }, pattern: "[A-Za-z0-9_-]{2,32}", required: true },
       opacity,
+      ...surface,
     ],
   },
   followers: {
@@ -150,6 +190,7 @@ export const WIDGETS = {
         prefixes: { x: "x.com/", youtube: "youtube.com/@", twitch: "twitch.tv/", tiktok: "tiktok.com/@" },
       },
       opacity,
+      ...surface,
     ],
   },
   video: {
@@ -197,6 +238,7 @@ export const WIDGETS = {
       { key: "timezone", label: "Time zone", kind: "timezone", country: "country" },
       { key: "city", label: "City", kind: "city", timezone: "timezone", country: "country", max: 30 },
       opacity,
+      ...surface,
     ],
   },
   countdown: {
@@ -210,6 +252,7 @@ export const WIDGETS = {
       { key: "ctaLabel", label: "Button label", kind: "text", max: 20 },
       { key: "ctaUrl", label: "Button link", kind: "url" },
       opacity,
+      ...surface,
     ],
   },
   reactions: {
@@ -228,8 +271,9 @@ export const WIDGETS = {
       { key: "title", label: "Title", kind: "text", max: 40, required: true },
       { key: "body", label: "Text", kind: "textarea", max: 280 },
       { key: "ctaLabel", label: "Button label", kind: "text", placeholder: "Join", max: 20 },
-      { key: "url", label: "Link", kind: "url", placeholder: "https://…" },
+      { key: "url", label: "Link", kind: "url", placeholder: "https://…", required: true },
       opacity,
+      ...surface,
     ],
   },
   text: {
@@ -240,6 +284,7 @@ export const WIDGETS = {
       { key: "title", label: "Title", kind: "text", max: 40 },
       { key: "body", label: "Text", kind: "textarea", max: 280, required: true },
       opacity,
+      ...surface,
     ],
   },
 } as const satisfies Record<string, WidgetDef>;
@@ -339,6 +384,8 @@ export const widgetInput = z
         if (shown) ctx.addIssue({ code: "custom", message: `${WIDGETS[w.type].name}: ${("hint" in f && f.hint) || `invalid ${f.label}`}` });
       } else if (parsed.data !== undefined) settings[f.key] = parsed.data as string | number;
     }
+    // Video: a channel, or one pinned video.
+    if (w.type === "video" && !w.settings.channel && !w.settings.url) ctx.addIssue({ code: "custom", message: "Video: add a channel or a video link" });
     // A clock's zone always belongs to its country (older clocks get the country from the zone).
     for (const f of WIDGETS[w.type].fields as readonly FieldDef[]) {
       if (f.kind !== "timezone" || (settings[f.key] === undefined && settings[f.country] === undefined)) continue;
@@ -350,6 +397,28 @@ export const widgetInput = z
   });
 
 export const widgetsInput = z.array(widgetInput).max(60);
+
+/** Whether a field (or one of its options) is locked to Premium. */
+export function premiumLocked(f: FieldDef, value?: unknown): boolean {
+  if (!f.premium) return false;
+  return f.premium === true || (value !== undefined && f.premium.includes(String(value)));
+}
+
+/** Drops the Premium-only settings of a widget (non-Premium saves): the defaults apply instead. */
+export function stripPremium(type: WidgetType, settings: WidgetSettings): WidgetSettings {
+  const out = { ...settings };
+  for (const f of WIDGETS[type].fields as readonly FieldDef[]) if (premiumLocked(f, out[f.key])) delete out[f.key];
+  return out;
+}
+
+/**
+ * What still has to be filled in before a widget can be saved (empty = ready).
+ * Same rules the API applies on save, so the editor can block the button first.
+ */
+export function widgetProblems(w: { type: WidgetType; size: WidgetSize; settings: Record<string, unknown> }): string[] {
+  const r = widgetInput.safeParse(w);
+  return r.success ? [] : r.error.issues.map((i) => i.message.replace(/^[^:]+: /, ""));
+}
 
 /** Full link for a "handle" field, from the settings it lives in. */
 export function handleUrl(def: { from: string; prefixes: Record<string, string> }, settings: WidgetSettings, handle: string) {

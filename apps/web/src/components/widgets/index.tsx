@@ -1,12 +1,15 @@
 "use client";
 
+import { useContext } from "react";
 import type { Widget } from "@fl3x/shared";
 import { HoldingsWidget, NftWidget, PnlWidget, TokenWidget } from "./crypto";
 import { CommunityWidget } from "./social";
 import { ClockWidgetV2, CountdownWidgetV2, FollowersWidgetV2, MusicWidgetV2, PortfolioWidgetV2, VideoWidgetV2 } from "./v2";
 import { ImageWidget, LinkWidget, ReactionsWidget, TextWidget } from "./utility";
 
-export { sizeClass } from "./WidgetFrame";
+import { WidgetSurface, WidgetTier } from "./WidgetFrame";
+
+export { sizeClass, WidgetTier } from "./WidgetFrame";
 
 /**
  * Renders any widget by type. `interactive` is false in the editor preview.
@@ -14,6 +17,17 @@ export { sizeClass } from "./WidgetFrame";
  * designs only (the V1 versions were removed on 2026-10-29).
  */
 export function WidgetView({ w, interactive = true }: { w: Widget; interactive?: boolean }) {
+  const tier = useContext(WidgetTier);
+  // A color background shows only while the profile is Premium (a lapsed tier falls back to glass).
+  const look = w.settings.surface === "color" && (tier === null || tier === "premium") ? { surface: "color", color: String(w.settings.surfaceColor ?? "#FF97CB") } : {};
+  return (
+    <WidgetSurface.Provider value={look}>
+      <WidgetBody w={w} interactive={interactive} />
+    </WidgetSurface.Provider>
+  );
+}
+
+function WidgetBody({ w, interactive }: { w: Widget; interactive: boolean }) {
   switch (w.type) {
     case "pnl": return <PnlWidget w={w} />;
     case "portfolio": return <PortfolioWidgetV2 w={w} />;
