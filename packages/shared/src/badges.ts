@@ -31,6 +31,10 @@ export const BADGES: readonly BadgeDef[] = [
   { id: "early-adopter", name: "Early Adopter", color: "#F6FF7C", description: "Joined during the invite-only pre-launch.", unlock: { kind: "early" } },
   { id: "whale", name: "Whale", color: "#008CFF", description: "Holds 10× the Premium amount of $FL3X.", unlock: { kind: "whale" } },
   { id: "contributor", name: "Contributor", color: "#F87BFF", description: "Brought 3 people to FL3X with their invite link.", unlock: { kind: "referrals", count: 3 } },
+  // Referral rewards: each milestone unlocks the next badge (shown on the Referral page).
+  { id: "recruiter", name: "Recruiter", color: "#6FA8FF", description: "Brought 10 people to FL3X with their invite link.", unlock: { kind: "referrals", count: 10 } },
+  { id: "ambassador", name: "Ambassador", color: "#FF9E7A", description: "Brought 25 people to FL3X with their invite link.", unlock: { kind: "referrals", count: 25 } },
+  { id: "legend", name: "Legend", color: "#FFE45C", description: "Brought 50 people to FL3X with their invite link.", unlock: { kind: "referrals", count: 50 } },
   { id: "kol", name: "Kol", color: "#FFD268", description: "Key opinion leader, recognized by the team.", unlock: { kind: "granted" } },
   { id: "creator", name: "Creator", color: "#C274FF", description: "Content creator, recognized by the team.", unlock: { kind: "granted" } },
   { id: "builder", name: "Builder", color: "#93FFFA", description: "Ships products in the ecosystem.", unlock: { kind: "granted" } },
@@ -79,3 +83,6 @@ export function badgeDetail(b: BadgeDef, stats: { memberNumber: number | null; r
       return null;
   }
 }
+
+/** Referral milestones, smallest first: the rewards shown on the Referral page. */
+export const REFERRAL_REWARDS = BADGES.flatMap((b) => (b.unlock.kind === "referrals" ? [{ badge: b, count: b.unlock.count }] : [])).sort((a, b) => a.count - b.count);

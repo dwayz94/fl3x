@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { Suspense, useEffect, useState, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Logout01Icon, NewTwitterIcon } from "@hugeicons/core-free-icons";
+import { Download01Icon, Logout01Icon, NewTwitterIcon } from "@hugeicons/core-free-icons";
 import type { EditableProfile, Me } from "@fl3x/shared";
 import { useAuth, useMe } from "@/components/auth/AuthProvider";
 import { PageHeader, Spinner } from "@/components/dashboard/Panel";
@@ -213,7 +213,20 @@ function IdentityForm({ me }: { me: Me }) {
         <textarea className={`${inputClass} h-24 resize-none py-2.5`} maxLength={160} value={bio} onChange={(e) => setBio(e.target.value)} placeholder="FL3X on all screens!" />
       </Field>
       <Field label="Your profile">
-        <CopyField value={`${site.url}/@${username}`} display={`${site.domain}/@${username}`} />
+        <div className="flex gap-2">
+          <div className="min-w-0 flex-1">
+            <CopyField value={`${site.url}/@${username}`} display={`${site.domain}/@${username}`} />
+          </div>
+          {/* The share card as a PNG, to post on X. */}
+          <a
+            href={`/u/${username}/card`}
+            download={`fl3x-${username}.png`}
+            className="flex shrink-0 items-center gap-1.5 rounded-xl bg-white/[0.08] px-3 text-sm hover:bg-white/[0.14]"
+          >
+            <Icon icon={Download01Icon} size={16} />
+            Download card
+          </a>
+        </div>
       </Field>
       <p className="mt-auto text-[11px] text-fg-3">Tip: you can also click your name or bio on the card in Customize.</p>
       <UnsavedBar dirty={dirty} saving={saving} savedFlash={savedFlash} error={error} nudge={0} onDiscard={reset} onSave={() => void patch({ displayName: name, bio })} />

@@ -1,4 +1,5 @@
 import { env } from "../env";
+import { getSettings } from "./settings";
 
 interface ParsedTokenAccounts {
   result?: { value: { account: { data: { parsed: { info: { tokenAmount: { uiAmount: number | null } } } } } }[] };
@@ -29,7 +30,8 @@ async function balanceOf(owner: string, mint: string): Promise<number> {
 }
 
 export async function totalTokenBalance(wallets: string[]): Promise<number> {
-  if (!env.TOKEN_MINT || wallets.length === 0) return 0;
-  const balances = await Promise.all(wallets.map((w) => balanceOf(w, env.TOKEN_MINT!)));
+  const { tokenMint } = await getSettings();
+  if (!tokenMint || wallets.length === 0) return 0;
+  const balances = await Promise.all(wallets.map((w) => balanceOf(w, tokenMint)));
   return balances.reduce((a, b) => a + b, 0);
 }

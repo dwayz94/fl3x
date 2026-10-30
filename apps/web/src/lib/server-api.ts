@@ -8,10 +8,10 @@ const fallbackConfig: PublicConfig = {
   banner: null,
 };
 
-/** Server-side fetch of the public config, cached 5 min. Never breaks the landing page. */
+/** Server-side fetch of the public config, cached 1 min (admin changes show up quickly). Never breaks the landing page. */
 export async function getPublicConfig(): Promise<PublicConfig> {
   try {
-    const res = await fetch(`${site.apiUrl}/config`, { next: { revalidate: 300 } });
+    const res = await fetch(`${site.apiUrl}/config`, { next: { revalidate: 60 } });
     if (!res.ok) return fallbackConfig;
     return (await res.json()) as PublicConfig;
   } catch {

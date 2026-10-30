@@ -8,13 +8,18 @@ Profiles with live widgets for crypto people. The founder speaks French: reply i
 - Sign-in uses Privy: X (the join flow), any wallet (EVM or Solana) elsewhere, no embedded wallet. The $FL3X token is on Solana: only Solana wallets count for tiers. Holdings are re-checked at most every 5 min per member and every 5 min for paying members (job in `api/src/index.ts`).
 - Join (`/join`) is a step carousel like getrekt's onboarding: Continue with X → handle (prefilled from X, + invite code while invite-only) → link wallets (optional) → ready (dashboard or profile).
 - The owner sees an "Edit profile" button on their own public profile (`lib/use-owner.ts` reads the stored session token; profiles don't load Privy).
-- Landing banner under the navbar (`landing/StatusBanner.tsx`, Figma 32:6590): automatic text from `LAUNCH_PHASE` + `TOKEN_MINT`, overridden by the API env `BANNER_TEXT` / `BANNER_DETAIL` / `BANNER_LINK_LABEL` / `BANNER_LINK_URL` (`BANNER_TEXT=off` hides it). Closing it hides that message only.
+- Live settings: launch phase, token mint (CA), tier thresholds and the landing banner are edited at `/admin` (needs the API's `ADMIN_API_KEY`, kept for the tab only), stored in `app_settings` and applied without a restart (`api/lib/settings.ts`, 10 s cache; the landing refetches `/config` every minute). The API env only gives the starting values. `/admin` also mints team invite codes.
+- Landing banner under the navbar (`landing/StatusBanner.tsx`, Figma 32:6590): automatic text from the phase + token mint, or a custom message / hidden from `/admin`. Closing it hides that message only.
 - The landing page keeps the old project's design (`../fl3x-old`). Join / waitlist follow the Figma sign screens: no card, centered column on the money-bag background.
 - Customize is a full-screen mode (no sidebar, back button). Drag reorders live (`profile/EditableGrid.tsx`, motion layout animations). Name and bio are edited in Settings or in place on the card in Customize; clicking the avatar in Customize uploads a new one.
 - Links and community/video widgets take a handle only; the domain is fixed (`LINK_KINDS`, field kind `handle`). Trading terminal referral links (Axiom, GMGN, Padre, Proxima, FOMO) use their own one-color marks (`BrandIcon` in `profile/links.ts`).
 - Widgets are added by click or by dragging a library tile onto the card (`dragFromLibrary` in Customize). Profile links are reordered by drag or arrows on the Links page (order = `position`).
 - Music widgets play a 30 s preview from Deezer (`/data/preview`, looked up by title + artist on click; links expire after ~15 min).
 - Reactions widget is hidden from the library (kept for existing profiles).
+- NFT Gallery widget (`nfts`): NFTs of the member's verified Solana wallets via DAS `searchAssets` with `compressed: false` (compressed spam inlines base64 images: `getAssetsByOwner` returned 350 MB for one wallet). Needs a DAS-capable RPC (Helius). Fetched by widget id like the portfolio.
+- Settings has a "Download card" button: `/u/<username>/card` renders the share image fresh as a PNG attachment.
+- Referral rewards: badges at 3 / 10 / 25 / 50 referrals (Contributor, Recruiter, Ambassador, Legend; `REFERRAL_REWARDS`), shown on the Referral page.
+- Help Center at `/help` (`components/help/content.ts` holds the articles, layout modelled on getrekt's docs). Keep it in sync when a feature changes; numbers come from `@fl3x/shared` where possible.
 - Widgets: only the V2 designs remain for portfolio, music, clock, followers, video and countdown (V1 removed 2026-10-29, no `style` setting). The dashboard follows the Figma prototype (`FL3X.lol`, node 186:1226), which is **not final**. Widgets (node 217:191) are redrawn in the same style, never copied.
 
 ## Architecture

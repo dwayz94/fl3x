@@ -159,3 +159,10 @@ export const connections = pgTable("connections", {
   expiresAt: timestamp("expires_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [primaryKey({ columns: [t.userId, t.provider] })]);
+
+/** Live site settings edited from /admin (launch phase, token mint, thresholds, banner): one JSON row, no restart needed. */
+export const appSettings = pgTable("app_settings", {
+  key: text("key").primaryKey(),
+  value: jsonb("value").notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});

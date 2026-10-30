@@ -65,4 +65,3 @@ if (env.NODE_ENV === "production") {
   if (/localhost|127\.0\.0\.1/.test(env.WEB_ORIGIN)) throw new Error("WEB_ORIGIN must list the production site origins");
 }
 
-export const thresholds = { starter: env.TIER_STARTER_MIN, premium: env.TIER_PREMIUM_MIN };

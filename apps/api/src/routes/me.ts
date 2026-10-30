@@ -3,8 +3,8 @@ import { and, eq, gt, inArray, isNull, lt, lte, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import { claimRequest, normalizeUsername, TIER_LIMITS, waitlistRequest, type WaitlistStatus } from "@fl3x/shared";
 import { db, schema } from "../db";
-import { env } from "../env";
 import { requirePrivyId, requireUser } from "../lib/auth";
+import { getSettings } from "../lib/settings";
 import { generateCode } from "../lib/codes";
 import { resolveInviteCode } from "../lib/invites";
 import { badRequest, conflict, forbidden } from "../lib/errors";
@@ -72,7 +72,7 @@ export async function meRoutes(app: FastifyInstance) {
     // The link may carry the inviter's handle instead of the code.
     const inviteCode = given ? ((await resolveInviteCode(given)) ?? given) : undefined;
     const username = normalizeUsername(raw);
-    if (env.LAUNCH_PHASE === "invite_only" && !inviteCode) throw forbidden("An invite code is required during pre-launch");
+    if ((await getSettings()).phase === "invite_only" && !inviteCode) throw forbidden("An invite code is required during pre-launch");
     if (await isUsernameTaken(username)) throw conflict("This username is already taken", "username_taken");
 
     const updated = await db.transaction(async (tx) => {

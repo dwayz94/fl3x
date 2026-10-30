@@ -90,6 +90,13 @@ const media: Record<string, MediaData> = {
 /** Resolver for DemoDataProvider: every widget param starting with "demo:" maps to fixed data. */
 export function resolveDemo(path: string, params: Record<string, string | undefined>): unknown {
   switch (path) {
+    case "nfts":
+      // Library preview only (local demo art, not anyone's real NFTs).
+      return {
+        items: [IMG.cover, IMG.cover2, IMG.cover3, IMG.cover4].map((image, i) => ({ id: `demo-nft-${i}`, name: `Piece #${i + 1}`, image, collection: "Demo" })),
+        total: 24,
+        wallets: 1,
+      };
     case "portfolio":
       return wallet;
     case "token":
@@ -117,6 +124,7 @@ export const DEMO_WIDGETS: { type: WidgetType; label?: string; settings: WidgetS
   { type: "pnl", settings: { period: "1m" } },
   { type: "portfolio", settings: { period: "7d" } },
   { type: "holdings", settings: {} },
+  { type: "nfts", settings: {} },
   { type: "token", settings: { chain: "solana", address: "demo:nova", note: "My main bag this cycle. Not financial advice." } },
   { type: "community", label: "Telegram", settings: { platform: "telegram", invite: "fl3x" } },
   { type: "community", label: "Discord", settings: { platform: "discord", invite: "fl3x" } },

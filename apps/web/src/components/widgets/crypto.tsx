@@ -4,6 +4,7 @@ import type { Widget } from "@fl3x/shared";
 import { fmtPct, fmtUsd, fmtUsdCompact, splitUsd } from "@/lib/format";
 import type { TokenData } from "@/lib/types";
 import { useData } from "@/lib/use-data";
+import { useNfts } from "@/lib/use-nfts";
 import { usePortfolio } from "@/lib/use-portfolio";
 import { Avatar, WEmpty, WidgetFrame, WMuted, WPill, WSkeleton, WTitle } from "./WidgetFrame";
 
@@ -184,6 +185,50 @@ export function HoldingsWidget({ w }: { w: Widget }) {
     <WidgetFrame size="large" opacity={opacity} className="gap-3">
       {total}
       {list}
+    </WidgetFrame>
+  );
+}
+
+/** NFT gallery: a 2×2 grid (large) or a row of four (long), with the count. */
+export function NftWidget({ w }: { w: Widget }) {
+  const opacity = num(w.settings.bgOpacity, 100);
+  const { data, isLoading, isError } = useNfts(w);
+  if (isLoading) return <WSkeleton size={w.size} />;
+  if (isError) return <WEmpty size={w.size} label="NFTs unavailable right now" />;
+  if (!data || data.wallets === 0) return <WEmpty size={w.size} label="Link a Solana wallet in Settings" />;
+  if (data.items.length === 0) return <WEmpty size={w.size} label="No NFTs in these wallets" />;
+
+  const shown = data.items.slice(0, 4);
+  const tile = (n: (typeof shown)[number]) => (
+    <div key={n.id} className="relative aspect-square min-w-0 overflow-hidden rounded-xl bg-white/5" title={n.collection ? `${n.name} · ${n.collection}` : n.name}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={n.image} alt={n.name} loading="lazy" className="size-full object-cover" />
+    </div>
+  );
+  const count = (
+    <p className="font-primary text-sm leading-none">
+      {data.total} <span className="text-fg-2">NFT{data.total === 1 ? "" : "S"}</span>
+    </p>
+  );
+
+  if (w.size === "long") {
+    return (
+      <WidgetFrame size="long" opacity={opacity}>
+        <div className="flex w-16 shrink-0 flex-col gap-1">
+          <WTitle className="text-base">NFTs</WTitle>
+          {count}
+        </div>
+        <div className="grid min-w-0 flex-1 grid-cols-4 gap-2">{shown.map(tile)}</div>
+      </WidgetFrame>
+    );
+  }
+  return (
+    <WidgetFrame size="large" opacity={opacity}>
+      <div className="mb-2 flex items-baseline justify-between">
+        <WTitle className="text-base">NFTs</WTitle>
+        {count}
+      </div>
+      <div className="grid flex-1 grid-cols-2 gap-2">{shown.map(tile)}</div>
     </WidgetFrame>
   );
 }

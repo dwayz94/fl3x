@@ -3,7 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { Crown02Icon, NewTwitterIcon, UserGroupIcon } from "@hugeicons/core-free-icons";
-import type { ReferralSummary } from "@fl3x/shared";
+import { REFERRAL_REWARDS, type ReferralSummary } from "@fl3x/shared";
 import { useAuth, useMe } from "@/components/auth/AuthProvider";
 import { CopyField } from "@/components/dashboard/CopyField";
 import { PageHeader, Spinner } from "@/components/dashboard/Panel";
@@ -32,6 +32,7 @@ export default function ReferralPage() {
   const tweet = `I'm flexing on @fl3xdotlol. Live widgets, verified wallets, one link.\n\nClaim your profile before your handle is gone:\n${link}`;
   // Progress toward passing the next member above you.
   const progress = data.toNextRank ? data.referrals / (data.referrals + data.toNextRank) : 1;
+  const nextReward = REFERRAL_REWARDS.find((r) => data.referrals < r.count);
 
   return (
     <div className="flex flex-col px-4 py-8 md:px-8 lg:h-svh lg:py-6">
@@ -78,7 +79,15 @@ export default function ReferralPage() {
               </p>
             </div>
             <div className="relative mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-4">
-              <p className="text-xs text-fg-2">3 referrals unlock the Contributor badge.</p>
+              <p className="text-xs text-fg-2">
+                {nextReward ? (
+                  <>
+                    <span className="text-brand">{nextReward.count - data.referrals}</span> more for the {nextReward.badge.name} badge.
+                  </>
+                ) : (
+                  "Every referral badge unlocked."
+                )}
+              </p>
               <ShareOnX text={tweet} label="Share my referral" />
             </div>
           </section>
@@ -102,18 +111,30 @@ export default function ReferralPage() {
             </div>
           </section>
 
-          <section className="grid gap-3 rounded-3xl bg-[#0d0d0d] p-5 sm:grid-cols-3 lg:flex-1">
-            {[
-              ["1", "Share your link", "Post it on X, drop it in your Discord or your bio."],
-              ["2", "They claim a name", "Friends pick a username and set up their card."],
-              ["3", "You climb", "Every member counts. 3 unlock the Contributor badge."],
-            ].map(([n, t, d]) => (
-              <div key={n} className="flex flex-col gap-2 rounded-2xl bg-white/[0.03] p-4">
-                <span className="font-primary text-3xl leading-none text-brand">{n}</span>
-                <p className="font-primary text-lg leading-none">{t}</p>
-                <p className="text-xs text-fg-3">{d}</p>
-              </div>
-            ))}
+          {/* Rewards: a badge at each referral milestone. */}
+          <section className="flex flex-col rounded-3xl bg-[#0d0d0d] p-5 lg:min-h-0 lg:flex-1">
+            <h2 className="font-primary text-2xl leading-none">Rewards</h2>
+            <p className="mt-1 mb-4 text-xs text-fg-3">A badge on your profile at each milestone. Every member who joins with your link counts.</p>
+            <ul className="grid gap-2 sm:grid-cols-2">
+              {REFERRAL_REWARDS.map(({ badge, count }) => {
+                const done = data.referrals >= count;
+                return (
+                  <li key={badge.id} className={cn("flex items-center gap-3 rounded-2xl p-3", done ? "bg-white/[0.06]" : "bg-white/[0.03]")}>
+                    <span className={cn("flex size-10 shrink-0 items-center justify-center rounded-xl bg-white/[0.05]", !done && "opacity-40 grayscale")}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={`/images/badges/${badge.id}.svg`} alt="" className="size-5" />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-primary text-lg leading-none">{badge.name}</p>
+                      <p className="mt-1 text-[11px] text-fg-3">{count} referrals</p>
+                    </div>
+                    <span className={cn("shrink-0 text-xs", done ? "text-success" : "text-fg-3")}>
+                      {done ? "Unlocked" : `${count - data.referrals} to go`}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
           </section>
         </div>
 

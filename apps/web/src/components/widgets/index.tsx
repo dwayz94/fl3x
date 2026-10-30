@@ -1,7 +1,7 @@
 "use client";
 
 import type { Widget } from "@fl3x/shared";
-import { HoldingsWidget, PnlWidget, TokenWidget } from "./crypto";
+import { HoldingsWidget, NftWidget, PnlWidget, TokenWidget } from "./crypto";
 import { CommunityWidget } from "./social";
 import { ClockWidgetV2, CountdownWidgetV2, FollowersWidgetV2, MusicWidgetV2, PortfolioWidgetV2, VideoWidgetV2 } from "./v2";
 import { ImageWidget, LinkWidget, ReactionsWidget, TextWidget } from "./utility";
@@ -19,6 +19,7 @@ export function WidgetView({ w, interactive = true }: { w: Widget; interactive?:
     case "portfolio": return <PortfolioWidgetV2 w={w} />;
     case "holdings": return <HoldingsWidget w={w} />;
     case "token": return <TokenWidget w={w} />;
+    case "nfts": return <NftWidget w={w} />;
     case "community": return <CommunityWidget w={w} />;
     case "followers": return <FollowersWidgetV2 w={w} />;
     case "video": return <VideoWidgetV2 w={w} />;

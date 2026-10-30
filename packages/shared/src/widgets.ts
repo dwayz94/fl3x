@@ -96,6 +96,12 @@ export const WIDGETS = {
     category: "crypto",
     fields: [wallets, opacity],
   },
+  nfts: {
+    name: "NFT Gallery",
+    description: "NFTs from your verified Solana wallets",
+    category: "crypto",
+    fields: [wallets, opacity],
+  },
   token: {
     name: "Token",
     description: "Shill a token with live market cap",

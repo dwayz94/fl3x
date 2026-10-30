@@ -100,3 +100,12 @@ export interface ReferralSummary {
   invited: { username: string; displayName: string | null; avatarUrl: string | null; joinedAt: string | null }[];
   leaderboard: { rank: number; username: string; displayName: string | null; avatarUrl: string | null; premium: boolean; referrals: number; you: boolean }[];
 }
+
+/** NFTs from a member's verified Solana wallets (NFT gallery widget). */
+export interface NftData {
+  items: { id: string; name: string; image: string; collection: string | null }[];
+  /** NFTs found across the wallets (the widget shows a few). */
+  total: number;
+  /** Solana wallets read. */
+  wallets: number;
+}

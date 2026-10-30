@@ -47,17 +47,18 @@ async function rasterUri(url: string | null | undefined, width: number, height: 
   }
 }
 
-export async function fetchShareProfile(username: string): Promise<FullPublicProfile | null> {
+/** `fresh` skips the 1 h cache: the downloadable card must show the profile as it is now. */
+export async function fetchShareProfile(username: string, fresh = false): Promise<FullPublicProfile | null> {
   const res = await fetch(`${site.apiUrl}/profiles/${encodeURIComponent(username)}`, {
-    next: { revalidate: 3600 },
+    ...(fresh ? { cache: "no-store" as const } : { next: { revalidate: 3600 } }),
     headers: process.env.INTERNAL_API_KEY ? { "x-internal-key": process.env.INTERNAL_API_KEY } : undefined,
   }).catch(() => null);
   return res?.ok ? ((await res.json()) as FullPublicProfile) : null;
 }
 
-export async function renderShareImage(username: string) {
+export async function renderShareImage(username: string, fresh = false) {
   const [profile, moga, outfit, logo, verified, bag] = await Promise.all([
-    fetchShareProfile(username),
+    fetchShareProfile(username, fresh),
     publicAsset("/fonts/primary/moga.otf"),
     publicAsset("/fonts/secondary/Outfit-Regular.ttf"),
     publicAsset("/images/fl3x-logo.svg"),

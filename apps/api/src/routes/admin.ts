@@ -2,11 +2,12 @@ import type { FastifyInstance } from "fastify";
 import { timingSafeEqual } from "node:crypto";
 import { arrayContains, eq, or, sql } from "drizzle-orm";
 import { z } from "zod";
-import { BADGES } from "@fl3x/shared";
+import { BADGES, siteSettingsSchema } from "@fl3x/shared";
 import { db, schema } from "../db";
 import { env } from "../env";
 import { generateCode } from "../lib/codes";
 import { forbidden, notFound } from "../lib/errors";
+import { getSettings, saveSettings } from "../lib/settings";
 
 const createInvites = z.object({
   count: z.number().int().min(1).max(500).default(1),
@@ -70,6 +71,10 @@ export async function adminRoutes(app: FastifyInstance) {
       }),
     );
   });
+
+  /** Live site settings (phase, token mint, thresholds, banner): edited from /admin, applied without a restart. */
+  app.get("/admin/settings", async () => getSettings());
+  app.put("/admin/settings", async (req) => saveSettings(siteSettingsSchema.parse(req.body)));
 
   /** Mint genesis invite codes (no owner). */
   app.post("/admin/invites", async (req) => {

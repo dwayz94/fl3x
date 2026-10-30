@@ -4,7 +4,7 @@ import {
   type EditableProfile, type LinkKind, type ProfileTheme, type Widget, type WidgetSize, type WidgetType,
 } from "@fl3x/shared";
 import { db, schema } from "../db";
-import { thresholds } from "../env";
+import { getSettings } from "./settings";
 import type { UserRow } from "./users";
 
 /** Numbers behind badges: referrals and onboarding order. */
@@ -32,7 +32,7 @@ export async function badgesFor(user: UserRow, stats?: Awaited<ReturnType<typeof
     memberNumber,
     referrals,
     tokenBalance: user.tokenBalance,
-    premiumMin: thresholds.premium,
+    premiumMin: (await getSettings()).thresholds.premium,
     staff: user.role === "admin",
     granted: user.grantedBadges,
   });

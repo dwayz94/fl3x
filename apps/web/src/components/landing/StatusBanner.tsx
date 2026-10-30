@@ -25,18 +25,18 @@ function launchBanner(config: PublicConfig): Banner {
 const DISMISSED = "fl3x:banner-dismissed";
 
 /** Pink strip under the landing navbar (Figma 32:6590). Closing it hides this message only: a new one shows again. */
-export function StatusBanner({ config }: { config: PublicConfig }) {
+export function StatusBanner({ config, preview }: { config: PublicConfig; preview?: boolean }) {
   const banner = config.banner === "off" ? null : (config.banner ?? launchBanner(config));
   const key = banner ? `${banner.text}|${banner.detail ?? ""}` : "";
   // Hidden until we know it wasn't closed, so it never flashes in and out.
   const [dismissed, setDismissed] = useState(true);
   useEffect(() => {
     try {
-      setDismissed(localStorage.getItem(DISMISSED) === key);
+      setDismissed(!preview && localStorage.getItem(DISMISSED) === key);
     } catch {
       setDismissed(false);
     }
-  }, [key]);
+  }, [key, preview]);
 
   if (!banner || dismissed) return null;
   const external = banner.link && /^https?:\/\//.test(banner.link.url);

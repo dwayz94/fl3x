@@ -1,7 +1,8 @@
 import { and, count, eq, isNull, sql } from "drizzle-orm";
 import { TIER_LIMITS, tierForBalance, type Me } from "@fl3x/shared";
 import { db, schema } from "../db";
-import { env, thresholds } from "../env";
+import { env } from "../env";
+import { getSettings } from "./settings";
 import { devAuth, fetchIdentity } from "./privy";
 import { totalTokenBalance } from "./solana";
 import { verifiedWallets } from "./wallets";
@@ -37,7 +38,7 @@ export async function refreshTier(user: UserRow, force = false): Promise<UserRow
     const balance = await totalTokenBalance([...new Set(solana)]);
     const [row] = await db
       .update(schema.users)
-      .set({ tokenBalance: balance, tier: tierForBalance(balance, thresholds), tierCheckedAt: new Date() })
+      .set({ tokenBalance: balance, tier: tierForBalance(balance, (await getSettings()).thresholds), tierCheckedAt: new Date() })
       .where(eq(schema.users.id, user.id))
       .returning();
     if (row!.tier !== user.tier) await syncInviteSeats(row!);

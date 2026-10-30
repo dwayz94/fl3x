@@ -5,6 +5,7 @@ import { PERIODS, type PeriodId } from "@fl3x/shared";
 import { db, schema } from "../db";
 import { requireUser } from "../lib/auth";
 import { badRequest, conflict, notFound } from "../lib/errors";
+import { getNfts } from "../lib/providers/nfts";
 import { getPortfolio } from "../lib/providers/wallet";
 import { refreshTier, toMe } from "../lib/users";
 import {
@@ -62,6 +63,26 @@ export async function walletRoutes(app: FastifyInstance) {
     const [row] = await db.delete(schema.wallets).where(and(eq(schema.wallets.id, req.params.id), eq(schema.wallets.userId, user.id))).returning();
     if (!row) throw notFound("Wallet not found");
     return toMe(await refreshTier(user, true));
+  });
+
+  /** NFT gallery, editor preview: own verified wallets only. */
+  app.get("/me/nfts", async (req) => {
+    const user = await requireUser(req);
+    const q = z.object({ wallets: z.string().max(1000).default("all") }).parse(req.query);
+    return getNfts(resolveWidgetWallets(q.wallets, await verifiedWallets(user)));
+  });
+
+  /** NFT gallery on a public profile: resolved from the widget id, like the portfolio. */
+  app.get<{ Params: { widgetId: string } }>("/data/nfts/:widgetId", { config: { rateLimit: { max: 60, timeWindow: "1 minute" } } }, async (req) => {
+    if (!z.uuid().safeParse(req.params.widgetId).success) throw notFound();
+    const [row] = await db
+      .select({ widget: schema.widgets, user: schema.users })
+      .from(schema.widgets)
+      .innerJoin(schema.users, eq(schema.users.id, schema.widgets.userId))
+      .where(eq(schema.widgets.id, req.params.widgetId))
+      .limit(1);
+    if (!row || row.widget.type !== "nfts") throw notFound();
+    return getNfts(resolveWidgetWallets(row.widget.settings.wallets, await verifiedWallets(row.user)));
   });
 
   /** Editor preview: own verified wallets only. */

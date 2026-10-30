@@ -3,7 +3,8 @@ import { and, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { normalizeUsername, validateUsername, type FullPublicProfile, type PublicConfig } from "@fl3x/shared";
 import { db, schema } from "../db";
-import { env, thresholds } from "../env";
+import { env } from "../env";
+import { getSettings } from "../lib/settings";
 import { notFound } from "../lib/errors";
 import { badgesFor, badgeStats, loadProfile } from "../lib/profiles";
 import { resolveInviteCode } from "../lib/invites";
@@ -11,21 +12,10 @@ import { isUsernameTaken } from "../lib/users";
 
 export async function publicRoutes(app: FastifyInstance) {
 
-  app.get("/config", async (): Promise<PublicConfig> => ({
-    phase: env.LAUNCH_PHASE,
-    token: { symbol: env.TOKEN_SYMBOL, mint: env.TOKEN_MINT },
-    thresholds,
-    banner:
-      env.BANNER_TEXT === "off"
-        ? "off"
-        : env.BANNER_TEXT
-          ? {
-              text: env.BANNER_TEXT,
-              detail: env.BANNER_DETAIL || null,
-              link: env.BANNER_LINK_LABEL && env.BANNER_LINK_URL ? { label: env.BANNER_LINK_LABEL, url: env.BANNER_LINK_URL } : null,
-            }
-          : null,
-  }));
+  app.get("/config", async (): Promise<PublicConfig> => {
+    const settings = await getSettings();
+    return { phase: settings.phase, token: { symbol: env.TOKEN_SYMBOL, mint: settings.tokenMint }, thresholds: settings.thresholds, banner: settings.banner };
+  });
 
   app.get<{ Params: { username: string } }>("/usernames/:username", async (req) => {
     const check = validateUsername(req.params.username);
