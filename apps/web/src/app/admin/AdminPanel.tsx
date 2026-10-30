@@ -192,7 +192,7 @@ function Unlock({ onUnlock, error }: { onUnlock: (key: string) => void; error: s
         }}
       >
         <h1 className="text-center text-4xl leading-none">ADMIN</h1>
-        <p className="mb-2 text-center text-sm text-fg-2">Enter the API&apos;s admin key (Render → fl3x-api → Environment → ADMIN_API_KEY).</p>
+        <p className="mb-2 text-center text-sm text-fg-2">Enter your admin key.</p>
         <input type="password" className={inputClass} value={value} onChange={(e) => setValue(e.target.value)} placeholder="Admin key" autoFocus autoComplete="off" />
         {error && <p className="text-sm text-danger">{error}</p>}
         <Button type="submit" className="w-full">
