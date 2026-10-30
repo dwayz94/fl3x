@@ -24,7 +24,7 @@ type Props = { params: Promise<{ username: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const profile = await getProfile((await params).username);
-  if (!profile) return { title: "Not found" };
+  if (!profile) return { title: "Page not found", robots: { index: false } };
   const name = profile.displayName ?? profile.username;
   return {
     title: `${name} (@${profile.username})`,
