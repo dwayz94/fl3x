@@ -394,8 +394,8 @@ export const HELP_GROUPS: HelpGroup[] = [
               {
                 type: "list",
                 items: [
-                  "**My Spotify (live)**: shows the track you're playing, or the last one you played. Connect Spotify in [Settings](/dashboard/settings) under Connections.",
-                  "**A track or playlist**: paste a Spotify link to show one track or playlist.",
+                  "**Currently listening**: shows the track you're playing, or the last one you played. Connect Spotify in [Settings](/dashboard/settings) under Connections.",
+                  "**A track**: paste a Spotify track link (open.spotify.com/track/…) to show that track.",
                   "Visitors can play a 30-second preview when one is available.",
                 ],
               },

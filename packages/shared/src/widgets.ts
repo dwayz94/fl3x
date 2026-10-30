@@ -31,8 +31,16 @@ export type PeriodId = (typeof PERIODS)[number]["id"];
 
 type Opt = { id: string; label: string };
 
-export type FieldDef =
-  | { key: string; label: string; kind: "text" | "url" | "textarea"; placeholder?: string; max?: number; required?: boolean }
+/**
+ * Shown (and required, if it is) only while another field has one of these values:
+ * e.g. the color picker only when "Background" is "Color". Hidden values are kept, not validated.
+ */
+type ShowWhen = { when?: { key: string; is: readonly string[] } };
+
+export type FieldDef = ShowWhen & (
+  | { key: string; label: string; kind: "text" | "textarea"; placeholder?: string; max?: number; required?: boolean }
+  /** `pattern` narrows the link (e.g. Spotify tracks only), `hint` is the error then. */
+  | { key: string; label: string; kind: "url"; placeholder?: string; required?: boolean; pattern?: string; hint?: string }
   /**
    * A handle typed after a fixed domain, picked by the `from` field
    * (e.g. platform "discord" → discord.gg/). Keeps links on the right site.
@@ -52,7 +60,8 @@ export type FieldDef =
   /** Display name of the clock's place: emptied when the country or zone changes, the zone's city shows meanwhile. */
   | { key: string; label: string; kind: "city"; timezone: string; country: string; max?: number }
   | { key: string; label: string; kind: "color"; default: string }
-  | { key: string; label: string; kind: "range"; min: number; max: number; default: number };
+  | { key: string; label: string; kind: "range"; min: number; max: number; default: number }
+);
 
 export interface WidgetDef {
   name: string;
@@ -71,7 +80,7 @@ const background: FieldDef = {
   key: "background", label: "Background", kind: "segmented", default: "cover",
   options: [{ id: "cover", label: "Cover colors" }, { id: "glass", label: "Glass" }, { id: "color", label: "Color" }],
 };
-const tint: FieldDef = { key: "tint", label: "Color", kind: "color", default: "#7B5CFF" };
+const tint: FieldDef = { key: "tint", label: "Color", kind: "color", default: "#7B5CFF", when: { key: "background", is: ["color"] } };
 const opacity: FieldDef = { key: "bgOpacity", label: "Background opacity", kind: "range", min: 20, max: 100, default: 100 };
 
 export const WIDGETS = {
@@ -160,8 +169,12 @@ export const WIDGETS = {
     description: "What you're listening to on Spotify, or a track you pick",
     category: "media",
     fields: [
-      { key: "source", label: "Show", kind: "segmented", options: [{ id: "spotify", label: "My Spotify (live)" }, { id: "link", label: "A track or playlist" }], default: "spotify" },
-      { key: "url", label: "Spotify link (when showing a track)", kind: "url", placeholder: "https://open.spotify.com/track/…" },
+      { key: "source", label: "Show", kind: "segmented", options: [{ id: "spotify", label: "Currently listening" }, { id: "link", label: "A track" }], default: "spotify" },
+      {
+        key: "url", label: "Spotify track link", kind: "url", placeholder: "https://open.spotify.com/track/…", required: true,
+        pattern: "^https://open\\.spotify\\.com/(intl-[a-z-]+/)?track/[A-Za-z0-9]+", hint: "Paste a Spotify track link (open.spotify.com/track/…)",
+        when: { key: "source", is: ["link"] },
+      },
       background,
       tint,
     ],
@@ -193,7 +206,7 @@ export const WIDGETS = {
     fields: [
       { key: "title", label: "Title", kind: "text", max: 40 },
       { key: "target", label: "Date", kind: "datetime", required: true },
-      { key: "country", label: "Country code", kind: "text", placeholder: "AE", max: 2 },
+      { key: "country", label: "Flag (optional)", kind: "country" },
       { key: "ctaLabel", label: "Button label", kind: "text", max: 20 },
       { key: "ctaUrl", label: "Button link", kind: "url" },
       opacity,
@@ -256,6 +269,14 @@ export function defaultSettings(type: WidgetType): WidgetSettings {
   return out;
 }
 
+/** Whether a field applies with these settings (see `when`); a missing value counts as the field's default. */
+export function fieldShown(type: WidgetType, f: FieldDef, settings: Record<string, unknown>): boolean {
+  if (!f.when) return true;
+  const dep = (WIDGETS[type].fields as readonly FieldDef[]).find((d) => d.key === f.when!.key);
+  const value = settings[f.when.key] ?? (dep && "default" in dep ? dep.default : undefined);
+  return f.when.is.includes(String(value));
+}
+
 function fieldSchema(f: FieldDef): z.ZodType {
   switch (f.kind) {
     case "number":
@@ -267,8 +288,10 @@ function fieldSchema(f: FieldDef): z.ZodType {
       return z.enum(f.options.map((o) => o.id) as [string, ...string[]]);
     case "color":
       return z.string().regex(/^#[0-9a-fA-F]{6}$/);
-    case "url":
-      return z.union([z.url({ protocol: /^https?$/ }).max(500), z.literal("")]);
+    case "url": {
+      const url = z.url({ protocol: /^https?$/ }).max(500);
+      return z.union([f.pattern ? url.regex(new RegExp(f.pattern), f.hint) : url, z.literal("")]);
+    }
     case "image":
       return imageUrl;
     case "handle":
@@ -300,16 +323,21 @@ export const widgetInput = z
       const m = w.settings.url.match(/(?:discord\.gg|discord\.com\/invite|t\.me)\/([A-Za-z0-9_-]{2,32})/);
       if (m) w.settings = { ...w.settings, invite: m[1], platform: w.settings.url.includes("t.me") ? "telegram" : "discord" };
     }
+    // Music widgets saved before "source" existed only had a link.
+    if (w.type === "music" && !w.settings.source && w.settings.url) w.settings = { ...w.settings, source: "link" };
     const settings: WidgetSettings = {};
     for (const f of WIDGETS[w.type].fields as readonly FieldDef[]) {
       const raw = w.settings[f.key];
+      const shown = fieldShown(w.type, f, w.settings);
       if (raw === undefined || raw === null || raw === "") {
-        if ("required" in f && f.required) ctx.addIssue({ code: "custom", message: `${WIDGETS[w.type].name}: ${f.label} is required` });
+        if (shown && "required" in f && f.required) ctx.addIssue({ code: "custom", message: `${WIDGETS[w.type].name}: ${f.label} is required` });
         continue;
       }
       const parsed = fieldSchema(f).safeParse(raw);
-      if (!parsed.success) ctx.addIssue({ code: "custom", message: `${WIDGETS[w.type].name}: invalid ${f.label}` });
-      else if (parsed.data !== undefined) settings[f.key] = parsed.data as string | number;
+      // A hidden field keeps a valid old value (switching back restores it) and drops an invalid one silently.
+      if (!parsed.success) {
+        if (shown) ctx.addIssue({ code: "custom", message: `${WIDGETS[w.type].name}: ${("hint" in f && f.hint) || `invalid ${f.label}`}` });
+      } else if (parsed.data !== undefined) settings[f.key] = parsed.data as string | number;
     }
     // A clock's zone always belongs to its country (older clocks get the country from the zone).
     for (const f of WIDGETS[w.type].fields as readonly FieldDef[]) {

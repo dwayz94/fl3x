@@ -156,7 +156,7 @@ export function Field({
         <input
           type={def.kind === "url" ? "url" : "text"}
           className={inputClass}
-          maxLength={def.max}
+          maxLength={"max" in def ? def.max : 500}
           placeholder={def.placeholder}
           value={str}
           onChange={(e) => onChange(e.target.value)}

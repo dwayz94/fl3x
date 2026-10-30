@@ -118,18 +118,41 @@ export default function ReferralPage() {
             <ul className="grid gap-2 sm:grid-cols-2">
               {REFERRAL_REWARDS.map(({ badge, count }) => {
                 const done = data.referrals >= count;
+                const pct = Math.min(1, data.referrals / count);
                 return (
-                  <li key={badge.id} className={cn("flex items-center gap-3 rounded-2xl p-3", done ? "bg-white/[0.06]" : "bg-white/[0.03]")}>
-                    <span className={cn("flex size-10 shrink-0 items-center justify-center rounded-xl bg-white/[0.05]", !done && "opacity-40 grayscale")}>
+                  <li
+                    key={badge.id}
+                    className="relative flex items-center gap-3 overflow-hidden rounded-2xl p-3"
+                    // Each reward wears its badge's color: full once unlocked, a faint tint before.
+                    style={{ background: `color-mix(in srgb, ${badge.color} ${done ? 14 : 5}%, transparent)` }}
+                  >
+                    <span
+                      className={cn("flex size-10 shrink-0 items-center justify-center rounded-xl", !done && "opacity-60")}
+                      style={{ background: `color-mix(in srgb, ${badge.color} 18%, transparent)` }}
+                    >
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={`/images/badges/${badge.id}.svg`} alt="" className="size-5" />
                     </span>
                     <div className="min-w-0 flex-1">
-                      <p className="font-primary text-lg leading-none">{badge.name}</p>
-                      <p className="mt-1 text-[11px] text-fg-3">{count} referrals</p>
+                      <p className="font-primary text-lg leading-none" style={{ color: done ? badge.color : undefined }}>
+                        {badge.name}
+                      </p>
+                      <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-white/10">
+                        <div className="h-full rounded-full" style={{ width: `${Math.max(pct * 100, 2)}%`, background: badge.color }} />
+                      </div>
                     </div>
-                    <span className={cn("shrink-0 text-xs", done ? "text-success" : "text-fg-3")}>
-                      {done ? "Unlocked" : `${count - data.referrals} to go`}
+                    <span className="shrink-0 text-right text-[11px] leading-tight">
+                      {done ? (
+                        <span style={{ color: badge.color }}>Unlocked</span>
+                      ) : (
+                        <>
+                          <span className="text-fg-2">
+                            {data.referrals}/{count}
+                          </span>
+                          <br />
+                          <span className="text-fg-3">referrals</span>
+                        </>
+                      )}
                     </span>
                   </li>
                 );

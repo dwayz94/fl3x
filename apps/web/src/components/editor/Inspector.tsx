@@ -1,7 +1,7 @@
 "use client";
 
 import { ArrowDown02Icon, ArrowUp02Icon, CursorEdit01Icon, Delete02Icon, DragDropIcon, Image01Icon, PlusSignIcon, TextIcon } from "@hugeicons/core-free-icons";
-import { WIDGETS, type EditableProfile, type FieldDef, type LinkedWallet, type Widget, type WidgetSize } from "@fl3x/shared";
+import { WIDGETS, fieldShown, type EditableProfile, type FieldDef, type LinkedWallet, type Widget, type WidgetSize } from "@fl3x/shared";
 import { Brand, Icon } from "@/components/ui";
 import { WidgetView } from "@/components/widgets";
 import { cn } from "@/lib/cn";
@@ -66,7 +66,8 @@ export function Inspector(props: {
         <Label>Size</Label>
         <Segmented options={[{ id: "long", label: "Long card" }, { id: "large", label: "Large card" }]} value={w.size} onChange={(v) => props.onWidget({ size: v as WidgetSize })} />
       </div>
-      {(def.fields as readonly FieldDef[]).map((f) => (
+      {/* Fields that depend on another (a color only once "Color" is picked…) appear when they apply. */}
+      {(def.fields as readonly FieldDef[]).filter((f) => fieldShown(w.type, f, w.settings)).map((f) => (
         <Field
           key={f.key}
           def={f}
