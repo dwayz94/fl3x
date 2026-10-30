@@ -6,3 +6,4 @@ export * from "./Sparkline";
 export * from "./Flag";
 export * from "./Verified";
 export * from "./ImageInput";
+export * from "./VideoInput";

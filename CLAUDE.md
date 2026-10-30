@@ -17,6 +17,10 @@ Profiles with live widgets for crypto people. The founder speaks French: reply i
 - Music widgets play a 30 s preview from Deezer (`/data/preview`, looked up by title + artist on click; links expire after ~15 min).
 - Reactions widget is hidden from the library (kept for existing profiles).
 - NFT Gallery widget (`nfts`): NFTs of the member's verified Solana wallets via DAS `searchAssets` with `compressed: false` (compressed spam inlines base64 images: `getAssetsByOwner` returned 350 MB for one wallet). Needs a DAS-capable RPC (Helius). Fetched by widget id like the portfolio.
+- Clock widget: country (flag picker) → time zone limited to that country (auto when it has one) → city name (`shared/timezones.ts`, `resolveClock`, also applied by the API). Old clocks infer the country from their zone.
+- Wallet linking: one modal (`components/wallet/ConnectWalletModal.tsx`, modelled on getrekt's) used by Settings, the join flow and the Customize inspector of wallet widgets.
+- Members get their X profile picture as avatar: downloaded in 400×400 and stored as our own media on claim / sign-in (`api/lib/x-avatar.ts`), only while they haven't picked another one.
+- Premium video / GIF backgrounds: MP4 (H.264) / WebM ≤ 30 s and 20 MB, GIFs stored as animated WebP; duration checked on the server without ffmpeg (`api/lib/video.ts`), served with Range (206) for Safari, poster frame for the share card and reduced motion.
 - Settings has a "Download card" button: `/u/<username>/card` renders the share image fresh as a PNG attachment.
 - Referral rewards: badges at 3 / 10 / 25 / 50 referrals (Contributor, Recruiter, Ambassador, Legend; `REFERRAL_REWARDS`), shown on the Referral page.
 - Help Center at `/help` (`components/help/content.ts` holds the articles, layout modelled on getrekt's docs). Keep it in sync when a feature changes; numbers come from `@fl3x/shared` where possible.

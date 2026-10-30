@@ -94,6 +94,8 @@ export const BACKGROUNDS = [
   { id: "gold", label: "Gold" },
   { id: "teal", label: "Teal" },
   { id: "image", label: "Image" },
+  // Premium: an uploaded MP4 / WebM video or animated GIF (stored as animated WebP), in backgroundUrl.
+  { id: "video", label: "Video / GIF" },
   // Premium: animated, drawn in CSS by the web app (AnimatedBackdrop).
   { id: "aurora", label: "Aurora", animated: true },
   { id: "money", label: "Money rain", animated: true },
@@ -104,11 +106,25 @@ export const BACKGROUNDS = [
 export const ANIMATED_BACKGROUNDS = ["aurora", "money", "grid", "pulse"] as const;
 export type AnimatedBackground = (typeof ANIMATED_BACKGROUNDS)[number];
 export const isAnimatedBackground = (id: string): id is AnimatedBackground => (ANIMATED_BACKGROUNDS as readonly string[]).includes(id);
+/** Backgrounds that move: CSS animations and uploaded videos / GIFs. All Premium; others fall back to plain. */
+export const isPremiumBackground = (id: string) => isAnimatedBackground(id) || id === "video";
+
+/** Video backgrounds: short loops. The API checks the real duration of every upload. */
+export const MAX_BACKGROUND_VIDEO_SECONDS = 30;
+/**
+ * 30 s of 1080p H.264 at a web-friendly ~5 Mbit/s is about 19 MB; anything
+ * heavier is slow to start on mobile and every byte is kept in Postgres.
+ */
+export const MAX_BACKGROUND_VIDEO_BYTES = 20 * 1024 * 1024;
+/** Uploaded videos are served as /media/<id>.mp4 or .webm; animated GIFs become .webp images. */
+export const isVideoUrl = (url: string) => /\.(mp4|webm)(?:[?#]|$)/i.test(url);
 
 export interface ProfileTheme {
   accent: string;
   background: (typeof BACKGROUNDS)[number]["id"];
   backgroundUrl?: string;
+  /** Still frame of a video / GIF background: share image, reduced motion, shown while the video loads. */
+  backgroundPoster?: string;
   font: (typeof FONTS)[number]["id"];
   cursor: (typeof CURSORS)[number]["id"];
   /** The small FL3X mark under the card. Premium can hide it. */
@@ -151,7 +167,7 @@ export const TIER_PERKS: Record<Tier, string[]> = {
     "Premium checkmark next to your name",
     `${TIER_LIMITS.premium.widgets} widgets and ${TIER_LIMITS.premium.links} links`,
     "Custom fonts and cursors",
-    "Animated backgrounds",
+    `Animated backgrounds, or your own video or GIF (up to ${MAX_BACKGROUND_VIDEO_SECONDS} s)`,
     "Remove the FL3X mark from your profile",
     `Analytics for the last ${TIER_LIMITS.premium.analyticsDays} days`,
     `${TIER_LIMITS.premium.invites} invites to hand out during pre-launch`,
@@ -173,6 +189,7 @@ export const themeInput = z.object({
   accent: z.string().regex(/^#[0-9a-fA-F]{6}$/),
   background: z.enum(BACKGROUNDS.map((b) => b.id) as [string, ...string[]]),
   backgroundUrl: z.union([imageUrl, z.literal("")]).optional(),
+  backgroundPoster: z.union([imageUrl, z.literal("")]).optional(),
   font: z.enum(FONTS.map((f) => f.id) as [string, ...string[]]),
   cursor: z.enum(CURSORS.map((c) => c.id) as [string, ...string[]]),
   branding: z.boolean().optional(),

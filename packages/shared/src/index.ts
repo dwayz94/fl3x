@@ -7,3 +7,4 @@ export * from "./widgets";
 export * from "./profile";
 export * from "./badges";
 export * from "./analytics";
+export * from "./timezones";

@@ -5,6 +5,7 @@ import { claimRequest, normalizeUsername, TIER_LIMITS, waitlistRequest, type Wai
 import { db, schema } from "../db";
 import { requirePrivyId, requireUser } from "../lib/auth";
 import { getSettings } from "../lib/settings";
+import { adoptXAvatar } from "../lib/x-avatar";
 import { generateCode } from "../lib/codes";
 import { resolveInviteCode } from "../lib/invites";
 import { badRequest, conflict, forbidden } from "../lib/errors";
@@ -12,7 +13,12 @@ import { isUsernameTaken, notOnboarded, refreshTier, syncUser, toMe } from "../l
 
 export async function meRoutes(app: FastifyInstance) {
   /** Called by the web app right after a Privy login / account link. */
-  app.post("/session", async (req) => toMe(await syncUser(await requirePrivyId(req))));
+  app.post("/session", async (req) => {
+    const user = await syncUser(await requirePrivyId(req));
+    // X linked after the name was claimed (or its picture never copied yet).
+    await adoptXAvatar(user);
+    return toMe(user);
+  });
 
   app.get("/me", async (req) => toMe(await refreshTier(await requireUser(req))));
 
@@ -110,6 +116,7 @@ export async function meRoutes(app: FastifyInstance) {
       return row;
     });
 
+    await adoptXAvatar(updated);
     return toMe(updated);
   });
 }

@@ -225,7 +225,9 @@ function Editor({ initial, tier, wallets }: { initial: EditorPayload; tier: Tier
   // Entering and leaving Customize animate (panels slide in from their side, the card zooms in).
   const [leaving, setLeaving] = useState(false);
   // Everything appears together once the widgets' data and the background are in.
-  const ready = useReady(draft.theme.background === "image" ? draft.theme.backgroundUrl : undefined);
+  const ready = useReady(
+    draft.theme.background === "image" ? draft.theme.backgroundUrl : draft.theme.background === "video" ? draft.theme.backgroundPoster : undefined,
+  );
   const shown = ready && !leaving;
   const back = () => {
     if (dirty) return setNudge((n) => n + 1);

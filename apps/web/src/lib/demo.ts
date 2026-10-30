@@ -91,9 +91,14 @@ const media: Record<string, MediaData> = {
 export function resolveDemo(path: string, params: Record<string, string | undefined>): unknown {
   switch (path) {
     case "nfts":
-      // Library preview only (local demo art, not anyone's real NFTs).
+      // Library preview: real Solana NFTs (shrunk copies in /images/demo/nfts).
       return {
-        items: [IMG.cover, IMG.cover2, IMG.cover3, IMG.cover4].map((image, i) => ({ id: `demo-nft-${i}`, name: `Piece #${i + 1}`, image, collection: "Demo" })),
+        items: [
+          ["y00t-4718", "y00t #4718", "y00ts"],
+          ["degod-3744", "DeGod #3744", "DeGods"],
+          ["doge-capital-908", "Doge Capital #908", "Doge Capital"],
+          ["meego-1339", "Meego #1339", "Meegos"],
+        ].map(([file, name, collection]) => ({ id: `demo-${file}`, name: name!, image: `/images/demo/nfts/${file}.webp`, collection: collection! })),
         total: 24,
         wallets: 1,
       };
@@ -132,7 +137,7 @@ export const DEMO_WIDGETS: { type: WidgetType; label?: string; settings: WidgetS
   { type: "video", label: "YouTube, latest upload", settings: { platform: "youtube", channel: "nova" } },
   { type: "video", label: "Twitch, live now", settings: { platform: "twitch", channel: "nova" } },
   { type: "music", label: "My Spotify, now playing", settings: { source: "spotify" } },
-  { type: "image", settings: { url: IMG.cover } },
+  { type: "image", settings: { url: "/images/demo/photo.webp" } },
   { type: "link", label: "With button", settings: { image: IMG.cover3, title: "Genesis pass drop", body: LOREM, ctaLabel: "Mint now", url: "https://fl3x.lol" } },
   { type: "link", label: "Journal (no button)", settings: { image: IMG.cover2, title: "Trading journal", body: LOREM + " " + LOREM } },
   { type: "clock", settings: { timezone: "Asia/Dubai", city: "Dubai,", country: "AE" } },

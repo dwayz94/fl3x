@@ -31,7 +31,8 @@ export default function SettingsPage() {
         </Card>
 
         <div className="flex flex-col gap-4 lg:min-h-0">
-          <Card title="Wallets" desc="Proven with a free signature. Wallet widgets add them all up." className="lg:min-h-0 lg:flex-1" scroll>
+          {/* Sized to its wallets; scrolls only when there are more than the column can hold. */}
+          <Card title="Wallets" desc="Proven with a free signature. Wallet widgets add them all up." className="lg:min-h-0" scroll>
             <WalletsPanel me={me} />
           </Card>
           <Card title="Connections" desc="Keeps your music widget playing what you listen to.">

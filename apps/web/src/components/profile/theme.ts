@@ -1,7 +1,7 @@
-import { isAnimatedBackground, type AnimatedBackground, type ProfileTheme, type Tier } from "@fl3x/shared";
+import { isAnimatedBackground, isPremiumBackground, type AnimatedBackground, type ProfileTheme, type Tier } from "@fl3x/shared";
 
 /** Page backdrops behind the profile card (the dark glows from the Figma backgrounds). */
-export const backdrops: Record<Exclude<ProfileTheme["background"], "image" | AnimatedBackground>, string> = {
+export const backdrops: Record<Exclude<ProfileTheme["background"], "image" | "video" | AnimatedBackground>, string> = {
   plain: "#0b0b0b",
   pink: "radial-gradient(120% 80% at 50% 0%, #4a1f36 0%, #120a0f 55%, #050505 100%)",
   violet: "radial-gradient(120% 80% at 50% 0%, #2f1b4d 0%, #0d0a14 55%, #050505 100%)",
@@ -14,14 +14,18 @@ export function backdropStyle(theme: ProfileTheme): React.CSSProperties {
   if (theme.background === "image" && theme.backgroundUrl) {
     return { background: `#050505 url(${JSON.stringify(theme.backgroundUrl)}) center / cover no-repeat` };
   }
+  // Video / GIF: the still frame first (while the video loads, or for reduced motion); AnimatedBackdrop plays it on top.
+  if (theme.background === "video" && theme.backgroundPoster) {
+    return { background: `#060509 url(${JSON.stringify(theme.backgroundPoster)}) center / cover no-repeat` };
+  }
   // Animated ones paint on a near-black base; AnimatedBackdrop draws the motion on top.
-  if (isAnimatedBackground(theme.background)) return { background: "#060509" };
-  return { background: backdrops[theme.background === "image" ? "plain" : theme.background] };
+  if (isPremiumBackground(theme.background)) return { background: "#060509" };
+  return { background: backdrops[theme.background === "image" ? "plain" : (theme.background as keyof typeof backdrops)] };
 }
 
-/** Animated backgrounds are Premium: if the owner's tier dropped, the page falls back to plain. */
+/** Animated and video backgrounds are Premium: if the owner's tier dropped, the page falls back to plain. */
 export function effectiveTheme(theme: ProfileTheme, tier: Tier): ProfileTheme {
-  return tier !== "premium" && isAnimatedBackground(theme.background) ? { ...theme, background: "plain" } : theme;
+  return tier !== "premium" && isPremiumBackground(theme.background) ? { ...theme, background: "plain" } : theme;
 }
 
 export const fontClass: Record<ProfileTheme["font"], string> = {

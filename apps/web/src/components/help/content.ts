@@ -22,7 +22,9 @@ import {
   Wallet01Icon,
 } from "@hugeicons/core-free-icons";
 import type { IconSvgElement } from "@hugeicons/react";
-import { BACKGROUNDS, BADGES, CURSORS, FONTS, PERIODS, TIER_LIMITS, USERNAME_MAX, USERNAME_MIN } from "@fl3x/shared";
+import {
+  BACKGROUNDS, BADGES, CURSORS, FONTS, MAX_BACKGROUND_VIDEO_BYTES, MAX_BACKGROUND_VIDEO_SECONDS, PERIODS, TIER_LIMITS, USERNAME_MAX, USERNAME_MIN,
+} from "@fl3x/shared";
 
 export type HelpBlock =
   | { type: "p"; text: string }
@@ -66,7 +68,7 @@ const premium = TIER_LIMITS.premium;
 /** Badges unlocked by referral milestones, lowest first. */
 const referralRewards = BADGES.flatMap((b) => (b.unlock.kind === "referrals" ? [{ name: b.name, count: b.unlock.count }] : [])).sort((a, b) => a.count - b.count);
 const label = (ids: readonly { label: string }[]) => ids.map((x) => x.label).join(", ");
-const plainBackgrounds = BACKGROUNDS.filter((b) => !("animated" in b) && b.id !== "image");
+const plainBackgrounds = BACKGROUNDS.filter((b) => !("animated" in b) && b.id !== "image" && b.id !== "video");
 const animatedBackgrounds = BACKGROUNDS.filter((b) => "animated" in b);
 
 export const HELP_GROUPS: HelpGroup[] = [
@@ -487,6 +489,7 @@ export const HELP_GROUPS: HelpGroup[] = [
                   `**Colors**: ${label(plainBackgrounds)}.`,
                   "**Image**: upload your own, or use one of the FL3X images.",
                   `**Animated** (Premium): ${label(animatedBackgrounds)}.`,
+                  `**Video or GIF** (Premium): upload an MP4 (H.264), WebM or GIF loop up to ${MAX_BACKGROUND_VIDEO_SECONDS} seconds and ${MAX_BACKGROUND_VIDEO_BYTES / 1024 / 1024} MB. It plays muted, and stays on a still frame for visitors who turned off animations.`,
                 ],
               },
             ],
@@ -510,7 +513,7 @@ export const HELP_GROUPS: HelpGroup[] = [
                 items: [
                   `**Font** for your name: ${label(FONTS)}.`,
                   `**Cursor** for your visitors: ${label(CURSORS.filter((c) => c.id !== "default"))}.`,
-                  "**Animated backgrounds**.",
+                  "**Animated backgrounds**, and your own video or GIF as a background.",
                   "**Branding**: hide the small FL3X mark under your card.",
                 ],
               },

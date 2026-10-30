@@ -8,7 +8,7 @@ import {
   BACKGROUNDS, BADGES, CURSORS, FONTS, WIDGETS, WIDGET_TYPES,
   type EditableProfile, type ProfileTheme, type Tier, type WidgetSize, type WidgetType,
 } from "@fl3x/shared";
-import { Icon, ImageInput } from "@/components/ui";
+import { Icon, ImageInput, VideoInput } from "@/components/ui";
 import { AnimatedBackdrop } from "@/components/profile/AnimatedBackdrop";
 import { BadgeIcon } from "@/components/profile/Badges";
 import { backdrops, cursorStyle, cursorSvg, fontClass } from "@/components/profile/theme";
@@ -155,7 +155,7 @@ export function Library(props: {
             <div>
               <p className="mb-1.5 text-xs text-fg-2">Glows</p>
               <div className="grid grid-cols-2 gap-2">
-                {BACKGROUNDS.filter((b) => b.id !== "image" && !("animated" in b)).map((b) => (
+                {BACKGROUNDS.filter((b) => b.id !== "image" && b.id !== "video" && !("animated" in b)).map((b) => (
                   <button
                     key={b.id}
                     type="button"
@@ -186,6 +186,22 @@ export function Library(props: {
                     </button>
                   ))}
                 </div>
+              </PremiumGate>
+            </div>
+            <div>
+              <p className="mb-1.5 text-xs text-fg-2">Video / GIF</p>
+              <PremiumGate locked={!premium} label="Video backgrounds">
+                <VideoInput
+                  value={theme.background === "video" ? theme.backgroundUrl : undefined}
+                  poster={theme.backgroundPoster}
+                  onChange={(m) =>
+                    props.onTheme(
+                      m
+                        ? { background: "video", backgroundUrl: m.url, backgroundPoster: m.poster ?? "" }
+                        : { background: "plain", backgroundUrl: "", backgroundPoster: "" },
+                    )
+                  }
+                />
               </PremiumGate>
             </div>
           </div>

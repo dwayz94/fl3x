@@ -10,8 +10,7 @@ import {
   ArrowDownRight01Icon, ArrowUpRight01Icon, InstagramIcon, Moon02Icon, NewTwitterIcon, PauseIcon, PlayIcon, SpotifyIcon, Sun03Icon,
   TiktokIcon, TwitchIcon, YoutubeIcon,
 } from "@hugeicons/core-free-icons";
-import { getTimezone } from "countries-and-timezones";
-import { PERIODS, type Widget } from "@fl3x/shared";
+import { PERIODS, resolveClock, zoneCity, type Widget } from "@fl3x/shared";
 import { Flag, Icon } from "@/components/ui";
 import { usePreview } from "@/lib/audio";
 import { cn } from "@/lib/cn";
@@ -239,12 +238,8 @@ export function MusicWidgetV2({ w }: { w: Widget }) {
   if (isLoading || !data) return <WSkeleton size={w.size} />;
 
   const playing = live && data.nowPlaying;
-  const status = live && (
-    <div className="mb-1 flex items-center gap-2">
-      {playing && <Equalizer bars={4} className="h-3" />}
-      <span className={cn("font-primary text-[10px] leading-none uppercase", playing ? "text-[#1DB954]" : "text-fg-3")}>{playing ? "Now playing" : "Last played"}</span>
-    </div>
-  );
+  // Playing shows as the moving equalizer only (no "Now playing" label next to it); otherwise say it's the last track.
+  const lastPlayed = live && !playing && <p className="mb-1 font-primary text-[10px] leading-none text-fg-3 uppercase">Last played</p>;
   const cover = (cls: string) => (
     <div className={cn("relative shrink-0 overflow-hidden rounded-xl bg-white/10 shadow-[0_8px_24px_rgba(0,0,0,0.5)]", cls)}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -260,7 +255,7 @@ export function MusicWidgetV2({ w }: { w: Widget }) {
         <div className="relative z-10 flex size-full items-center gap-3">
           {cover("aspect-square h-full")}
           <div className="min-w-0 flex-1">
-            {status}
+            {playing ? <Equalizer bars={4} className="mb-1 h-3" /> : lastPlayed}
             <WTitle className="text-xl leading-none">{data.title}</WTitle>
             {data.author && <p className="truncate text-[11px] text-fg-2">{data.author}</p>}
           </div>
@@ -280,7 +275,7 @@ export function MusicWidgetV2({ w }: { w: Widget }) {
           {cover("size-[84px]")}
           {logo}
         </div>
-        <div className="mt-auto">{status}</div>
+        <div className="mt-auto">{lastPlayed}</div>
         <WTitle className="text-xl leading-none">{data.title}</WTitle>
         {data.author && <p className="truncate text-[11px] text-fg-2">{data.author}</p>}
         <div className="mt-2.5 flex items-center justify-between">
@@ -405,10 +400,9 @@ function useNow(intervalMs: number) {
 }
 
 export function ClockWidgetV2({ w }: { w: Widget }) {
-  const tz = str(w.settings.timezone) || "UTC";
+  // The zone always belongs to the country (older clocks without one get the zone's).
+  const { timezone: tz, country } = resolveClock(w.settings);
   const city = str(w.settings.city).replace(/,$/, "");
-  // The flag follows the time zone unless a country is set by hand.
-  const country = str(w.settings.country) || getTimezone(tz)?.countries[0] || "";
   const now = useNow(10_000);
   let time = "--:--";
   let hour = 12;
@@ -426,7 +420,7 @@ export function ClockWidgetV2({ w }: { w: Widget }) {
   const place = (
     <div className="flex min-w-0 items-center gap-1.5">
       {country && <Flag country={country} className="size-4 shrink-0 rounded-full" />}
-      <span className="truncate font-primary text-base leading-none uppercase">{city || tz.split("/").pop()?.replace(/_/g, " ")}</span>
+      <span className="truncate font-primary text-base leading-none uppercase">{city || zoneCity(tz)}</span>
     </div>
   );
   const icon = <Icon icon={s.icon} size={22} style={{ color: s.tint, filter: `drop-shadow(0 0 10px ${s.tint})` }} />;

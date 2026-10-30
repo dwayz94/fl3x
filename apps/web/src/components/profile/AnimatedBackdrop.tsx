@@ -1,13 +1,16 @@
 import { isAnimatedBackground, type ProfileTheme } from "@fl3x/shared";
 import { cn } from "@/lib/cn";
+import { VideoBackdrop } from "./VideoBackdrop";
 
 /**
  * Premium animated backgrounds, pure CSS: only transform and opacity move
  * (GPU friendly). Keyframes live in globals.css; prefers-reduced-motion
- * freezes them on a still frame. Renders nothing for other backgrounds.
+ * freezes them on a still frame. Also plays uploaded video / GIF
+ * backgrounds. Renders nothing for other backgrounds.
  */
 export function AnimatedBackdrop({ theme, className, compact }: { theme: ProfileTheme; className?: string; compact?: boolean }) {
   const kind = theme.background;
+  if (kind === "video") return theme.backgroundUrl ? <VideoBackdrop url={theme.backgroundUrl} poster={theme.backgroundPoster} className={className} /> : null;
   if (!isAnimatedBackground(kind)) return null;
   const accent = theme.accent;
   const scene = (

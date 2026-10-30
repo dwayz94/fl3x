@@ -1,11 +1,19 @@
 "use client";
 
-import { ArrowDown02Icon, ArrowUp02Icon, Delete02Icon } from "@hugeicons/core-free-icons";
+import { ArrowDown02Icon, ArrowUp02Icon, CursorEdit01Icon, Delete02Icon, DragDropIcon, Image01Icon, PlusSignIcon, TextIcon } from "@hugeicons/core-free-icons";
 import { WIDGETS, type EditableProfile, type FieldDef, type LinkedWallet, type Widget, type WidgetSize } from "@fl3x/shared";
 import { Brand, Icon } from "@/components/ui";
 import { WidgetView } from "@/components/widgets";
 import { cn } from "@/lib/cn";
 import { Field, Label, Segmented } from "./Field";
+
+const TIPS = [
+  { icon: PlusSignIcon, title: "Add", text: "Pick a widget on the left. It shows up at the end of your card." },
+  { icon: DragDropIcon, title: "Move", text: "Drag a widget: the others make room as you go. On a phone, hold it first." },
+  { icon: CursorEdit01Icon, title: "Edit", text: "Click a widget to change its content, size and style here." },
+  { icon: TextIcon, title: "Name & bio", text: "Click your name or bio on the card and type." },
+  { icon: Image01Icon, title: "Picture", text: "Click your avatar on the card to upload a new one." },
+];
 
 export function Inspector(props: {
   draft: EditableProfile;
@@ -23,16 +31,15 @@ export function Inspector(props: {
         <h2 className="border-b border-white/10 pb-5 text-3xl">
           <Brand>[e]D[i]T</Brand>
         </h2>
-        {[
-          ["Add", "Pick a widget on the left. It shows up at the end of your card."],
-          ["Move", "Drag a widget: the others make room as you go. On a phone, hold it first."],
-          ["Edit", "Click a widget to change its content, size and style here."],
-          ["Name & bio", "Click your name or bio on the card and type."],
-          ["Picture", "Click your avatar on the card to upload a new one."],
-        ].map(([t, d]) => (
-          <div key={t} className="rounded-2xl bg-white/[0.04] p-3">
-            <p className="font-primary text-lg leading-none">{t}</p>
-            <p className="mt-1 text-xs text-fg-2">{d}</p>
+        {TIPS.map((t) => (
+          <div key={t.title} className="flex gap-3 rounded-2xl bg-white/[0.04] p-3">
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-brand/10 text-brand">
+              <Icon icon={t.icon} size={18} />
+            </span>
+            <div className="min-w-0">
+              <p className="font-primary text-lg leading-none">{t.title}</p>
+              <p className="mt-1 text-xs text-fg-2">{t.text}</p>
+            </div>
           </div>
         ))}
       </div>

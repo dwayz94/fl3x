@@ -1,10 +1,14 @@
 "use client";
 
-import { useMemo } from "react";
+import { useState } from "react";
 import type { FieldDef, LinkedWallet } from "@fl3x/shared";
 import { ImageInput } from "@/components/ui";
+import { CityInput, CountryPicker, ZonePicker } from "./ClockPlace";
 import { shortAddress } from "@/lib/format";
 import { cn } from "@/lib/cn";
+import { ChainTile, CHAINS } from "@/components/wallet/chain";
+import { ConnectWalletModal } from "@/components/wallet/ConnectWalletModal";
+import { EmptyWallets, LinkWalletButton } from "@/components/wallet/LinkWallet";
 
 export const inputClass =
   "h-10 w-full rounded-xl border border-white/10 bg-[#111] px-3 text-sm text-fg outline-none transition-colors placeholder:text-fg-3 focus:border-brand";
@@ -52,7 +56,6 @@ export function Field({
   onChange: (v: string | number | undefined) => void;
   wallets: LinkedWallet[];
 }) {
-  const timezones = useMemo(() => (def.kind === "timezone" ? Intl.supportedValuesOf("timeZone") : []), [def.kind]);
   const str = value === undefined ? "" : String(value);
 
   let control: React.ReactNode;
@@ -89,16 +92,14 @@ export function Field({
     case "wallets":
       control = <WalletsPicker value={str || def.default} onChange={onChange} wallets={wallets} />;
       break;
+    case "country":
+      control = <CountryPicker settings={settings} onChange={onChange} />;
+      break;
     case "timezone":
-      control = (
-        <select className={inputClass} value={str || "UTC"} onChange={(e) => onChange(e.target.value)}>
-          {timezones.map((tz) => (
-            <option key={tz} value={tz}>
-              {tz.replace(/_/g, " ")}
-            </option>
-          ))}
-        </select>
-      );
+      control = <ZonePicker settings={settings} countryKey={def.country} onChange={onChange} />;
+      break;
+    case "city":
+      control = <CityInput settings={settings} value={str} timezoneKey={def.timezone} countryKey={def.country} max={def.max} onChange={onChange} />;
       break;
     case "datetime":
       control = (
@@ -171,11 +172,9 @@ export function Field({
   );
 }
 
-/** "All wallets" (default, follows future links) or a hand-picked set. */
+/** "All wallets" (default, follows future links) or a hand-picked set, and linking a new one right here. */
 function WalletsPicker({ value, onChange, wallets }: { value: string; onChange: (v: string) => void; wallets: LinkedWallet[] }) {
-  if (wallets.length === 0) {
-    return <p className="rounded-xl border border-dashed border-white/15 px-3 py-2.5 text-xs text-fg-3">Link a wallet in Settings to display it</p>;
-  }
+  const [open, setOpen] = useState(false);
   const all = value === "all";
   const picked = new Set(all ? wallets.map((w) => w.address) : value.split(",").filter(Boolean));
   const toggle = (address: string) => {
@@ -184,30 +183,41 @@ function WalletsPicker({ value, onChange, wallets }: { value: string; onChange: 
     else next.add(address);
     onChange(next.size === wallets.length ? "all" : [...next].join(","));
   };
+  // A hand-picked set gets the new wallet too: it was linked for this widget.
+  const onLinked = (_me: unknown, address: string) => {
+    if (!all) onChange([...picked, address].join(","));
+  };
+  const modal = <ConnectWalletModal open={open} onClose={() => setOpen(false)} onLinked={onLinked} />;
+
+  if (wallets.length === 0) {
+    return (
+      <>
+        <EmptyWallets compact onLink={() => setOpen(true)} />
+        {modal}
+      </>
+    );
+  }
   return (
     <div className="flex flex-col gap-1.5">
       <button
         type="button"
         onClick={() => onChange("all")}
-        className={cn("flex items-center justify-between rounded-xl border px-3 py-2 text-xs", all ? "border-brand bg-brand/10 text-fg" : "border-white/10 bg-[#111] text-fg-2")}
+        className={cn("flex h-10 items-center justify-between rounded-xl border px-3 text-xs transition-colors", all ? "border-brand bg-brand/10 text-fg" : "border-white/10 bg-[#111] text-fg-2 hover:text-fg")}
       >
         All my wallets <span className="text-fg-3">{wallets.length} combined</span>
       </button>
       {wallets.map((w) => (
-        <label key={w.id} className="flex cursor-pointer items-center gap-2.5 rounded-xl border border-white/10 bg-[#111] px-3 py-2 text-xs">
-          <input type="checkbox" checked={picked.has(w.address)} onChange={() => toggle(w.address)} className="accent-brand" />
-          <ChainDot chain={w.chain} />
-          <span className="font-mono text-fg-2">{shortAddress(w.address)}</span>
+        <label key={w.id} className="flex h-11 cursor-pointer items-center gap-2.5 rounded-xl border border-white/10 bg-[#111] px-2 text-xs transition-colors hover:border-white/20">
+          <ChainTile chain={w.chain} size={28} />
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-fg">{w.label || `${CHAINS[w.chain].label} wallet`}</span>
+            <span className="block font-mono text-[10px] text-fg-3">{shortAddress(w.address)}</span>
+          </span>
+          <input type="checkbox" checked={picked.has(w.address)} onChange={() => toggle(w.address)} className="size-4 accent-brand" />
         </label>
       ))}
+      <LinkWalletButton onClick={() => setOpen(true)} />
+      {modal}
     </div>
-  );
-}
-
-export function ChainDot({ chain }: { chain: LinkedWallet["chain"] }) {
-  return (
-    <span className={cn("rounded-md px-1.5 py-0.5 text-[9px] font-normal uppercase", chain === "solana" ? "bg-[#9945FF]/25 text-[#C9A8FF]" : "bg-[#627EEA]/25 text-[#AFC0FF]")}>
-      {chain === "solana" ? "SOL" : "EVM"}
-    </span>
   );
 }

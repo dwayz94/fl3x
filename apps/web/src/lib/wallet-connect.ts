@@ -18,11 +18,32 @@ export interface DetectedWallet {
   sign: (address: string, message: string) => Promise<string>;
 }
 
-/** Wallets we show even when not installed, with where to get them. */
-export const KNOWN_WALLETS: { name: string; chain: WalletChain; url: string; match: RegExp }[] = [
-  { name: "Phantom", chain: "solana", url: "https://phantom.com/download", match: /phantom/i },
-  { name: "Solflare", chain: "solana", url: "https://solflare.com/download", match: /solflare/i },
-  { name: "Backpack", chain: "solana", url: "https://backpack.app/download", match: /backpack/i },
+/** Wallets we show even when not installed, with where to get them (and, on phones, their in-app browser). */
+export const KNOWN_WALLETS: { name: string; chain: WalletChain; url: string; match: RegExp; icon?: string; browse?: (url: string) => string }[] = [
+  {
+    name: "Phantom",
+    chain: "solana",
+    url: "https://phantom.com/download",
+    match: /phantom/i,
+    icon: "/images/wallets/phantom.svg",
+    browse: (url) => `https://phantom.app/ul/browse/${encodeURIComponent(url)}?ref=${encodeURIComponent(new URL(url).origin)}`,
+  },
+  {
+    name: "Solflare",
+    chain: "solana",
+    url: "https://solflare.com/download",
+    match: /solflare/i,
+    icon: "/images/wallets/solflare.svg",
+    browse: (url) => `https://solflare.com/ul/v1/browse/${encodeURIComponent(url)}?ref=${encodeURIComponent(new URL(url).origin)}`,
+  },
+  {
+    name: "Backpack",
+    chain: "solana",
+    url: "https://backpack.app/download",
+    match: /backpack/i,
+    icon: "/images/wallets/backpack.png",
+    browse: (url) => `https://backpack.app/ul/v1/browse/${encodeURIComponent(url)}?ref=${encodeURIComponent(new URL(url).origin)}`,
+  },
   { name: "MetaMask", chain: "evm", url: "https://metamask.io/download", match: /metamask/i },
   { name: "Rabby", chain: "evm", url: "https://rabby.io", match: /rabby/i },
   { name: "Coinbase Wallet", chain: "evm", url: "https://www.coinbase.com/wallet/downloads", match: /coinbase/i },
@@ -30,6 +51,9 @@ export const KNOWN_WALLETS: { name: string; chain: WalletChain; url: string; mat
   { name: "OKX Wallet", chain: "evm", url: "https://www.okx.com/web3", match: /okx/i },
   { name: "Rainbow", chain: "evm", url: "https://rainbow.me/download", match: /rainbow/i },
 ];
+
+/** Phones have no extensions: wallets open the page in their own browser instead. */
+export const isMobileBrowser = () => typeof navigator !== "undefined" && /android|iphone|ipad|ipod/i.test(navigator.userAgent);
 
 /* ---------------------------------------------------------------- EVM */
 

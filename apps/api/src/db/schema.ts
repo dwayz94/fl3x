@@ -137,15 +137,21 @@ export const walletChallenges = pgTable("wallet_challenges", {
   expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
 });
 
-/** Uploaded images, re-encoded to WebP by the API (never served as uploaded). */
+/**
+ * Uploads. Images are re-encoded to WebP (never served as uploaded); video
+ * backgrounds (kind "video") are MP4 / WebM kept as uploaded once checked, or
+ * animated WebP made from a GIF; "poster" is the still frame shown for them.
+ */
 export const media = pgTable("media", {
   id: uuid("id").primaryKey().defaultRandom(),
   userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  kind: text("kind", { enum: ["avatar", "background", "widget"] }).notNull(),
+  kind: text("kind", { enum: ["avatar", "background", "widget", "video", "poster"] }).notNull(),
   mime: text("mime").notNull(),
   bytes: bytea("bytes").notNull(),
   width: integer("width").notNull(),
   height: integer("height").notNull(),
+  /** Videos and animations only. */
+  durationMs: integer("duration_ms"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [index("media_user_idx").on(t.userId)]);
 

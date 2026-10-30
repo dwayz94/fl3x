@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { imageUrl } from "./profile";
+import { isCountryCode, localTimeZone, resolveClock } from "./timezones";
 
 /**
  * Widget catalogue. Field definitions drive both the dashboard inspector
@@ -44,7 +45,12 @@ export type FieldDef =
   /** "all" (every verified wallet, the default) or a comma-separated list of addresses. */
   | { key: string; label: string; kind: "wallets"; default: string }
   | { key: string; label: string; kind: "datetime"; required?: boolean }
-  | { key: string; label: string; kind: "timezone" }
+  /** Country picker (ISO code, flag + name). */
+  | { key: string; label: string; kind: "country" }
+  /** Time zone limited to the zones of the `country` field: set by itself when the country has only one. */
+  | { key: string; label: string; kind: "timezone"; country: string }
+  /** Display name of the clock's place: emptied when the country or zone changes, the zone's city shows meanwhile. */
+  | { key: string; label: string; kind: "city"; timezone: string; country: string; max?: number }
   | { key: string; label: string; kind: "color"; default: string }
   | { key: string; label: string; kind: "range"; min: number; max: number; default: number };
 
@@ -174,9 +180,9 @@ export const WIDGETS = {
     description: "Your local time and flag",
     category: "utility",
     fields: [
-      { key: "timezone", label: "Time zone", kind: "timezone" },
-      { key: "city", label: "City", kind: "text", max: 30 },
-      { key: "country", label: "Flag (auto from the time zone)", kind: "text", placeholder: "Auto, or a code like AE", max: 2 },
+      { key: "country", label: "Country", kind: "country" },
+      { key: "timezone", label: "Time zone", kind: "timezone", country: "country" },
+      { key: "city", label: "City", kind: "city", timezone: "timezone", country: "country", max: 30 },
       opacity,
     ],
   },
@@ -239,7 +245,14 @@ export interface Widget {
 
 export function defaultSettings(type: WidgetType): WidgetSettings {
   const out: WidgetSettings = {};
-  for (const f of WIDGETS[type].fields as readonly FieldDef[]) if ("default" in f) out[f.key] = f.default;
+  for (const f of WIDGETS[type].fields as readonly FieldDef[]) {
+    if ("default" in f) out[f.key] = f.default;
+    // New clocks start on the member's own zone (the country follows from it).
+    else if (f.kind === "timezone") {
+      const tz = localTimeZone();
+      if (tz) out[f.key] = tz;
+    }
+  }
   return out;
 }
 
@@ -266,6 +279,9 @@ function fieldSchema(f: FieldDef): z.ZodType {
       return z.union([z.literal("all"), z.string().regex(/^[A-Za-z0-9]{32,44}(,[A-Za-z0-9]{32,44}){0,9}$/)]);
     case "timezone":
       return z.string().max(64);
+    case "country":
+      // Older clocks kept a free 2-letter text: an unknown code is dropped (the flag then follows the zone).
+      return z.string().max(2).transform((v) => (isCountryCode(v) ? v.toUpperCase() : undefined));
     default:
       return z.string().max(f.max ?? 200);
   }
@@ -293,7 +309,14 @@ export const widgetInput = z
       }
       const parsed = fieldSchema(f).safeParse(raw);
       if (!parsed.success) ctx.addIssue({ code: "custom", message: `${WIDGETS[w.type].name}: invalid ${f.label}` });
-      else settings[f.key] = parsed.data as string | number;
+      else if (parsed.data !== undefined) settings[f.key] = parsed.data as string | number;
+    }
+    // A clock's zone always belongs to its country (older clocks get the country from the zone).
+    for (const f of WIDGETS[w.type].fields as readonly FieldDef[]) {
+      if (f.kind !== "timezone" || (settings[f.key] === undefined && settings[f.country] === undefined)) continue;
+      const clock = resolveClock({ timezone: settings[f.key], country: settings[f.country] });
+      settings[f.key] = clock.timezone;
+      if (clock.country) settings[f.country] = clock.country;
     }
     return { ...w, settings };
   });

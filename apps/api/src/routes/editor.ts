@@ -2,10 +2,11 @@ import type { FastifyInstance } from "fastify";
 import { and, count, eq, notInArray, sql } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 import {
-  DEFAULT_THEME, PREMIUM_THEME_KEYS, TIER_LIMITS, isAnimatedBackground, identityInput, linksInput, profileInput, widgetsInput,
+  DEFAULT_THEME, PREMIUM_THEME_KEYS, TIER_LIMITS, isPremiumBackground, identityInput, linksInput, profileInput, widgetsInput,
   type ProfileTheme,
 } from "@fl3x/shared";
 import { db, schema } from "../db";
+import { env } from "../env";
 import { requireUser } from "../lib/auth";
 import { badRequest, forbidden } from "../lib/errors";
 import { badgesFor, loadProfile } from "../lib/profiles";
@@ -17,6 +18,14 @@ async function requireMember(req: Parameters<typeof requireUser>[0]): Promise<Us
   if (!user.username) throw forbidden("Claim a username first");
   // Limits follow the tokens held right now (cached 10 minutes), not the last /me call.
   return refreshTier(user);
+}
+
+/** True when the URL is one of our uploads stored as a video background (video or animated WebP). */
+async function isUploadedVideo(url: string | undefined): Promise<boolean> {
+  const id = url?.startsWith(`${env.API_PUBLIC_URL}/media/`) ? /\/media\/([0-9a-f-]{36})\.\w+$/.exec(url)?.[1] : undefined;
+  if (!id) return false;
+  const [row] = await db.select({ kind: schema.media.kind }).from(schema.media).where(eq(schema.media.id, id)).limit(1);
+  return row?.kind === "video";
 }
 
 export async function editorRoutes(app: FastifyInstance) {
@@ -32,8 +41,10 @@ export async function editorRoutes(app: FastifyInstance) {
     const theme = { ...body.theme } as ProfileTheme;
     if (user.tier !== "premium") {
       for (const key of PREMIUM_THEME_KEYS) (theme as unknown as Record<string, unknown>)[key] = DEFAULT_THEME[key];
-      // Animated backgrounds are Premium too.
-      if (isAnimatedBackground(theme.background)) theme.background = "plain";
+      // Animated and video / GIF backgrounds are Premium too, even passed off as an "image".
+      if (isPremiumBackground(theme.background) || (theme.background === "image" && (await isUploadedVideo(theme.backgroundUrl)))) {
+        theme.background = "plain";
+      }
     }
     await db
       .update(schema.profiles)

@@ -78,7 +78,9 @@ export async function renderShareImage(username: string, fresh = false) {
   const premium = profile.tier === "premium";
   const name = (profile.displayName || profile.username).toUpperCase();
   const bio = profile.bio && profile.bio.length > 110 ? `${profile.bio.slice(0, 107).trimEnd()}…` : profile.bio;
-  const bgUrl = profile.theme.background === "image" ? profile.theme.backgroundUrl : null;
+  // A video / GIF background shows as its still frame (Premium only, like on the page).
+  const bgUrl =
+    profile.theme.background === "image" ? profile.theme.backgroundUrl : profile.theme.background === "video" && premium ? profile.theme.backgroundPoster : null;
   const [avatar, background, badges] = await Promise.all([
     rasterUri(profile.avatarUrl, 440, 440),
     rasterUri(bgUrl, 1200, 630),
