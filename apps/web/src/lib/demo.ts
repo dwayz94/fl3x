@@ -1,5 +1,5 @@
 import { BADGES, DEFAULT_THEME, defaultSettings, type FullPublicProfile, type Widget, type WidgetSettings, type WidgetSize, type WidgetType } from "@fl3x/shared";
-import type { PortfolioData } from "@fl3x/shared";
+import type { HyperliquidData, PolymarketData, PortfolioData, TradesData } from "@fl3x/shared";
 import type { CommunityData, MediaData, TokenData } from "./types";
 
 /**
@@ -64,7 +64,57 @@ const wallet: PortfolioData = {
   wallets: 2,
 };
 
+const SOL_ICON = "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png";
+const BONK_ICON = "https://arweave.net/hQiPZOsRZXGXBJd_82PhVdlM_hACsT_q6wqwf5cSY7I";
+
+/** A month of daily values (calendar preview): mostly green days, a few red. */
+const monthly = (() => {
+  const out: { at: string; valueUsd: number }[] = [];
+  let v = 91_000;
+  for (let d = 30; d >= 0; d--) {
+    v *= 1 + Math.sin(d * 1.7) * 0.035 + 0.012;
+    out.push({ at: new Date(Date.now() - d * 86_400_000).toISOString(), valueUsd: v });
+  }
+  return out;
+})();
+
+const trades: TradesData = {
+  wallets: 1,
+  items: [
+    { signature: "demo-1", at: new Date(Date.now() - 2 * 3_600_000).toISOString(), side: "buy", token: { address: "bonk", symbol: "BONK", name: "Bonk", iconUrl: BONK_ICON }, amount: 41_200_000, quote: { symbol: "SOL", amount: 4.2 }, valueUsd: 744 },
+    { signature: "demo-2", at: new Date(Date.now() - 7 * 3_600_000).toISOString(), side: "sell", token: { address: "nova", symbol: "NOVA", name: "Nova", iconUrl: IMG.avatar3 }, amount: 120_000, quote: { symbol: "SOL", amount: 9.8 }, valueUsd: 1_736 },
+    { signature: "demo-3", at: new Date(Date.now() - 26 * 3_600_000).toISOString(), side: "buy", token: { address: "fl3x", symbol: "FL3X", name: "FL3X", iconUrl: "/images/fl3x-icon.svg" }, amount: 2_400_000, quote: { symbol: "USDC", amount: 5_000 }, valueUsd: 5_000 },
+    { signature: "demo-4", at: new Date(Date.now() - 3 * 86_400_000).toISOString(), side: "sell", token: { address: "sol", symbol: "SOL", name: "Solana", iconUrl: SOL_ICON }, amount: 12, quote: { symbol: "USDC", amount: 2_124 }, valueUsd: 2_124 },
+  ],
+};
+
+const hyperliquid: HyperliquidData = {
+  wallets: 1,
+  accountValue: 48_230,
+  unrealizedPnl: 2_310,
+  pnl: { day: 1_120, week: 4_870, month: 12_640, allTime: 38_900 },
+  positions: [
+    { coin: "BTC", side: "long", size: 0.4, entryPx: 98_200, valueUsd: 41_000, unrealizedPnl: 1_740, leverage: 5 },
+    { coin: "SOL", side: "short", size: 60, entryPx: 182, valueUsd: 10_700, unrealizedPnl: 570, leverage: 3 },
+    { coin: "HYPE", side: "long", size: 300, entryPx: 34.1, valueUsd: 10_500, unrealizedPnl: -210, leverage: 2 },
+  ],
+};
+
+const polymarket: PolymarketData = {
+  name: "nova",
+  totalValue: 8_420,
+  totalPnl: 1_260,
+  url: "#",
+  positions: [
+    { title: "Will SOL close 2026 above $300?", outcome: "Yes", size: 4_000, avgPrice: 0.31, curPrice: 0.44, valueUsd: 1_760, pnl: 520, pnlPct: 41.9, icon: SOL_ICON, url: "#" },
+    { title: "Will a memecoin flip $10B market cap this year?", outcome: "No", size: 3_000, avgPrice: 0.58, curPrice: 0.66, valueUsd: 1_980, pnl: 240, pnlPct: 13.8, icon: BONK_ICON, url: "#" },
+    { title: "ETH ETF net inflows positive in November?", outcome: "Yes", size: 2_500, avgPrice: 0.62, curPrice: 0.55, valueUsd: 1_375, pnl: -175, pnlPct: -11.3, icon: null, url: "#" },
+  ],
+};
+
 const tokens: Record<string, TokenData> = {
+  sol: { chain: "solana", address: "sol", name: "Solana", symbol: "SOL", priceUsd: 177.2, marketCap: 96_000_000_000, change24h: 4.6, imageUrl: SOL_ICON, url: "#" },
+  bonk: { chain: "solana", address: "bonk", name: "Bonk", symbol: "BONK", priceUsd: 0.0000181, marketCap: 1_400_000_000, change24h: -2.4, imageUrl: BONK_ICON, url: "#" },
   nova: { chain: "solana", address: "nova", name: "Nova", symbol: "NOVA", priceUsd: 0.0005, marketCap: 500_000, change24h: 18, imageUrl: IMG.avatar3, url: "#" },
   fl3x: { chain: "solana", address: "fl3x", name: "FL3X", symbol: "FL3X", priceUsd: 0.0021, marketCap: 2_100_000, change24h: 42, imageUrl: "/images/fl3x-icon.svg", url: "#" },
 };
@@ -102,7 +152,15 @@ export function resolveDemo(path: string, params: Record<string, string | undefi
         total: 24,
         wallets: 1,
       };
+    case "trades":
+      return trades;
+    case "hyperliquid":
+      return hyperliquid;
+    case "polymarket":
+      return polymarket;
     case "portfolio":
+      // The calendar reads a month: daily points instead of the hourly ones.
+      if (params.period === "1m") return { ...wallet, history: monthly };
       return wallet;
     case "token":
       return tokens[params.address?.replace("demo:", "") ?? ""];
@@ -130,6 +188,14 @@ export const DEMO_WIDGETS: { type: WidgetType; label?: string; settings: WidgetS
   { type: "portfolio", settings: { period: "7d" } },
   { type: "holdings", settings: {} },
   { type: "nfts", settings: {} },
+  { type: "allocation", settings: {} },
+  { type: "movers", settings: {} },
+  { type: "calendar", settings: { network: "solana" } },
+  { type: "trades", settings: {} },
+  { type: "watchlist", settings: { chain: "solana", tokens: "demo:sol, demo:bonk, demo:fl3x, demo:nova" } },
+  { type: "hyperliquid", settings: { period: "month" } },
+  { type: "polymarket", settings: { user: "demo" } },
+  { type: "quote", settings: { quote: "Stay humble. Stack bags. Flex anyway.", author: "Nova" } },
   { type: "token", settings: { chain: "solana", address: "demo:nova", note: "My main bag this cycle. Not financial advice." } },
   { type: "community", label: "Telegram", settings: { platform: "telegram", invite: "fl3x" } },
   { type: "community", label: "Discord", settings: { platform: "discord", invite: "fl3x" } },

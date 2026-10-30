@@ -11,6 +11,7 @@ import { connectionRoutes } from "./routes/connections";
 import { dataRoutes } from "./routes/data";
 import { devRoutes } from "./routes/dev";
 import { editorRoutes } from "./routes/editor";
+import { marketRoutes } from "./routes/markets";
 import { mediaRoutes } from "./routes/media";
 import { meRoutes } from "./routes/me";
 import { isInternalRequest } from "./lib/internal";
@@ -84,6 +85,7 @@ export async function buildApp() {
   await app.register(dataRoutes);
   await app.register(mediaRoutes);
   await app.register(walletRoutes);
+  await app.register(marketRoutes);
   await app.register(connectionRoutes);
   await app.register(adminRoutes);
   await app.register(devRoutes);

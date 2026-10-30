@@ -1,7 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { and, arrayContains, eq, ne } from "drizzle-orm";
 import { z } from "zod";
-import { onNetwork, PERIODS, type PeriodId } from "@fl3x/shared";
+import { onNetwork, PERIODS, PORTFOLIO_WIDGET_TYPES, type PeriodId } from "@fl3x/shared";
 import { db, schema } from "../db";
 import { requireUser } from "../lib/auth";
 import { badRequest, conflict, notFound } from "../lib/errors";
@@ -105,7 +105,7 @@ export async function walletRoutes(app: FastifyInstance) {
       .innerJoin(schema.users, eq(schema.users.id, schema.widgets.userId))
       .where(eq(schema.widgets.id, req.params.widgetId))
       .limit(1);
-    if (!row || !["pnl", "portfolio", "holdings"].includes(row.widget.type)) throw notFound();
+    if (!row || !(PORTFOLIO_WIDGET_TYPES as readonly string[]).includes(row.widget.type)) throw notFound();
     // A P&L card counts only the wallets of its network (Solana or EVM).
     return getPortfolio(onNetwork(resolveWidgetWallets(row.widget.settings.wallets, await verifiedWallets(row.user)), row.widget.settings.network), q.period);
   });

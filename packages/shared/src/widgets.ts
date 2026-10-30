@@ -45,7 +45,7 @@ type ShowWhen = {
 };
 
 export type FieldDef = ShowWhen & (
-  | { key: string; label: string; kind: "text" | "textarea"; placeholder?: string; max?: number; required?: boolean }
+  | { key: string; label: string; kind: "text" | "textarea"; placeholder?: string; max?: number; required?: boolean; pattern?: string; hint?: string }
   /** `pattern` narrows the link (e.g. Spotify tracks only), `hint` is the error then. */
   | { key: string; label: string; kind: "url"; placeholder?: string; required?: boolean; pattern?: string; hint?: string }
   /**
@@ -59,7 +59,8 @@ export type FieldDef = ShowWhen & (
   | { key: string; label: string; kind: "select" | "segmented"; options: readonly Opt[]; default: string }
   /**
    * "all" (every verified wallet, the default) or a comma-separated list of addresses.
-   * `network` names a field ("solana" | "evm") that limits which wallets count.
+   * `network` limits which wallets count: "solana" / "evm" for a fixed family, or the
+   * key of a field holding one (the P&L card's Network).
    */
   | { key: string; label: string; kind: "wallets"; default: string; network?: string }
   | { key: string; label: string; kind: "datetime"; required?: boolean }
@@ -83,6 +84,17 @@ export interface WidgetDef {
 }
 
 const wallets = { key: "wallets", label: "Wallets", kind: "wallets", default: "all" } as const satisfies FieldDef;
+
+/** Hyperliquid P&L windows (its own portfolio history). */
+export const HL_PERIODS = [
+  { id: "day", label: "24h" },
+  { id: "week", label: "7d" },
+  { id: "month", label: "30d" },
+  { id: "allTime", label: "All" },
+] as const;
+
+/** Widgets built on the member's wallet value (snapshotted hourly, fetched by widget id). */
+export const PORTFOLIO_WIDGET_TYPES = ["pnl", "portfolio", "holdings", "allocation", "movers", "calendar"] as const;
 
 /** Wallet families a widget can be limited to (EVM covers Ethereum, Base, BNB, Arbitrum, Robinhood…). */
 export const NETWORKS = [
@@ -148,6 +160,65 @@ export const WIDGETS = {
     description: "Wallet value and its biggest bags",
     category: "crypto",
     fields: [wallets, opacity, ...surface],
+  },
+  allocation: {
+    name: "Allocation",
+    description: "How your portfolio splits between your biggest bags",
+    category: "crypto",
+    fields: [wallets, opacity, ...surface],
+  },
+  movers: {
+    name: "Best & Worst",
+    description: "Your best and worst bag of the last 24 hours",
+    category: "crypto",
+    fields: [wallets, opacity, ...surface],
+  },
+  calendar: {
+    name: "P&L Calendar",
+    description: "Green and red days of your wallets this month",
+    category: "crypto",
+    fields: [
+      { key: "network", label: "Network", kind: "segmented", options: NETWORKS, default: "solana" },
+      { ...wallets, network: "network" },
+      opacity,
+      ...surface,
+    ],
+  },
+  trades: {
+    name: "Recent Trades",
+    description: "Your last swaps on Solana",
+    category: "crypto",
+    fields: [{ ...wallets, network: "solana" }, opacity, ...surface],
+  },
+  watchlist: {
+    name: "Watchlist",
+    description: "Up to 4 tokens with their live price",
+    category: "crypto",
+    fields: [
+      { key: "chain", label: "Chain", kind: "select", options: CHAINS, default: "solana" },
+      {
+        key: "tokens", label: "Token addresses (up to 4, comma separated)", kind: "text", placeholder: "Mint / contract, Mint / contract…", max: 280, required: true,
+        pattern: "^\\s*[A-Za-z0-9]{20,64}(\\s*,\\s*[A-Za-z0-9]{20,64}){0,3}\\s*,?\\s*$", hint: "Paste 1 to 4 token addresses, separated by commas",
+      },
+      opacity,
+      ...surface,
+    ],
+  },
+  hyperliquid: {
+    name: "Hyperliquid",
+    description: "Your perps P&L and open positions on Hyperliquid",
+    category: "crypto",
+    fields: [{ ...wallets, network: "evm" }, { key: "period", label: "P&L", kind: "segmented", options: HL_PERIODS, default: "month" }, opacity, ...surface],
+  },
+  polymarket: {
+    name: "Polymarket",
+    description: "Your open bets on Polymarket",
+    category: "crypto",
+    fields: [
+      { key: "user", label: "Polymarket profile", kind: "text", placeholder: "@username, 0x… or your profile link", max: 120, required: true },
+      opacity,
+      ...surface,
+    ],
   },
   nfts: {
     name: "NFT Gallery",
@@ -276,6 +347,17 @@ export const WIDGETS = {
       ...surface,
     ],
   },
+  quote: {
+    name: "Quote",
+    description: "A line you live by, set big",
+    category: "utility",
+    fields: [
+      { key: "quote", label: "Quote", kind: "textarea", max: 140, required: true },
+      { key: "author", label: "Who said it (optional)", kind: "text", max: 40 },
+      opacity,
+      ...surface,
+    ],
+  },
   text: {
     name: "Text",
     description: "A note, a quote, an announcement",
@@ -350,8 +432,10 @@ function fieldSchema(f: FieldDef): z.ZodType {
     case "country":
       // Older clocks kept a free 2-letter text: an unknown code is dropped (the flag then follows the zone).
       return z.string().max(2).transform((v) => (isCountryCode(v) ? v.toUpperCase() : undefined));
-    default:
-      return z.string().max(f.max ?? 200);
+    default: {
+      const text = z.string().max(f.max ?? 200);
+      return "pattern" in f && f.pattern ? text.regex(new RegExp(f.pattern), f.hint) : text;
+    }
   }
 }
 

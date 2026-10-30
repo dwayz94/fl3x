@@ -385,6 +385,30 @@ export const HELP_GROUPS: HelpGroup[] = [
                 type: "p",
                 text: "**NFT Gallery** shows NFTs from your linked **Solana** wallets (EVM NFTs aren't supported yet, and compressed NFTs are skipped), with the total count. The large card shows a 2×2 grid, the long card a row of 4.",
               },
+              {
+                type: "list",
+                items: [
+                  "**Allocation**: how your wallets split between your three biggest bags and the rest.",
+                  "**Best & Worst**: the bag that gained and the one that lost the most dollars over the last 24 hours.",
+                  "**P&L Calendar**: one square per day for the last month, green when your wallets went up, red when they went down (Solana or EVM, like the P&L card). It fills in as hourly history builds up.",
+                  "**Recent Trades**: your last swaps on Solana (bought or sold, for how much SOL or USDC, how long ago).",
+                  "**Hyperliquid**: the perps P&L of your linked EVM wallets over 24h, 7d, 30d or all time, your account value and open positions.",
+                ],
+              },
+            ],
+          },
+          {
+            id: "market-widgets",
+            heading: "Market widgets",
+            blocks: [
+              {
+                type: "list",
+                items: [
+                  "**Watchlist**: up to 4 tokens (paste their addresses, separated by commas) with their live price and 24h change.",
+                  "**Polymarket**: the open bets of a Polymarket profile. Enter your @username, your Polymarket wallet (0x…) or your profile link.",
+                  "**Quote**: a line you live by, set big, with who said it.",
+                ],
+              },
             ],
           },
           {

@@ -2,7 +2,7 @@ import { createPublicKey, randomBytes, verify } from "node:crypto";
 import bs58 from "bs58";
 import { and, eq, gt, inArray, lt } from "drizzle-orm";
 import { getAddress, isAddress, verifyMessage } from "viem";
-import type { LinkedWallet, WalletChain } from "@fl3x/shared";
+import { PORTFOLIO_WIDGET_TYPES, type LinkedWallet, type WalletChain } from "@fl3x/shared";
 import { db, schema } from "../db";
 import type { UserRow } from "./users";
 
@@ -91,7 +91,7 @@ export async function walletsToSnapshot(): Promise<string[]> {
   const owners = await db
     .selectDistinct({ userId: schema.widgets.userId })
     .from(schema.widgets)
-    .where(inArray(schema.widgets.type, ["pnl", "portfolio", "holdings"]));
+    .where(inArray(schema.widgets.type, [...PORTFOLIO_WIDGET_TYPES]));
   if (owners.length === 0) return [];
   const ids = owners.map((o) => o.userId);
   const [users, linked] = await Promise.all([

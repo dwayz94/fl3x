@@ -5,7 +5,8 @@ import type { Widget } from "@fl3x/shared";
 import { HoldingsWidget, NftWidget, PnlWidget, TokenWidget } from "./crypto";
 import { CommunityWidget } from "./social";
 import { ClockWidgetV2, CountdownWidgetV2, FollowersWidgetV2, MusicWidgetV2, PortfolioWidgetV2, VideoWidgetV2 } from "./v2";
-import { ImageWidget, LinkWidget, ReactionsWidget, TextWidget } from "./utility";
+import { AllocationWidget, CalendarWidget, HyperliquidWidget, MoversWidget, PolymarketWidget, TradesWidget, WatchlistWidget } from "./markets";
+import { ImageWidget, LinkWidget, QuoteWidget, ReactionsWidget, TextWidget } from "./utility";
 
 import { WidgetSurface, WidgetTier } from "./WidgetFrame";
 
@@ -34,6 +35,14 @@ function WidgetBody({ w, interactive }: { w: Widget; interactive: boolean }) {
     case "holdings": return <HoldingsWidget w={w} />;
     case "token": return <TokenWidget w={w} />;
     case "nfts": return <NftWidget w={w} />;
+    case "allocation": return <AllocationWidget w={w} />;
+    case "movers": return <MoversWidget w={w} />;
+    case "calendar": return <CalendarWidget w={w} />;
+    case "trades": return <TradesWidget w={w} />;
+    case "watchlist": return <WatchlistWidget w={w} />;
+    case "hyperliquid": return <HyperliquidWidget w={w} />;
+    case "polymarket": return <PolymarketWidget w={w} />;
+    case "quote": return <QuoteWidget w={w} />;
     case "community": return <CommunityWidget w={w} />;
     case "followers": return <FollowersWidgetV2 w={w} />;
     case "video": return <VideoWidgetV2 w={w} />;

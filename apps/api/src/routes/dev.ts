@@ -1,7 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
-import { BADGES, defaultSettings, type WidgetSettings, type WidgetType, TIER_LIMITS } from "@fl3x/shared";
+import { BADGES, defaultSettings, type WidgetSettings, type WidgetType, TIER_LIMITS, PORTFOLIO_WIDGET_TYPES } from "@fl3x/shared";
 import { db, schema } from "../db";
 import { env } from "../env";
 import { generateCode } from "../lib/codes";
@@ -64,7 +64,7 @@ async function seedMember(name: string) {
     await tx.insert(schema.widgets).values(
       SAMPLE_WIDGETS
         // Wallet widgets need a verified wallet: skipped when DEV_WALLET is empty.
-        .filter((w) => wallet || !["pnl", "portfolio", "holdings"].includes(w.type))
+        .filter((w) => wallet || !(PORTFOLIO_WIDGET_TYPES as readonly string[]).includes(w.type))
         .map((w, position) => ({
           userId: user.id,
           type: w.type,

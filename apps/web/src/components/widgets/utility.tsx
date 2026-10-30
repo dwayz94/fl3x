@@ -37,6 +37,26 @@ export function TextWidget({ w }: { w: Widget }) {
   );
 }
 
+/** A line set big in Moga, with an optional author. The type shrinks as the quote gets longer. */
+export function QuoteWidget({ w }: { w: Widget }) {
+  const quote = str(w.settings.quote).trim();
+  const author = str(w.settings.author).trim();
+  const opacity = num(w.settings.bgOpacity, 100);
+  if (!quote) return <WEmpty size={w.size} label="Write your quote" />;
+  const long = w.size === "long";
+  const size = long ? (quote.length > 70 ? 15 : quote.length > 40 ? 18 : 22) : quote.length > 90 ? 18 : quote.length > 50 ? 22 : 28;
+  return (
+    <WidgetFrame size={w.size} opacity={opacity} className={long ? "flex-col items-start justify-center gap-1" : "justify-center gap-2"}>
+      <p className={`font-primary leading-[1.05] uppercase ${long ? "line-clamp-2" : "line-clamp-6"}`} style={{ fontSize: size }}>
+        <span className="text-brand">“</span>
+        {quote}
+        <span className="text-brand">”</span>
+      </p>
+      {author && <p className="text-[11px] text-fg-2">— {author}</p>}
+    </WidgetFrame>
+  );
+}
+
 const DEFAULT_EMOJIS = "🤑😈💀🤡🤖";
 
 export function ReactionsWidget({ w, interactive }: { w: Widget; interactive: boolean }) {

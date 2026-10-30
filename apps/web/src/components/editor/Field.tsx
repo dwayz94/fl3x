@@ -43,6 +43,10 @@ export function Segmented({ options, value, onChange }: { options: readonly { id
   );
 }
 
+/** A wallets field's family: fixed ("solana" / "evm") or read from another field (default Solana). */
+const walletNetwork = (network: string, settings: Record<string, unknown>) =>
+  network === "solana" || network === "evm" ? network : settings[network] === "evm" ? "evm" : "solana";
+
 export function Field({
   def,
   value,
@@ -105,7 +109,7 @@ export function Field({
           value={str || def.default}
           onChange={onChange}
           // Limited to the widget's network when it has one (P&L: Solana or EVM).
-          wallets={def.network ? wallets.filter((w) => addressNetwork(w.address) === (settings[def.network!] ?? "solana")) : wallets}
+          wallets={def.network ? wallets.filter((w) => addressNetwork(w.address) === walletNetwork(def.network!, settings)) : wallets}
         />
       );
       break;

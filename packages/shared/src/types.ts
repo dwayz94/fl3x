@@ -109,3 +109,44 @@ export interface NftData {
   /** Solana wallets read. */
   wallets: number;
 }
+
+/** Last swaps of a member's verified Solana wallets (Recent Trades widget). Addresses are never included. */
+export interface TradesData {
+  items: {
+    /** Transaction signature (links to Solscan). */
+    signature: string;
+    at: string;
+    /** "buy": SOL / a stablecoin out, a token in. "sell": the other way. */
+    side: "buy" | "sell";
+    token: { address: string; symbol: string; name: string | null; iconUrl: string | null };
+    /** Tokens bought or sold. */
+    amount: number;
+    /** What was paid / received for them. */
+    quote: { symbol: string; amount: number };
+    /** USD value of the swap at today's price of the quote (null when unknown). */
+    valueUsd: number | null;
+  }[];
+  /** Solana wallets read. */
+  wallets: number;
+}
+
+/** Hyperliquid perps account of a member's verified EVM wallets (Hyperliquid widget). */
+export interface HyperliquidData {
+  accountValue: number;
+  unrealizedPnl: number;
+  /** Realized + unrealized P&L over each window, from Hyperliquid's own portfolio history. */
+  pnl: { day: number | null; week: number | null; month: number | null; allTime: number | null };
+  positions: { coin: string; side: "long" | "short"; size: number; entryPx: number; valueUsd: number; unrealizedPnl: number; leverage: number | null }[];
+  /** EVM wallets read. */
+  wallets: number;
+}
+
+/** Open Polymarket positions of a public Polymarket profile (Polymarket widget). */
+export interface PolymarketData {
+  /** The profile's display name on Polymarket, when it has one. */
+  name: string | null;
+  totalValue: number;
+  totalPnl: number;
+  positions: { title: string; outcome: string; size: number; avgPrice: number; curPrice: number; valueUsd: number; pnl: number; pnlPct: number; icon: string | null; url: string }[];
+  url: string;
+}
