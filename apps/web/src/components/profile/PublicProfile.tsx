@@ -30,7 +30,7 @@ export function PublicProfile({ profile }: { profile: FullPublicProfile }) {
 
   return (
     <main
-      className="relative isolate flex min-h-svh flex-col items-center px-3 py-10 md:px-6 md:py-20"
+      className="relative isolate flex min-h-svh flex-col items-center px-3 py-8 md:px-6 md:py-10"
       style={{ ...backdropStyle(theme), cursor: cursorStyle(theme) }}
     >
       {/* Premium animated background, behind everything, fixed to the viewport. */}
@@ -45,10 +45,13 @@ export function PublicProfile({ profile }: { profile: FullPublicProfile }) {
           Edit profile
         </Link>
       )}
-      <ProfileView profile={profile} tier={profile.tier} views={profile.views} onLinkClick={(t) => track(profile.username, "click", t)} />
+      {/* Centered in the screen when it fits; a taller card starts at the top and the page scrolls. */}
+      <div className="flex w-full flex-1 flex-col items-center justify-center">
+        <ProfileView profile={profile} tier={profile.tier} views={profile.views} onLinkClick={(t) => track(profile.username, "click", t)} />
+      </div>
       {/* Premium can hide the FL3X mark. */}
       {!(profile.tier === "premium" && profile.theme.branding === false) && (
-        <Link href="/" className="mt-auto pt-12 opacity-50 transition-opacity hover:opacity-100" aria-label="Made with FL3X">
+        <Link href="/" className="pt-8 opacity-50 transition-opacity hover:opacity-100" aria-label="Made with FL3X">
           <Image src="/images/fl3x-logo.svg" alt="FL3X" width={64} height={22} />
         </Link>
       )}
