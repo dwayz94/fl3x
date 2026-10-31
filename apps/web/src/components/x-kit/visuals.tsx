@@ -112,6 +112,51 @@ const bag = (filter?: string, size = 440) => (
   <img src={filter ? "/brand/fl3x-icon-white.svg" : "/brand/fl3x-icon.svg"} alt="" style={{ width: size, height: size * (32 / 30), filter }} />
 );
 
+/**
+ * Falling pixel money bags in three depths: far ones small, blurred and dim,
+ * near ones big, sharp and cut by the edge. Fixed positions so renders match.
+ */
+const RAIN: [x: number, y: number, size: number, rot: number, depth: 0 | 1 | 2][] = [
+  [40, -30, 70, -18, 0], [170, 60, 120, 12, 1], [330, -50, 90, 25, 0], [430, 150, 60, -10, 0],
+  [560, 20, 150, -22, 1], [70, 300, 90, 30, 0], [250, 250, 60, -28, 0], [620, 300, 80, 16, 0],
+  [720, -60, 70, 8, 0], [880, 360, 110, -14, 1], [1010, -40, 90, 20, 0], [1180, 330, 70, -30, 0],
+  [1300, -70, 210, 18, 2], [1380, 250, 120, -12, 1], [470, 380, 230, -20, 2], [-60, 120, 200, 22, 2],
+  [930, 160, 50, 34, 0], [1240, 160, 50, -8, 0], [780, 230, 45, 22, 0],
+];
+const DEPTH = [
+  { opacity: 0.22, blur: 3 },
+  { opacity: 0.4, blur: 1 },
+  { opacity: 0.9, blur: 0 },
+];
+
+function BagRain({ dim = false, tone = "pink" }: { dim?: boolean; tone?: "pink" | "black" }) {
+  return (
+    <div className="absolute inset-0">
+      {RAIN.map(([x, y, size, rot, depth], i) => {
+        const d = DEPTH[depth]!;
+        return (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            key={i}
+            src="/brand/fl3x-icon.svg"
+            alt=""
+            className="absolute"
+            style={{
+              left: x,
+              top: y,
+              width: size,
+              height: size * (32 / 30),
+              transform: `rotate(${rot}deg)`,
+              opacity: d.opacity * (dim ? 0.55 : 1) * (tone === "black" ? 0.22 : 1),
+              filter: `${tone === "black" ? "brightness(0)" : ""} blur(${d.blur}px)`.trim(),
+            }}
+          />
+        );
+      })}
+    </div>
+  );
+}
+
 /* ------------------------------------------------------------------ visuals */
 
 export const VISUALS: Record<string, Visual> = {
@@ -135,26 +180,61 @@ export const VISUALS: Record<string, Visual> = {
     ),
   },
 
-  // Bottom-left (profile picture) and bottom-right (buttons on mobile) stay empty.
+  // X banners. Bottom-left (profile picture) stays empty; the lockup sits right
+  // of center, inside the band phones keep when they crop top and bottom.
   banner: {
     width: 1500,
     height: 500,
     render: () => (
-      <Frame art="/images/backgrounds/sign-bg.png" footer={false}>
-        <div className="absolute top-[78px] left-[120px] flex flex-col gap-5">
-          <Big size={112}>FL[3]X ON ALL</Big>
-          <Big size={112}>SCREENS</Big>
-          <Line size={26}>Your crypto profile, live. One link.</Line>
-        </div>
-        <div className="absolute top-[36px] right-[90px] flex gap-4" style={{ transform: "rotate(-4deg)" }}>
-          <W type="pnl" size="large" scale={1.05} />
-          <div className="flex flex-col gap-4 pt-8">
-            <W type="music" size="long" scale={0.95} />
-            <W type="community" size="long" nth={1} scale={0.95} />
-            <W type="video" size="long" nth={1} scale={0.95} />
+      <div className="relative h-full w-full overflow-hidden bg-black font-secondary text-white">
+        <BagRain />
+        <div className="absolute top-[118px] left-[790px] flex flex-col items-start gap-7">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/brand/fl3x-logo.svg" alt="FL3X" style={{ height: 112, width: "auto" }} />
+          <p className="m-0 font-primary text-[46px] leading-none uppercase">
+            Your onchain profile, elevated.
+          </p>
+          <div className="flex items-center gap-3 text-[22px]">
+            <span className="rounded-xl bg-white px-4 py-2 leading-none text-black">fl3x.lol/@you</span>
+            <span className="rounded-xl border border-white/25 px-4 py-2 leading-none text-white/75">Invite-only</span>
           </div>
         </div>
-      </Frame>
+      </div>
+    ),
+  },
+
+  // Typographic: the profile URL is the whole banner.
+  "banner-url": {
+    width: 1500,
+    height: 500,
+    render: () => (
+      <div className="relative h-full w-full overflow-hidden bg-black font-secondary text-white">
+        <BagRain dim />
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-6 pl-[220px]">
+          <p className="m-0 font-primary leading-[0.85] uppercase" style={{ fontSize: 196, fontVariantLigatures: "none" }}>
+            <span className="text-white/90">FL3X.LOL/</span>
+            <span className="text-brand">@YOU</span>
+          </p>
+          <p className="m-0 text-[28px] text-white/60">Your onchain profile, elevated. Now you can FL3X.</p>
+        </div>
+      </div>
+    ),
+  },
+
+  // Pink: black bags on the brand pink, like the pink avatar.
+  "banner-pink": {
+    width: 1500,
+    height: 500,
+    render: () => (
+      <div className="relative h-full w-full overflow-hidden font-secondary text-black" style={{ background: PINK }}>
+        <BagRain tone="black" />
+        <div className="absolute top-[130px] left-[800px] flex flex-col items-start gap-7">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/brand/fl3x-logo-mono-black.svg" alt="FL3X" style={{ height: 112, width: "auto" }} />
+          <p className="m-0 font-primary text-[46px] leading-none uppercase">Your onchain profile, elevated.</p>
+          <span className="rounded-xl bg-black px-4 py-2 text-[22px] leading-none text-white">fl3x.lol/@you</span>
+        </div>
+      </div>
     ),
   },
 

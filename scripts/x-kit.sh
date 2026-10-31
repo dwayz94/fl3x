@@ -9,7 +9,7 @@ mkdir -p "$OUT"
 size() {
   case "$1" in
     article-cover) echo 1500,600 ;;
-    banner) echo 1500,500 ;;
+    banner*) echo 1500,500 ;;
     avatar|avatar-pink) echo 800,800 ;;
     *) echo 1200,675 ;;
   esac

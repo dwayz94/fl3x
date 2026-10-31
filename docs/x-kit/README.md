@@ -9,7 +9,7 @@ Images : `docs/x-kit/images/` (PNG 2x, logo en bas à gauche, `fl3x.lol` en bas 
 | Image | Format | Usage |
 |---|---|---|
 | `avatar.png`, `avatar-pink.png` | 800×800 | Photo de profil X : sac rose sur noir, ou noir sur rose |
-| `banner.png` | 1500×500 | Bannière du profil, coins du bas laissés vides (photo de profil à gauche, boutons sur mobile à droite) |
+| `banner.png`, `banner-url.png`, `banner-pink.png` | 1500×500 | Trois bannières au choix (pluie de sacs, URL géante, version rose). Le logo est à droite du centre : la photo de profil cache le bas à gauche et le mobile rogne le haut et le bas |
 | `launch.png` | 1200×675 | Tweet épinglé |
 | `article-cover.png` | 1500×600 (5:2) | Couverture de l'article |
 | Les autres | 1200×675 (16:9) | Tweets. Le profil montré est celui de FL3X. Tokens (WIF, JUP, POPCAT), chaînes (Bankless sur YouTube, kaicenat sur Twitch) et titre (Kendrick Lamar, « HUMBLE. ») sont réels, copiés le 31/10/2026 dans `public/images/demo/real`. Les montants du P&L restent des exemples |

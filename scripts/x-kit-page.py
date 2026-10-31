@@ -124,7 +124,7 @@ for key, title, hint in GROUPS:
 
 article = article_steps(section('10. Article X'))
 
-PROFILE = [('avatar.png', 'Profile picture (black)'), ('avatar-pink.png', 'Profile picture (pink)'), ('banner.png', 'Banner 1500×500')]
+PROFILE = [('avatar.png', 'Profile picture (black)'), ('avatar-pink.png', 'Profile picture (pink)'), ('banner.png', 'Banner: bag rain'), ('banner-url.png', 'Banner: fl3x.lol/@you'), ('banner-pink.png', 'Banner: pink')]
 profile = '\n'.join(
     f'<a class="asset {"wide" if "banner" in f else ""}" href="images/{f}" download><img src="images/{f}" alt=""><span>{t} · Download</span></a>' for f, t in PROFILE
 )
