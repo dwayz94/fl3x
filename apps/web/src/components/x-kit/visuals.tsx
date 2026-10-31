@@ -129,10 +129,11 @@ const DEPTH = [
   { opacity: 0.9, blur: 0 },
 ];
 
-function BagRain({ dim = false, tone = "pink" }: { dim?: boolean; tone?: "pink" | "black" }) {
+/** `far`: only the small, blurred bags, for behind glass widgets (big ones would show through). */
+function BagRain({ dim = false, far = false, tone = "pink" }: { dim?: boolean; far?: boolean; tone?: "pink" | "black" }) {
   return (
     <div className="absolute inset-0">
-      {RAIN.map(([x, y, size, rot, depth], i) => {
+      {RAIN.filter(([, , , , depth]) => !far || depth === 0).map(([x, y, size, rot, depth], i) => {
         const d = DEPTH[depth]!;
         return (
           // eslint-disable-next-line @next/next/no-img-element
@@ -153,6 +154,33 @@ function BagRain({ dim = false, tone = "pink" }: { dim?: boolean; tone?: "pink" 
           />
         );
       })}
+    </div>
+  );
+}
+
+/** A pixel sparkle (plus shape), for the avatar variants. */
+function Sparkle({ x, y, px, color }: { x: number; y: number; px: number; color: string }) {
+  const cells = [[1, 0], [0, 1], [1, 1], [2, 1], [1, 2]];
+  return (
+    <span className="absolute" style={{ left: x, top: y, width: px * 3, height: px * 3 }}>
+      {cells.map(([cx, cy], i) => (
+        <span key={i} className="absolute" style={{ left: cx! * px, top: cy! * px, width: px, height: px, background: color }} />
+      ))}
+    </span>
+  );
+}
+
+/** 800×800 avatar: the bag centered on a background, optional glow. X crops it to a circle. */
+function AvatarArt({ bg, glow, filter, size = 420, children }: { bg: string; glow?: string; filter?: string; size?: number; children?: ReactNode }) {
+  return (
+    <div className="relative flex h-full w-full items-center justify-center overflow-hidden" style={{ background: bg }}>
+      {children}
+      <div className="relative" style={{ width: size, height: size * (32 / 30), filter: [filter, glow].filter(Boolean).join(" ") || undefined }}>
+        {/* The $ is cut out of the icon: a black plate behind it keeps the glow from showing through. */}
+        {!filter?.includes("brightness(0)") && <span className="absolute bg-black" style={{ left: size * (7 / 30), top: size * (11 / 30), width: size * (16 / 30), height: size * (17 / 30) }} />}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/brand/fl3x-icon.svg" alt="" className="relative size-full" />
+      </div>
     </div>
   );
 }
@@ -180,6 +208,73 @@ export const VISUALS: Record<string, Visual> = {
     ),
   },
 
+  // Avatar variants, all the same bag.
+  "avatar-glow": {
+    width: 800,
+    height: 800,
+    render: () => <AvatarArt bg="#000" glow="drop-shadow(0 0 40px rgba(255,151,203,0.55)) drop-shadow(0 0 110px rgba(255,151,203,0.35))" />,
+  },
+  "avatar-gradient": {
+    width: 800,
+    height: 800,
+    render: () => <AvatarArt bg="linear-gradient(225deg, #4a2038 0%, #160910 45%, #000 75%)" glow="drop-shadow(0 18px 40px rgba(0,0,0,0.6))" />,
+  },
+  "avatar-ring": {
+    width: 800,
+    height: 800,
+    render: () => (
+      <AvatarArt bg="#000" size={360} glow="drop-shadow(0 0 30px rgba(255,151,203,0.35))">
+        <span className="absolute rounded-full" style={{ inset: 70, border: `14px solid ${PINK}`, boxShadow: "0 0 50px rgba(255,151,203,0.45), inset 0 0 50px rgba(255,151,203,0.25)" }} />
+      </AvatarArt>
+    ),
+  },
+  "avatar-grid": {
+    width: 800,
+    height: 800,
+    render: () => (
+      <AvatarArt
+        bg="radial-gradient(55% 55% at 50% 50%, #2b1020, #000 80%)"
+        glow="drop-shadow(0 0 50px rgba(255,151,203,0.45))"
+      >
+        <span className="absolute inset-0" style={{ backgroundImage: "linear-gradient(rgba(255,255,255,0.06) 2px, transparent 2px), linear-gradient(90deg, rgba(255,255,255,0.06) 2px, transparent 2px)", backgroundSize: "28px 28px" }} />
+      </AvatarArt>
+    ),
+  },
+  "avatar-sparkle": {
+    width: 800,
+    height: 800,
+    render: () => (
+      <AvatarArt bg="#000" size={400} glow="drop-shadow(0 0 45px rgba(255,151,203,0.4))">
+        <Sparkle x={170} y={190} px={16} color={PINK} />
+        <Sparkle x={575} y={160} px={22} color="#fff" />
+        <Sparkle x={600} y={540} px={14} color={PINK} />
+        <Sparkle x={150} y={560} px={12} color="#fff" />
+      </AvatarArt>
+    ),
+  },
+  "avatar-neon": {
+    width: 800,
+    height: 800,
+    render: () => (
+      <AvatarArt
+        bg="radial-gradient(60% 60% at 50% 55%, #3a0f2a, #0a0208 70%)"
+        glow="drop-shadow(0 0 3px #ffd6ea) drop-shadow(0 0 24px #FF97CB) drop-shadow(0 0 70px #FF5FB0)"
+      />
+    ),
+  },
+  "avatar-white": {
+    width: 800,
+    height: 800,
+    render: () => <AvatarArt bg="#000" filter="grayscale(1) brightness(2.2)" />,
+  },
+  "avatar-pink-glow": {
+    width: 800,
+    height: 800,
+    render: () => (
+      <AvatarArt bg={`radial-gradient(60% 60% at 50% 50%, #ffc2e0, ${PINK} 70%)`} filter="brightness(0)" glow="drop-shadow(0 24px 30px rgba(120,20,70,0.45))" />
+    ),
+  },
+
   // X banners. Bottom-left (profile picture) stays empty; the lockup sits right
   // of center, inside the band phones keep when they crop top and bottom.
   banner: {
@@ -194,10 +289,124 @@ export const VISUALS: Record<string, Visual> = {
           <p className="m-0 font-primary text-[46px] leading-none uppercase">
             Your onchain profile, elevated.
           </p>
-          <div className="flex items-center gap-3 text-[22px]">
-            <span className="rounded-xl bg-white px-4 py-2 leading-none text-black">fl3x.lol/@you</span>
-            <span className="rounded-xl border border-white/25 px-4 py-2 leading-none text-white/75">Invite-only</span>
+          <span className="rounded-xl bg-white px-4 py-2 text-[22px] leading-none text-black">fl3x.lol/@you</span>
+        </div>
+      </div>
+    ),
+  },
+
+  // Widget wall on the right, the line on the left (above the profile picture).
+  "banner-moves": {
+    width: 1500,
+    height: 500,
+    render: () => (
+      <Frame footer={false}>
+        <div className="absolute -top-[150px] left-[560px] flex flex-col gap-4" style={{ transform: "rotate(-8deg)" }}>
+          {[
+            [["pnl", "large"], ["community", "long", 1], ["music", "large"], ["token", "large"]],
+            [["portfolio", "long"], ["clock", "large"], ["video", "long"], ["holdings", "large"]],
+            [["followers", "long"], ["countdown", "large"], ["community", "long"], ["pnl", "large"]],
+          ].map((row, r) => (
+            <div key={r} className="flex items-start gap-4" style={{ marginLeft: r * 70 }}>
+              {row.map(([type, size, nth], i) => (
+                <W key={i} type={type as WidgetType} size={size as WidgetSize} nth={(nth as number) ?? 0} scale={0.95} />
+              ))}
+            </div>
+          ))}
+        </div>
+        <div className="absolute inset-0" style={{ background: "linear-gradient(90deg, #000 30%, rgba(0,0,0,0.6) 46%, transparent 62%)" }} />
+        <div className="absolute top-[70px] left-[90px] flex flex-col items-start gap-5">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/brand/fl3x-logo.svg" alt="FL3X" style={{ height: 52, width: "auto" }} />
+          <Big size={96}>Y[o]UR B[i]O, BUT</Big>
+          <Big size={96}>IT M[o]VES</Big>
+        </div>
+      </Frame>
+    ),
+  },
+
+  // The drag moment: a grid with one widget lifted, the line on the left.
+  "banner-drag": {
+    width: 1500,
+    height: 500,
+    render: () => (
+      <Frame footer={false} bg="#0b0b0b">
+        <div className="absolute top-[70px] left-[90px] z-10 flex flex-col items-start gap-5">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/brand/fl3x-logo.svg" alt="FL3X" style={{ height: 52, width: "auto" }} />
+          <Big size={96}>DRAG. DR[o]P.</Big>
+          <Big size={96}>FL[e]X.</Big>
+        </div>
+        <div className="absolute top-[40px] left-[640px] rounded-[40px] bg-[#1a1a1a] p-6" style={{ zoom: 0.92 }}>
+          <div className="grid grid-cols-[172px_172px_356px] grid-rows-[96px_96px_96px_96px] gap-3">
+            <div className="row-span-2">
+              <W type="pnl" size="large" />
+            </div>
+            <div className="row-span-2 rounded-[28px] border-2 border-dashed border-white/25 bg-white/[0.03]" />
+            <W type="community" size="long" />
+            <W type="community" size="long" nth={1} />
+            <div className="col-span-2 row-span-2 flex gap-3">
+              <W type="clock" size="large" />
+              <W type="token" size="large" />
+            </div>
+            <W type="followers" size="long" />
+            <W type="video" size="long" />
           </div>
+          <div className="absolute top-[50px] left-[226px] rounded-[28px] shadow-[0_30px_70px_rgba(0,0,0,0.8)]" style={{ transform: "rotate(-7deg) scale(1.08)" }}>
+            <W type="music" size="large" />
+          </div>
+        </div>
+      </Frame>
+    ),
+  },
+
+  // FL3X's own profile card, tilted, cut by the right edge.
+  "banner-card": {
+    width: 1500,
+    height: 500,
+    render: () => (
+      <div className="relative h-full w-full overflow-hidden bg-black font-secondary text-white">
+        <BagRain far />
+        <DemoDataProvider resolve={resolveDemo}>
+          <div className="absolute top-[60px] left-[760px]" style={{ transform: "rotate(-6deg)" }}>
+            <Card widgets={layout("classic")} scale={0.95} width={780} />
+          </div>
+        </DemoDataProvider>
+        <div className="absolute top-[90px] left-[90px] flex flex-col items-start gap-6">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/brand/fl3x-logo.svg" alt="FL3X" style={{ height: 96, width: "auto" }} />
+          <p className="m-0 font-primary text-[42px] leading-none uppercase">Your onchain profile, elevated.</p>
+          <span className="rounded-xl bg-white px-4 py-2 text-[22px] leading-none text-black">fl3x.lol/@you</span>
+        </div>
+      </div>
+    ),
+  },
+
+  // Bag rain with a few live widgets falling with it.
+  "banner-mix": {
+    width: 1500,
+    height: 500,
+    render: () => (
+      <div className="relative h-full w-full overflow-hidden bg-black font-secondary text-white">
+        <BagRain far />
+        <DemoDataProvider resolve={resolveDemo}>
+          <div className="absolute top-[40px] left-[470px]" style={{ transform: "rotate(-10deg)" }}>
+            <W type="pnl" size="large" scale={0.9} />
+          </div>
+          <div className="absolute top-[375px] left-[430px]" style={{ transform: "rotate(5deg)" }}>
+            <W type="community" size="long" nth={1} scale={0.8} />
+          </div>
+          <div className="absolute top-[30px] left-[1170px]" style={{ transform: "rotate(9deg)" }}>
+            <W type="music" size="large" scale={0.85} />
+          </div>
+          <div className="absolute top-[330px] left-[1150px]" style={{ transform: "rotate(-6deg)" }}>
+            <W type="token" size="large" scale={0.75} />
+          </div>
+        </DemoDataProvider>
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-5 pl-[180px]">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/brand/fl3x-logo.svg" alt="FL3X" style={{ height: 110, width: "auto" }} />
+          <p className="m-0 font-primary text-[40px] leading-none uppercase">Your onchain profile, elevated.</p>
         </div>
       </div>
     ),

@@ -124,7 +124,14 @@ for key, title, hint in GROUPS:
 
 article = article_steps(section('10. Article X'))
 
-PROFILE = [('avatar.png', 'Profile picture (black)'), ('avatar-pink.png', 'Profile picture (pink)'), ('banner.png', 'Banner: bag rain'), ('banner-url.png', 'Banner: fl3x.lol/@you'), ('banner-pink.png', 'Banner: pink')]
+PROFILE = [
+    ('avatar.png', 'Avatar: black'), ('avatar-glow.png', 'Avatar: glow'), ('avatar-gradient.png', 'Avatar: gradient'), ('avatar-ring.png', 'Avatar: ring'),
+    ('avatar-grid.png', 'Avatar: pixel grid'), ('avatar-sparkle.png', 'Avatar: sparkles'), ('avatar-neon.png', 'Avatar: neon'), ('avatar-white.png', 'Avatar: white'),
+    ('avatar-pink.png', 'Avatar: pink'), ('avatar-pink-glow.png', 'Avatar: pink, shadow'),
+    ('banner.png', 'Banner: bag rain'), ('banner-card.png', 'Banner: profile card'), ('banner-moves.png', 'Banner: your bio, but it moves'),
+    ('banner-drag.png', 'Banner: drag, drop, flex'), ('banner-mix.png', 'Banner: rain + widgets'), ('banner-url.png', 'Banner: fl3x.lol/@you'),
+    ('banner-pink.png', 'Banner: pink'), ('banner-screens.png', 'Banner: FL3X on all screens (older)'),
+]
 profile = '\n'.join(
     f'<a class="asset {"wide" if "banner" in f else ""}" href="images/{f}" download><img src="images/{f}" alt=""><span>{t} · Download</span></a>' for f, t in PROFILE
 )
@@ -162,10 +169,11 @@ section {{ display:flex; flex-direction:column; gap:12px; }}
 pre {{ margin:0; white-space:pre-wrap; font-family:Body, system-ui, sans-serif; font-size:16px; line-height:1.45; background:var(--surface2); padding:14px; border-radius:10px; }}
 button.copy {{ align-self:flex-start; font-family:Button; font-size:14px; background:var(--paper); color:var(--bg); border:0; border-radius:8px; padding:10px 16px; cursor:pointer; }}
 button.copy.done {{ background:var(--win); }}
-.assets {{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }}
+.assets {{ display:grid; grid-template-columns:repeat(5, 1fr); gap:12px; }}
 .asset {{ display:flex; flex-direction:column; gap:6px; background:var(--surface); padding:12px; border-radius:16px; color:var(--muted); text-decoration:none; font-size:13px; }}
 .asset img {{ width:100%; border-radius:10px; }}
 .asset.wide {{ grid-column:1 / -1; }}
+.asset:not(.wide) img {{ border-radius:50%; }}
 .article {{ background:#f3eef1; color:#000; border-radius:16px; padding:28px; }}
 .article h1 {{ font-family:Display; text-transform:uppercase; font-size:48px; line-height:.85; margin:0 0 16px; }}
 .article h2 {{ font-family:Button; font-size:24px; margin:28px 0 8px; }}
@@ -185,7 +193,7 @@ button.copy.done {{ background:var(--win); }}
 .step-img {{ width:100%; max-width:520px; border-radius:10px; display:block; }}
 .step-note {{ color:var(--muted); font-size:13px; }}
 @media (max-width:700px) {{ .step {{ grid-template-columns:1fr; }} }}
-@media (max-width:700px) {{ .tweet {{ grid-template-columns:1fr; }} .assets {{ grid-template-columns:1fr; }} }}
+@media (max-width:700px) {{ .tweet {{ grid-template-columns:1fr; }} .assets {{ grid-template-columns:repeat(2, 1fr); }} }}
 </style>
 </head>
 <body>

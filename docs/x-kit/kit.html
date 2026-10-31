@@ -31,10 +31,11 @@ section { display:flex; flex-direction:column; gap:12px; }
 pre { margin:0; white-space:pre-wrap; font-family:Body, system-ui, sans-serif; font-size:16px; line-height:1.45; background:var(--surface2); padding:14px; border-radius:10px; }
 button.copy { align-self:flex-start; font-family:Button; font-size:14px; background:var(--paper); color:var(--bg); border:0; border-radius:8px; padding:10px 16px; cursor:pointer; }
 button.copy.done { background:var(--win); }
-.assets { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.assets { display:grid; grid-template-columns:repeat(5, 1fr); gap:12px; }
 .asset { display:flex; flex-direction:column; gap:6px; background:var(--surface); padding:12px; border-radius:16px; color:var(--muted); text-decoration:none; font-size:13px; }
 .asset img { width:100%; border-radius:10px; }
 .asset.wide { grid-column:1 / -1; }
+.asset:not(.wide) img { border-radius:50%; }
 .article { background:#f3eef1; color:#000; border-radius:16px; padding:28px; }
 .article h1 { font-family:Display; text-transform:uppercase; font-size:48px; line-height:.85; margin:0 0 16px; }
 .article h2 { font-family:Button; font-size:24px; margin:28px 0 8px; }
@@ -54,7 +55,7 @@ button.copy.done { background:var(--win); }
 .step-img { width:100%; max-width:520px; border-radius:10px; display:block; }
 .step-note { color:var(--muted); font-size:13px; }
 @media (max-width:700px) { .step { grid-template-columns:1fr; } }
-@media (max-width:700px) { .tweet { grid-template-columns:1fr; } .assets { grid-template-columns:1fr; } }
+@media (max-width:700px) { .tweet { grid-template-columns:1fr; } .assets { grid-template-columns:repeat(2, 1fr); } }
 </style>
 </head>
 <body>
@@ -65,11 +66,24 @@ button.copy.done { background:var(--win); }
   <nav><a href="#profile">Profile</a><a href="#tweets">Tweets</a><a href="#article">Article</a></nav>
 </header>
 
-<section id="profile"><h2 class="group">Profile</h2><p class="hint">Banner: the bottom corners stay empty (profile picture on the left, buttons on mobile on the right).</p><div class="assets"><a class="asset " href="images/avatar.png" download><img src="images/avatar.png" alt=""><span>Profile picture (black) · Download</span></a>
-<a class="asset " href="images/avatar-pink.png" download><img src="images/avatar-pink.png" alt=""><span>Profile picture (pink) · Download</span></a>
+<section id="profile"><h2 class="group">Profile</h2><p class="hint">Banner: the bottom corners stay empty (profile picture on the left, buttons on mobile on the right).</p><div class="assets"><a class="asset " href="images/avatar.png" download><img src="images/avatar.png" alt=""><span>Avatar: black · Download</span></a>
+<a class="asset " href="images/avatar-glow.png" download><img src="images/avatar-glow.png" alt=""><span>Avatar: glow · Download</span></a>
+<a class="asset " href="images/avatar-gradient.png" download><img src="images/avatar-gradient.png" alt=""><span>Avatar: gradient · Download</span></a>
+<a class="asset " href="images/avatar-ring.png" download><img src="images/avatar-ring.png" alt=""><span>Avatar: ring · Download</span></a>
+<a class="asset " href="images/avatar-grid.png" download><img src="images/avatar-grid.png" alt=""><span>Avatar: pixel grid · Download</span></a>
+<a class="asset " href="images/avatar-sparkle.png" download><img src="images/avatar-sparkle.png" alt=""><span>Avatar: sparkles · Download</span></a>
+<a class="asset " href="images/avatar-neon.png" download><img src="images/avatar-neon.png" alt=""><span>Avatar: neon · Download</span></a>
+<a class="asset " href="images/avatar-white.png" download><img src="images/avatar-white.png" alt=""><span>Avatar: white · Download</span></a>
+<a class="asset " href="images/avatar-pink.png" download><img src="images/avatar-pink.png" alt=""><span>Avatar: pink · Download</span></a>
+<a class="asset " href="images/avatar-pink-glow.png" download><img src="images/avatar-pink-glow.png" alt=""><span>Avatar: pink, shadow · Download</span></a>
 <a class="asset wide" href="images/banner.png" download><img src="images/banner.png" alt=""><span>Banner: bag rain · Download</span></a>
+<a class="asset wide" href="images/banner-card.png" download><img src="images/banner-card.png" alt=""><span>Banner: profile card · Download</span></a>
+<a class="asset wide" href="images/banner-moves.png" download><img src="images/banner-moves.png" alt=""><span>Banner: your bio, but it moves · Download</span></a>
+<a class="asset wide" href="images/banner-drag.png" download><img src="images/banner-drag.png" alt=""><span>Banner: drag, drop, flex · Download</span></a>
+<a class="asset wide" href="images/banner-mix.png" download><img src="images/banner-mix.png" alt=""><span>Banner: rain + widgets · Download</span></a>
 <a class="asset wide" href="images/banner-url.png" download><img src="images/banner-url.png" alt=""><span>Banner: fl3x.lol/@you · Download</span></a>
-<a class="asset wide" href="images/banner-pink.png" download><img src="images/banner-pink.png" alt=""><span>Banner: pink · Download</span></a></div></section>
+<a class="asset wide" href="images/banner-pink.png" download><img src="images/banner-pink.png" alt=""><span>Banner: pink · Download</span></a>
+<a class="asset wide" href="images/banner-screens.png" download><img src="images/banner-screens.png" alt=""><span>Banner: FL3X on all screens (older) · Download</span></a></div></section>
 
 <div id="tweets" style="display:flex;flex-direction:column;gap:48px"><section><h2 class="group">Pinned tweet</h2><p class="hint">Pin it on the profile.</p><article class="tweet">
   <a class="thumb" href="images/launch.png" download><img src="images/launch.png" alt=""><span>launch.png · Download</span></a>

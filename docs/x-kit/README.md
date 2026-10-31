@@ -8,8 +8,8 @@ Images : `docs/x-kit/images/` (PNG 2x, logo en bas à gauche, `fl3x.lol` en bas 
 
 | Image | Format | Usage |
 |---|---|---|
-| `avatar.png`, `avatar-pink.png` | 800×800 | Photo de profil X : sac rose sur noir, ou noir sur rose |
-| `banner.png`, `banner-url.png`, `banner-pink.png` | 1500×500 | Trois bannières au choix (pluie de sacs, URL géante, version rose). Le logo est à droite du centre : la photo de profil cache le bas à gauche et le mobile rogne le haut et le bas |
+| `avatar*.png` (10) | 800×800 | Le même sac décliné : noir, glow, dégradé, anneau, grille pixel, étincelles, néon, blanc, rose, rose avec ombre |
+| `banner*.png` (8) | 1500×500 | Bannières au choix : pluie de sacs, carte de profil, « your bio, but it moves », « drag, drop, flex », pluie + widgets, URL géante, rose, et l'ancienne « FL3X on all screens » (gardée, plus générée par le code). Le bas à gauche reste vide (photo de profil) |
 | `launch.png` | 1200×675 | Tweet épinglé |
 | `article-cover.png` | 1500×600 (5:2) | Couverture de l'article |
 | Les autres | 1200×675 (16:9) | Tweets. Le profil montré est celui de FL3X. Tokens (WIF, JUP, POPCAT), chaînes (Bankless sur YouTube, kaicenat sur Twitch) et titre (Kendrick Lamar, « HUMBLE. ») sont réels, copiés le 31/10/2026 dans `public/images/demo/real`. Les montants du P&L restent des exemples |
