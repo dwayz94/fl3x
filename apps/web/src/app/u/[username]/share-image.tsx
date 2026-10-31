@@ -127,7 +127,7 @@ export async function renderShareImage(username: string, fresh = false) {
                 {badges.map((b, i) => (b ? <img key={i} src={b} width={36} height={36} alt="" /> : null))}
               </div>
             )}
-            {bio && <div style={{ fontSize: 30, lineHeight: 1.3, color: "rgba(255,255,255,0.72)", textTransform: "uppercase", maxWidth: 700 }}>{bio}</div>}
+            {bio && <div style={{ fontSize: 30, lineHeight: 1.3, color: "rgba(255,255,255,0.72)", maxWidth: 700 }}>{bio}</div>}
           </div>
         </div>
 

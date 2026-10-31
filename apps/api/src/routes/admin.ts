@@ -111,7 +111,8 @@ export async function adminRoutes(app: FastifyInstance) {
         .set({ badges: [...new Set([...profile.badges, ...added])] })
         .where(eq(schema.profiles.userId, user.id));
     }
-    return adminUser(body.tierOverride !== undefined ? await refreshTier(row!, true) : row!);
+    // Founder and a gifted tier both change the tier: recompute it now.
+    return adminUser(body.tierOverride !== undefined || body.founder !== undefined ? await refreshTier(row!, true) : row!);
   });
 
   /** Live site settings (phase, token mint, thresholds, banner): edited from /admin, applied without a restart. */

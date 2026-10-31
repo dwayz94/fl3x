@@ -318,7 +318,7 @@ function Members({ adminKey }: { adminKey: string }) {
           <div>
             <p className="mb-2 text-xs text-fg-2">Badges</p>
             <div className="flex flex-wrap gap-2">
-              <BadgeToggle id="founder" name="Founder (team)" on={member.founder} onClick={() => void update({ founder: !member.founder })} />
+              <BadgeToggle id="founder" name="Founder (team · all Premium)" on={member.founder} onClick={() => void update({ founder: !member.founder })} />
               {TEAM_BADGES.map((b) => {
                 const on = member.badges.includes(b.id);
                 return (

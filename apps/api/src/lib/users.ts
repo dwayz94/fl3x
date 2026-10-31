@@ -26,12 +26,14 @@ export async function syncUser(privyId: string): Promise<UserRow> {
 const RANK = { none: 0, starter: 1, premium: 2 } as const;
 /** A tier given from /admin is a floor: holding more still counts. */
 const withOverride = (tier: keyof typeof RANK, override: UserRow["tierOverride"]) => (override && RANK[override] > RANK[tier] ? override : tier);
+/** Founders (the team, `role: admin`) get everything: Premium whatever they hold. */
+const floorOf = (user: UserRow): UserRow["tierOverride"] => (user.role === "admin" ? "premium" : user.tierOverride);
 
 export async function refreshTier(user: UserRow, force = false): Promise<UserRow> {
   const fresh = user.tierCheckedAt && Date.now() - user.tierCheckedAt.getTime() < TIER_TTL_MS;
   if (fresh && !force) return user;
   if (devAuth && env.DEV_TIER && user.privyId.startsWith("did:dev:")) {
-    const [row] = await db.update(schema.users).set({ tier: env.DEV_TIER, tierCheckedAt: new Date() }).where(eq(schema.users.id, user.id)).returning();
+    const [row] = await db.update(schema.users).set({ tier: withOverride(env.DEV_TIER, floorOf(user)), tierCheckedAt: new Date() }).where(eq(schema.users.id, user.id)).returning();
     if (row!.tier !== user.tier) await syncInviteSeats(row!);
     return row!;
   }
@@ -42,14 +44,18 @@ export async function refreshTier(user: UserRow, force = false): Promise<UserRow
     const balance = await totalTokenBalance([...new Set(solana)]);
     const [row] = await db
       .update(schema.users)
-      .set({ tokenBalance: balance, tier: withOverride(tierForBalance(balance, (await getSettings()).thresholds), user.tierOverride), tierCheckedAt: new Date() })
+      .set({ tokenBalance: balance, tier: withOverride(tierForBalance(balance, (await getSettings()).thresholds), floorOf(user)), tierCheckedAt: new Date() })
       .where(eq(schema.users.id, user.id))
       .returning();
     if (row!.tier !== user.tier) await syncInviteSeats(row!);
     return row!;
   } catch {
-    // RPC hiccup: keep the last known tier rather than downgrading anyone.
-    return user;
+    // RPC hiccup: keep the last known tier rather than downgrading anyone (a Founder / gift floor still applies).
+    const floored = withOverride(user.tier, floorOf(user));
+    if (floored === user.tier) return user;
+    const [row] = await db.update(schema.users).set({ tier: floored }).where(eq(schema.users.id, user.id)).returning();
+    await syncInviteSeats(row!);
+    return row!;
   }
 }
 

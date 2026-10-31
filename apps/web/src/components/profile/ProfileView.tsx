@@ -77,7 +77,7 @@ export function ProfileView({
                 placeholder={profile.username}
                 maxLength={32}
                 onCommit={(v) => editor.onIdentity!({ displayName: v || null })}
-                className="truncate"
+                className="truncate uppercase"
               />
             ) : (
               <span className="truncate">{name}</span>
@@ -91,10 +91,11 @@ export function ProfileView({
               placeholder="Add a bio"
               maxLength={160}
               onCommit={(v) => editor.onIdentity!({ bio: v || null })}
-              className="text-xs uppercase text-fg-2 md:text-sm"
+              className="text-xs text-fg-2 md:text-sm"
             />
           ) : (
-            profile.bio && <p className="text-xs uppercase text-fg-2 md:text-sm">{profile.bio}</p>
+            // The bio keeps the member's own capitals (the name stays uppercase).
+            profile.bio && <p className="text-xs text-fg-2 md:text-sm">{profile.bio}</p>
           )}
         </div>
       </header>
@@ -197,7 +198,7 @@ function InlineText({ value, placeholder, maxLength, onCommit, className }: { va
           }
         }}
         style={{ width: `${Math.max(6, text.length + 2)}ch` }}
-        className={cn("min-w-0 max-w-full rounded-lg bg-white/[0.06] px-1.5 uppercase outline-2 outline-brand [font:inherit]", className)}
+        className={cn("min-w-0 max-w-full rounded-lg bg-white/[0.06] px-1.5 outline-2 outline-brand [font:inherit]", className)}
       />
     );
   }

@@ -203,7 +203,7 @@ function IdentityForm({ me }: { me: Me }) {
             <span className="truncate">{name || username}</span>
             {me.tier === "premium" && <Verified size={20} />}
           </p>
-          <p className="mt-2 line-clamp-2 text-xs uppercase text-fg-2">{bio || <span className="text-fg-3">No bio yet</span>}</p>
+          <p className="mt-2 line-clamp-2 text-xs text-fg-2">{bio || <span className="text-fg-3">No bio yet</span>}</p>
         </div>
       </div>
 
