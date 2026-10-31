@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Footer, Navbar } from "@/components/shared";
 import { FamousCreators, Hero, HolderTiers, StatusBanner, WhyFl3x } from "@/components/landing";
+import { faqs } from "@/components/landing/WhyFl3x";
 import { site } from "@/config/site";
 import { getPublicConfig } from "@/lib/server-api";
 
@@ -24,6 +25,11 @@ const jsonLd = {
       sameAs: [site.social.x, site.social.discord, site.social.telegram],
     },
     { "@type": "WebSite", "@id": `${site.url}/#site`, name: site.name, url: site.url, description: site.description, publisher: { "@id": `${site.url}/#org` } },
+    // The landing FAQ, so it can show as answers right in search results.
+    {
+      "@type": "FAQPage",
+      mainEntity: faqs.map((f) => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } })),
+    },
   ],
 };
 

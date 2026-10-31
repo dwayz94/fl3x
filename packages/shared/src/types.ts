@@ -39,6 +39,18 @@ export interface PublicProfile {
   xHandle: string | null;
 }
 
+/** A profile card in the public directory (/explore). */
+export interface ExploreProfile {
+  username: string;
+  displayName: string | null;
+  bio: string | null;
+  avatarUrl: string | null;
+  verified: boolean;
+  /** Views over the last 30 days. */
+  views: number;
+  joinedAt: string;
+}
+
 export interface ApiError {
   error: string;
   message: string;

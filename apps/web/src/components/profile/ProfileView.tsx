@@ -70,14 +70,14 @@ export function ProfileView({
       <header className={cn("flex gap-4 md:gap-6", narrow ? "flex-col items-center text-center" : "items-center")}>
         <Avatar url={profile.avatarUrl} onEdit={editor?.onAvatar} />
         <div className={cn("flex min-w-0 flex-col gap-2", narrow && "items-center")}>
-          <h1 className={cn("flex max-w-full items-center gap-1.5 text-[34px] leading-none uppercase md:text-[44px]", fontClass[theme.font])}>
+          <h1 className={cn("flex max-w-full items-center gap-1.5 text-[34px] leading-none md:text-[44px]", fontClass[theme.font])}>
             {editor?.onIdentity ? (
               <InlineText
                 value={profile.displayName ?? ""}
                 placeholder={profile.username}
                 maxLength={32}
                 onCommit={(v) => editor.onIdentity!({ displayName: v || null })}
-                className="truncate uppercase"
+                className="truncate"
               />
             ) : (
               <span className="truncate">{name}</span>
@@ -94,7 +94,7 @@ export function ProfileView({
               className="text-xs text-fg-2 md:text-sm"
             />
           ) : (
-            // The bio keeps the member's own capitals (the name stays uppercase).
+            // Name and bio keep the member's own capitals.
             profile.bio && <p className="text-xs text-fg-2 md:text-sm">{profile.bio}</p>
           )}
         </div>
@@ -208,7 +208,7 @@ function InlineText({ value, placeholder, maxLength, onCommit, className }: { va
       onClick={() => setEditing(true)}
       title="Click to edit"
       className={cn(
-        "group/edit relative -ml-1.5 flex min-w-0 uppercase items-center rounded-lg pr-0.5 pl-1.5 text-left outline-1 outline-transparent transition-[outline-color,background-color] [font:inherit] hover:bg-white/[0.04] hover:outline-dashed hover:outline-white/40",
+        "group/edit relative -ml-1.5 flex min-w-0 items-center rounded-lg pr-0.5 pl-1.5 text-left outline-1 outline-transparent transition-[outline-color,background-color] [font:inherit] hover:bg-white/[0.04] hover:outline-dashed hover:outline-white/40",
         className,
       )}
     >

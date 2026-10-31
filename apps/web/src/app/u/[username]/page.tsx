@@ -41,18 +41,37 @@ export default async function ProfilePage({ params }: Props) {
   if (!profile) notFound();
   const name = profile.displayName ?? profile.username;
   // Tells search engines this page is a person's profile (name, handle, avatar, their links).
+  const url = `${site.url}/@${profile.username}`;
+  const sameAs = [...new Set([...(profile.xHandle ? [`https://x.com/${profile.xHandle}`] : []), ...profile.links.map((l) => l.url)])];
   const jsonLd = {
     "@context": "https://schema.org",
-    "@type": "ProfilePage",
-    url: `${site.url}/@${profile.username}`,
-    mainEntity: {
-      "@type": "Person",
-      name,
-      alternateName: `@${profile.username}`,
-      description: profile.bio ?? undefined,
-      image: profile.avatarUrl ?? undefined,
-      sameAs: profile.links.map((l) => l.url),
-    },
+    "@graph": [
+      {
+        "@type": "ProfilePage",
+        url,
+        name: `${name} (@${profile.username}) on FL3X`,
+        isPartOf: { "@id": `${site.url}/#site` },
+        mainEntity: {
+          "@type": "Person",
+          name,
+          alternateName: `@${profile.username}`,
+          identifier: profile.username,
+          url,
+          description: profile.bio ?? undefined,
+          image: profile.avatarUrl ?? undefined,
+          sameAs,
+          interactionStatistic: { "@type": "InteractionCounter", interactionType: "https://schema.org/ViewAction", userInteractionCount: profile.views },
+        },
+      },
+      {
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          { "@type": "ListItem", position: 1, name: "FL3X", item: site.url },
+          { "@type": "ListItem", position: 2, name: "Explore", item: `${site.url}/explore` },
+          { "@type": "ListItem", position: 3, name, item: url },
+        ],
+      },
+    ],
   };
   return (
     <>

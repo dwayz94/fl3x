@@ -3,7 +3,7 @@ import { SparklesIcon } from "@hugeicons/core-free-icons";
 import { Brand, buttonClass, Icon } from "@/components/ui";
 import { Faq } from "./Faq";
 
-const faqs = [
+export const faqs = [
   {
     q: "What makes FL3X different?",
     a: "We're built for web3. On-chain verification, live widgets that show your real crypto activity, and perks unlocked by holding the token, not just a list of links.",

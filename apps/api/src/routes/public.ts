@@ -1,7 +1,7 @@
 import type { FastifyInstance } from "fastify";
-import { and, eq, sql } from "drizzle-orm";
+import { and, desc, eq, gte, isNotNull, sql } from "drizzle-orm";
 import { z } from "zod";
-import { normalizeUsername, validateUsername, type FullPublicProfile, type PublicConfig } from "@fl3x/shared";
+import { normalizeUsername, validateUsername, type ExploreProfile, type FullPublicProfile, type PublicConfig } from "@fl3x/shared";
 import { db, schema } from "../db";
 import { env } from "../env";
 import { getSettings } from "../lib/settings";
@@ -37,6 +37,36 @@ export async function publicRoutes(app: FastifyInstance) {
     const { invite } = row;
     const expired = invite.expiresAt && invite.expiresAt < new Date();
     return { valid: !expired && invite.uses < invite.maxUses, inviter: row.inviter };
+  });
+
+  /** The public directory: published profiles, most viewed over 30 days or newest first. */
+  const exploreQuery = z.object({ sort: z.enum(["popular", "new"]).default("popular"), limit: z.coerce.number().int().min(1).max(5000).default(60) });
+  app.get("/explore", { config: { rateLimit: { max: 60, timeWindow: "1 minute" } } }, async (req): Promise<ExploreProfile[]> => {
+    const { sort, limit } = exploreQuery.parse(req.query);
+    const since = new Date(Date.now() - 30 * 86_400_000);
+    const views = db
+      .select({ userId: schema.profileEvents.profileUserId, views: sql<number>`count(*)::int`.as("views") })
+      .from(schema.profileEvents)
+      .where(and(eq(schema.profileEvents.kind, "view"), gte(schema.profileEvents.createdAt, since)))
+      .groupBy(schema.profileEvents.profileUserId)
+      .as("v");
+    const rows = await db
+      .select({
+        username: schema.users.username,
+        displayName: schema.profiles.displayName,
+        bio: schema.profiles.bio,
+        avatarUrl: schema.profiles.avatarUrl,
+        tier: schema.users.tier,
+        views: sql<number>`coalesce(${views.views}, 0)`,
+        joinedAt: schema.users.createdAt,
+      })
+      .from(schema.users)
+      .innerJoin(schema.profiles, eq(schema.profiles.userId, schema.users.id))
+      .leftJoin(views, eq(views.userId, schema.users.id))
+      .where(and(isNotNull(schema.users.username), eq(schema.profiles.isPublished, true)))
+      .orderBy(...(sort === "new" ? [desc(schema.users.createdAt)] : [desc(sql`coalesce(${views.views}, 0)`), desc(schema.users.createdAt)]))
+      .limit(limit);
+    return rows.map(({ tier, ...r }) => ({ ...r, username: r.username!, verified: tier === "premium", views: Number(r.views), joinedAt: r.joinedAt.toISOString() }));
   });
 
   app.get<{ Params: { username: string } }>("/profiles/:username", async (req): Promise<FullPublicProfile> => {

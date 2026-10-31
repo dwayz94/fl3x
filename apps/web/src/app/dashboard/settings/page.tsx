@@ -199,7 +199,7 @@ function IdentityForm({ me }: { me: Me }) {
       <div className="flex items-center gap-5 rounded-2xl bg-white/[0.03] p-5">
         <ImageInput kind="avatar" round value={data.profile.avatarUrl ?? undefined} onChange={(url) => void patch({ avatarUrl: url })} />
         <div className="min-w-0">
-          <p className="flex items-center gap-1.5 font-primary text-3xl leading-none uppercase">
+          <p className="flex items-center gap-1.5 font-primary text-3xl leading-none">
             <span className="truncate">{name || username}</span>
             {me.tier === "premium" && <Verified size={20} />}
           </p>

@@ -76,7 +76,7 @@ export async function renderShareImage(username: string, fresh = false) {
   if (!profile) return siteCard(logoUri, fonts);
 
   const premium = profile.tier === "premium";
-  const name = (profile.displayName || profile.username).toUpperCase();
+  const name = profile.displayName || profile.username;
   const bio = profile.bio && profile.bio.length > 110 ? `${profile.bio.slice(0, 107).trimEnd()}…` : profile.bio;
   // A video / GIF background shows as its still frame (Premium only, like on the page).
   const bgUrl =
