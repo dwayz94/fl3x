@@ -380,7 +380,173 @@ fl3x.lol/blog/[slug]
 
 ---
 
-## 9. Article X
+## 9. Compte perso du founder
+
+Ton compte, ta voix : à la première personne, sans ton marketing. Les gens suivent quelqu'un qui construit, pas un logo. Règles :
+- Raconter ce que tu fais **vraiment** (une feature finie, un bug, une décision). Les `[crochets]` sont à remplacer par tes vrais chiffres, ou à retirer : ne jamais inventer un nombre.
+- Quote-tweeter les posts de @fl3xdotlol avec ton avis perso, plutôt que les retweeter.
+- Répondre toi-même aux gens sous les giveaways : un founder qui répond, ça fait revenir.
+- 1 à 2 posts par jour. Une capture d'écran du site ou du code vaut mieux qu'une belle image.
+
+Bio (une au choix) :
+
+```
+Building @fl3xdotlol: your crypto profile, live.
+Founder & dev. Shipping every day.
+```
+
+```
+Founder of @fl3xdotlol. I write the code too.
+Onchain since [année].
+```
+
+**F1.** Le premier, à épingler sur ton compte (image : `launch.png`)
+```
+I've been building something for crypto people.
+
+Your bio link, but live: your P&L, your wallets, your token, your Discord, your stream. One page that updates itself.
+
+It's called FL3X. Invite-only for now. Reply and I'll send you a code.
+```
+
+**F2.**
+```
+Why I'm building FL3X:
+
+Every crypto bio is the same Linktree with 6 buttons. Meanwhile the interesting stuff (what you hold, what you trade, the community you run) lives nowhere.
+
+So I made a profile that shows it. Live.
+```
+
+**F3.**
+```
+Solo founder, I write most of the code myself.
+
+Today I shipped: [feature].
+Tomorrow: [feature].
+
+Building in public from now on.
+```
+
+**F4.** (avec une capture du dashboard ou de Customize)
+```
+Spent the whole day on one thing: making the widgets move when you drag one, like your phone's home screen.
+
+Worth it.
+```
+
+**F5.**
+```
+Rule I set on day one for FL3X: your wallet addresses never reach your public page.
+
+Visitors see the numbers. Not where they come from.
+Felt obvious. Most sites don't do it.
+```
+
+**F6.**
+```
+No connect kit on FL3X. No transaction to link a wallet.
+
+You sign one plain-text message that says "signing is free". That's it.
+
+If a site asks you to approve something just to "verify" your wallet, close the tab.
+```
+
+**F7.** (réponses)
+```
+Building FL3X, I need your honest take:
+
+What's the one thing you'd want on your crypto profile that no site does yet?
+```
+
+**F8.**
+```
+I'm giving FL3X Premium to people who reply to this with their Solana address.
+
+Not a bot, I read every reply myself.
+```
+
+**F9.**
+```
+I have [X] invite codes left for FL3X.
+
+Quote this with the handle you'd claim. Best ones get one.
+```
+
+**F10.** (avec une capture d'un vrai bug, si ça arrive)
+```
+Shipped a bug yesterday. [Ce qui s'est passé, en une phrase.]
+
+Fixed in [durée]. Sorry to the [X] people who hit it.
+
+Building in public means showing these too.
+```
+
+**F11.**
+```
+Things I didn't expect building a crypto profile site:
+
+- one wallet's NFT list came back at 350 MB (spam NFTs with images inlined)
+- Safari won't play a video background without byte ranges
+- every RPC has a different idea of "rate limit"
+```
+
+**F12.**
+```
+FL3X stats, week [N]:
+
+[X] profiles
+[X] wallets linked
+[X] widgets on cards
+
+Small. Growing. Every number is real.
+```
+
+**F13.** (en quote d'un post de @fl3xdotlol)
+```
+This one took me [X] days. Glad it's out.
+```
+
+**F14.**
+```
+The FL3X checkmark isn't for sale.
+
+It comes with Premium, and Premium comes from holding. Sell, and it goes away.
+```
+
+**F15.**
+```
+I check every new FL3X profile myself.
+
+Today's favorite: @[membre]. Go look.
+```
+
+**F16.**
+```
+What I've learned shipping fast as a solo dev:
+
+1. Ship the boring version first
+2. Real users find bugs you never will
+3. Answer every reply, even the mean ones
+```
+
+**F17.**
+```
+If you're a trader, put your Axiom or GMGN ref link right under your P&L.
+
+People click links next to proof, not links in a list. That's the whole idea behind FL3X.
+```
+
+**F18.**
+```
+Day [N] of building FL3X.
+
+Still no VC, still no team page, still shipping.
+```
+
+---
+
+## 10. Article X
 
 Couverture : `article-cover.png`. Images dans le texte, aux endroits marqués : `widgets.png`, `wallets.png`, `badges.png`, `referral.png`.
 
