@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { Spinner } from "@/components/dashboard/Panel";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft01Icon, ViewIcon, ViewOffSlashIcon } from "@hugeicons/core-free-icons";
@@ -401,12 +402,7 @@ function useReady(backgroundUrl?: string) {
 
 /** Shown while Customize gets everything ready, instead of pieces popping in one by one. */
 function CustomizeLoader() {
-  return (
-    <div className="fixed inset-0 z-40 flex flex-col items-center justify-center gap-4 bg-[#0b0b0b]">
-      <Image src="/images/fl3x-icon.svg" alt="" width={40} height={43} className="animate-pulse" />
-      <p className="text-xs text-fg-3">Loading your profile…</p>
-    </div>
-  );
+  return <Spinner screen />;
 }
 
 /**

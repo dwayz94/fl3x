@@ -41,7 +41,7 @@ const ROWS: Row[] = [
 ];
 
 /** Your tier, your $FL3X and how far the next tier is; then what each tier gets, side by side. */
-export default function PremiumPage() {
+export default function PlanPage() {
   const { getToken } = useAuth();
   const { data: me } = useMe();
   const { data: config } = useConfig();
@@ -72,7 +72,7 @@ export default function PremiumPage() {
 
   return (
     <div className="flex flex-col gap-4 px-4 py-8 md:px-8 lg:py-6">
-      <PageHeader title="PR[e]M[i]UM" subtitle={`Your tier follows the ${symbol} you hold in your Solana wallets. No subscription.`} />
+      <PageHeader title="PL[a]N" subtitle={`Your tier follows the ${symbol} you hold in your Solana wallets. No subscription.`} />
 
       {/* Status */}
       <section className="rounded-3xl bg-[#0d0d0d] p-5 md:p-6">

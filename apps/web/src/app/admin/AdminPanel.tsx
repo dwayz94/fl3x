@@ -168,7 +168,7 @@ export function AdminPanel() {
           {next.banner === "off" ? (
             <p className="px-4 py-3 text-center text-xs text-fg-3">No banner on the landing.</p>
           ) : (
-            <StatusBanner preview config={{ phase: next.phase, token: { symbol: "FL3X", mint: next.tokenMint }, thresholds: next.thresholds, banner: next.banner }} />
+            <StatusBanner config={{ phase: next.phase, token: { symbol: "FL3X", mint: next.tokenMint }, thresholds: next.thresholds, banner: next.banner }} />
           )}
         </div>
       </Card>

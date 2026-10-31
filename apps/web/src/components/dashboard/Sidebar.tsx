@@ -17,7 +17,7 @@ export const NAV = [
   { href: "/dashboard/badges", label: "Badges", icon: Award01Icon },
   { href: "/dashboard/links", label: "Links", icon: Link01Icon },
   { href: "/dashboard/referral", label: "Referral", icon: UserAdd01Icon },
-  { href: "/dashboard/premium", label: "Premium", icon: Crown02Icon },
+  { href: "/dashboard/plan", label: "Plan", icon: Crown02Icon },
 ];
 
 const SETTINGS = { href: "/dashboard/settings", label: "Settings", icon: Settings02Icon };

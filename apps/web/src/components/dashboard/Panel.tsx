@@ -38,9 +38,10 @@ export function Chip({ children, tone = "brand" }: { children: ReactNode; tone?:
   return <span className={cn("rounded-md px-1.5 py-0.5 font-secondary text-[11px] font-normal", tones[tone])}>{children}</span>;
 }
 
-export function Spinner() {
+/** The one loading indicator of the dashboard. `screen` centers it on the whole screen (before the layout exists). */
+export function Spinner({ screen }: { screen?: boolean }) {
   return (
-    <div className="flex min-h-[50vh] items-center justify-center">
+    <div className={screen ? "fixed inset-0 z-40 flex items-center justify-center bg-[#0b0b0b]" : "flex min-h-[50vh] items-center justify-center"}>
       <span className="size-6 animate-spin rounded-full border-2 border-brand border-t-transparent" />
     </div>
   );

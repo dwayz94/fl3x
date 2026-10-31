@@ -72,6 +72,16 @@ body {
   button { font-weight: 400; cursor: pointer; }
 }
 
+/* Anchor links (#tiers, legal contents) glide instead of jumping. Next turns it off during route changes (data-scroll-behavior). */
+@media (prefers-reduced-motion: no-preference) {
+  html { scroll-behavior: smooth; }
+  .page-enter { animation: page-enter 0.5s cubic-bezier(0.22, 1, 0.36, 1) both; }
+}
+@keyframes page-enter { from { opacity: 0; transform: translateY(12px); } }
+/* The section a contents link points to lights up briefly. */
+@keyframes target-flash { from { color: var(--color-brand); } }
+:target > .target-title { animation: target-flash 1.6s ease-out; }
+
 ::selection { background: var(--color-brand); color: var(--color-bg); }
 
 ::-webkit-scrollbar { width: 8px; height: 8px; }

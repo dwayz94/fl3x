@@ -100,7 +100,7 @@ export default function AnalyticsPage() {
           <div className="flex flex-col items-end gap-1">
             <div className="w-56"><Segmented options={ranges} value={days} onChange={(v) => Number(v) <= maxDays && setPicked(v)} /></div>
             {maxDays < 90 && (
-              <Link href="/dashboard/premium" className="text-[11px] text-fg-3 hover:text-brand">
+              <Link href="/dashboard/plan" className="text-[11px] text-fg-3 hover:text-brand">
                 {maxDays === 7 ? "Starter unlocks 30 days, Premium 90" : "Premium unlocks 90 days"}
               </Link>
             )}

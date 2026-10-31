@@ -793,7 +793,7 @@ export const HELP_GROUPS: HelpGroup[] = [
                 items: [
                   "Your tier follows the $FL3X held across all the **Solana** wallets you linked. $FL3X is a Solana token, so EVM wallets don't count.",
                   "Holdings are checked again every 5 minutes, and right away when you link or remove a wallet.",
-                  "Bought more? Use the refresh button on the [Premium](/dashboard/premium) page.",
+                  "Bought more? Use the refresh button on the [Plan](/dashboard/plan) page.",
                   "There's no subscription and nothing to pay FL3X. Sell or move the tokens and your tier follows within minutes.",
                 ],
               },
@@ -819,7 +819,7 @@ export const HELP_GROUPS: HelpGroup[] = [
             blocks: [
               {
                 type: "p",
-                text: "When the token is live, the [Premium](/dashboard/premium) page shows a Buy button with the official token. Always check the token address against FL3X's official accounts before buying.",
+                text: "When the token is live, the [Plan](/dashboard/plan) page shows a Buy button with the official token. Always check the token address against FL3X's official accounts before buying.",
               },
               {
                 type: "note",
@@ -1087,7 +1087,7 @@ export const HELP_GROUPS: HelpGroup[] = [
                 type: "list",
                 items: [
                   "Check the tokens are in a **Solana** wallet linked in Settings.",
-                  "Press refresh on the [Premium](/dashboard/premium) page. Otherwise it updates on its own within 5 minutes.",
+                  "Press refresh on the [Plan](/dashboard/plan) page. Otherwise it updates on its own within 5 minutes.",
                 ],
               },
             ],

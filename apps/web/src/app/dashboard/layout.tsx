@@ -37,7 +37,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       </div>
     );
   }
-  if (!me?.username) return <Spinner />;
+  if (!me?.username) return <Spinner screen />;
 
   // Customize is a full-screen mode of its own (back button, no sidebar).
   if (pathname.startsWith("/dashboard/customize")) return children;

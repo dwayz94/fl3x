@@ -13,7 +13,7 @@ export function LegalPage({ title, intro, sections }: { title: string; intro: Re
       <Navbar />
       {/* Gutter outside, width cap inside: the gutter must not eat into the reading column. */}
       <div className="px-gutter">
-      <article className="mx-auto max-w-[900px] py-16 md:py-24">
+      <article className="page-enter mx-auto max-w-[900px] py-16 md:py-24">
         <p className="text-sm text-fg-3">Last updated {LEGAL_UPDATED}</p>
         <h1 className="mt-2 text-5xl md:text-6xl">
           <Brand>{title}</Brand>
@@ -35,8 +35,8 @@ export function LegalPage({ title, intro, sections }: { title: string; intro: Re
 
         <div className="mt-12 flex flex-col gap-12">
           {sections.map((s, i) => (
-            <section key={s.id} id={s.id} className="scroll-mt-24">
-              <h2 className="text-3xl uppercase">
+            <section key={s.id} id={s.id} className="scroll-mt-28">
+              <h2 className="target-title text-3xl uppercase">
                 <span className="text-brand">{i + 1}.</span> {s.title}
               </h2>
               <div className="mt-4 flex flex-col gap-4 leading-relaxed text-fg-2 [&_a]:text-brand [&_a]:underline-offset-2 hover:[&_a]:underline [&_li]:pl-1 [&_strong]:font-normal [&_strong]:text-fg [&_ul]:flex [&_ul]:list-disc [&_ul]:flex-col [&_ul]:gap-2 [&_ul]:pl-5">

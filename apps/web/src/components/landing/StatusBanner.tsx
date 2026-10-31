@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { AlertCircleIcon, Cancel01Icon } from "@hugeicons/core-free-icons";
 import type { Banner, PublicConfig } from "@fl3x/shared";
 import { Icon } from "@/components/ui";
@@ -22,22 +22,13 @@ function launchBanner(config: PublicConfig): Banner {
   return { text: "FL3X is open to everyone", detail: `${symbol} launches soon`, link: { label: "Claim your name", url: "/join" } };
 }
 
-const DISMISSED = "fl3x:banner-dismissed";
-
-/** Pink strip under the landing navbar (Figma 32:6590). Closing it hides this message only: a new one shows again. */
-export function StatusBanner({ config, preview }: { config: PublicConfig; preview?: boolean }) {
+/**
+ * Pink strip under the landing navbar (Figma 32:6590). Shown on every visit, rendered on the
+ * server so it never pushes the hero down after load. Closing it hides it until the next page load.
+ */
+export function StatusBanner({ config }: { config: PublicConfig }) {
   const banner = config.banner === "off" ? null : (config.banner ?? launchBanner(config));
-  const key = banner ? `${banner.text}|${banner.detail ?? ""}` : "";
-  // Shown from the first paint (rendered on the server): appearing after load would push the
-  // whole hero down. Only visitors who closed it see it go away once the page is up.
   const [dismissed, setDismissed] = useState(false);
-  useEffect(() => {
-    try {
-      setDismissed(!preview && localStorage.getItem(DISMISSED) === key);
-    } catch {
-      setDismissed(false);
-    }
-  }, [key, preview]);
 
   if (!banner || dismissed) return null;
   const external = banner.link && /^https?:\/\//.test(banner.link.url);
@@ -67,12 +58,7 @@ export function StatusBanner({ config, preview }: { config: PublicConfig; previe
       <button
         type="button"
         aria-label="Close"
-        onClick={() => {
-          setDismissed(true);
-          try {
-            localStorage.setItem(DISMISSED, key);
-          } catch {}
-        }}
+        onClick={() => setDismissed(true)}
         className="absolute top-1/2 right-3 -translate-y-1/2 rounded-md p-1 transition-colors hover:bg-black/10"
       >
         <Icon icon={Cancel01Icon} size={18} />
