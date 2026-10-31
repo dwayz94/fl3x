@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
-import type { FullPublicProfile } from "@fl3x/shared";
+import { redirect } from "next/navigation";
+import { normalizeUsername, type FullPublicProfile } from "@fl3x/shared";
 import { PublicProfile } from "@/components/profile/PublicProfile";
+import { MissingProfile } from "@/components/shared";
 import { site } from "@/config/site";
 import { shareMetadata } from "@/lib/seo";
 
@@ -21,11 +22,33 @@ async function getProfile(username: string): Promise<FullPublicProfile | null> {
   return (await res.json()) as FullPublicProfile;
 }
 
+/** Whether a missing profile's name can still be claimed (same answer as the join flow's check). */
+async function getAvailability(username: string): Promise<{ available: boolean; reason: string | null }> {
+  try {
+    const res = await fetch(`${site.apiUrl}/usernames/${encodeURIComponent(username)}`, { next: { revalidate: 30 } });
+    if (res.ok) return await res.json();
+  } catch {}
+  return { available: false, reason: "Can't check this name right now. Try again in a moment." };
+}
+
+/** fl3x.lol/@you is the placeholder in our posts: people who tap it want to join (members land on their dashboard from there). */
+const JOIN_HANDLES = new Set(["you", "yourname"]);
+
+function handleOf(raw: string) {
+  try {
+    return normalizeUsername(decodeURIComponent(raw));
+  } catch {
+    return normalizeUsername(raw);
+  }
+}
+
 type Props = { params: Promise<{ username: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const profile = await getProfile((await params).username);
-  if (!profile) return { title: "Page not found", robots: { index: false } };
+  const username = handleOf((await params).username);
+  if (JOIN_HANDLES.has(username)) return { title: "Claim your name", robots: { index: false } };
+  const profile = await getProfile(username);
+  if (!profile) return { title: `@${username}`, description: `fl3x.lol/@${username} on FL3X`, robots: { index: false } };
   const name = profile.displayName ?? profile.username;
   return {
     title: `${name} (@${profile.username})`,
@@ -37,8 +60,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function ProfilePage({ params }: Props) {
-  const profile = await getProfile((await params).username);
-  if (!profile) notFound();
+  const username = handleOf((await params).username);
+  if (JOIN_HANDLES.has(username)) redirect("/join");
+  const profile = await getProfile(username);
+  if (!profile) return <MissingProfile handle={username} {...await getAvailability(username)} />;
   const name = profile.displayName ?? profile.username;
   // Tells search engines this page is a person's profile (name, handle, avatar, their links).
   const url = `${site.url}/@${profile.username}`;

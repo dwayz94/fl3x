@@ -1,14 +1,16 @@
 import type { FastifyInstance } from "fastify";
 import { timingSafeEqual } from "node:crypto";
-import { arrayContains, eq, or, sql } from "drizzle-orm";
+import bs58 from "bs58";
+import { arrayContains, arrayOverlaps, desc, eq, inArray, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import { BADGES, siteSettingsSchema } from "@fl3x/shared";
 import { db, schema } from "../db";
 import { env } from "../env";
 import { generateCode } from "../lib/codes";
-import { forbidden, notFound } from "../lib/errors";
+import { badRequest, forbidden, notFound } from "../lib/errors";
 import { getSettings, saveSettings } from "../lib/settings";
-import { refreshTier } from "../lib/users";
+import { refreshTier, refreshTiersForWallets } from "../lib/users";
+import { isSolanaAddress } from "../lib/wallets";
 
 const createInvites = z.object({
   count: z.number().int().min(1).max(500).default(1),
@@ -31,6 +33,23 @@ const memberUpdate = z.object({
   tierOverride: z.enum(["starter", "premium"]).nullable().optional(),
   badges: z.array(z.enum(grantable)).max(grantable.length).optional(),
 });
+
+const addGrants = z.object({
+  /** A list, or pasted text: addresses separated by new lines, commas or spaces. */
+  addresses: z.union([z.array(z.string().max(200)).max(2000), z.string().max(100_000)]),
+  tier: z.enum(["starter", "premium"]).default("premium"),
+  note: z.string().trim().max(200).optional(),
+});
+
+/** A real Solana public key: base58, 32–44 chars, decoding to 32 bytes. */
+function isSolanaKey(a: string) {
+  if (!isSolanaAddress(a)) return false;
+  try {
+    return bs58.decode(a).length === 32;
+  } catch {
+    return false;
+  }
+}
 
 /** What /admin shows about a member. */
 async function adminUser(u: typeof schema.users.$inferSelect) {
@@ -141,5 +160,57 @@ export async function adminRoutes(app: FastifyInstance) {
       .returning({ grantedBadges: schema.users.grantedBadges });
     if (!row) throw notFound("No such user");
     return row;
+  });
+
+  /**
+   * Wallet grants (giveaways): Solana addresses that get a tier, whether or
+   * not someone joined with them yet. Each one shows the member who holds it
+   * now (linked by signature first, else as an unclaimed sign-in wallet).
+   */
+  app.get("/admin/wallet-grants", async () => {
+    const grants = await db.select().from(schema.walletGrants).orderBy(desc(schema.walletGrants.createdAt), schema.walletGrants.address);
+    const addresses = grants.map((g) => g.address);
+    const holder = new Map<string, { id: string; username: string | null; tier: string }>();
+    if (addresses.length) {
+      const linked = await db
+        .select({ address: schema.wallets.address, id: schema.users.id, username: schema.users.username, tier: schema.users.tier })
+        .from(schema.wallets)
+        .innerJoin(schema.users, eq(schema.users.id, schema.wallets.userId))
+        .where(inArray(schema.wallets.address, addresses));
+      for (const l of linked) holder.set(l.address, { id: l.id, username: l.username, tier: l.tier });
+      const login = await db
+        .select({ id: schema.users.id, username: schema.users.username, tier: schema.users.tier, wallets: schema.users.wallets })
+        .from(schema.users)
+        .where(arrayOverlaps(schema.users.wallets, addresses));
+      for (const u of login) for (const a of u.wallets) if (addresses.includes(a) && !holder.has(a)) holder.set(a, { id: u.id, username: u.username, tier: u.tier });
+    }
+    return grants.map((g) => ({ address: g.address, tier: g.tier, note: g.note, createdAt: g.createdAt, member: holder.get(g.address) ?? null }));
+  });
+
+  /** Paste many addresses at once: deduped, invalid ones reported. Members already holding one get the tier now. */
+  app.post("/admin/wallet-grants", async (req) => {
+    const body = addGrants.parse(req.body);
+    const raw = (Array.isArray(body.addresses) ? body.addresses : body.addresses.split(/[\s,;]+/)).map((a) => a.trim()).filter(Boolean);
+    const unique = [...new Set(raw)];
+    const valid = unique.filter(isSolanaKey);
+    const invalid = unique.filter((a) => !isSolanaKey(a));
+    if (valid.length > 2000) throw badRequest("At most 2000 addresses at once");
+    const added = valid.length
+      ? (await db
+          .insert(schema.walletGrants)
+          .values(valid.map((address) => ({ address, tier: body.tier, note: body.note || null })))
+          .onConflictDoNothing()
+          .returning({ address: schema.walletGrants.address })).map((r) => r.address)
+      : [];
+    await refreshTiersForWallets(added);
+    return { added: added.length, existing: valid.length - added.length, invalid: invalid.length, invalidSamples: invalid.slice(0, 200) };
+  });
+
+  /** Take a grant back; whoever holds the wallet falls back to their own tier now. */
+  app.delete<{ Params: { address: string } }>("/admin/wallet-grants/:address", async (req) => {
+    const [row] = await db.delete(schema.walletGrants).where(eq(schema.walletGrants.address, req.params.address)).returning();
+    if (!row) throw notFound("No such grant");
+    await refreshTiersForWallets([row.address]);
+    return { ok: true };
   });
 }

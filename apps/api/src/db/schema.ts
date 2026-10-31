@@ -174,3 +174,16 @@ export const appSettings = pgTable("app_settings", {
   value: jsonb("value").notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+/**
+ * Tiers handed to Solana wallets from /admin (giveaways: "drop your address"),
+ * even before anyone joined with them. A member whose tier-counting wallets
+ * include one gets at least this tier (a floor, like users.tierOverride).
+ */
+export const walletGrants = pgTable("wallet_grants", {
+  /** Base58 Solana address, as given (case matters). */
+  address: text("address").primaryKey(),
+  tier: text("tier", { enum: ["starter", "premium"] }).notNull().default("premium"),
+  note: text("note"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});

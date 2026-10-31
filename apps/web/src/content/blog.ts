@@ -15,6 +15,159 @@ export interface BlogPost {
 
 export const POSTS: BlogPost[] = [
   {
+    slug: "how-to-get-a-fl3x-invite-code",
+    title: "How to get a FL3X invite code",
+    description: "FL3X is invite-only before launch. Here are the ways in: a member's link, a code drop, a giveaway or the waitlist.",
+    date: "2026-10-31",
+    tag: "Guide",
+    sections: [
+      {
+        id: "why",
+        heading: "Why invites",
+        blocks: [
+          { type: "p", text: "Before launch, claiming a name on FL3X needs an invite. It keeps the first profiles real and gives early members the short handles." },
+        ],
+      },
+      {
+        id: "ways",
+        heading: "Four ways in",
+        blocks: [
+          {
+            type: "list",
+            items: [
+              `**A member's link.** Every member has their own link, fl3x.lol/invite/theirname, and up to ${TIER_LIMITS.premium.invites} invites depending on their tier. Opening it fills the invite in for you.`,
+              "**Code drops.** We post invite codes on [@fl3xdotlol](https://x.com/fl3xdotlol), a few at a time. They go fast.",
+              "**Giveaways.** Some of our posts ask for a Solana address in the replies. Winners get an invite and Premium.",
+              "**The waitlist.** Sign in with X at [fl3x.lol/join](/join) without a code and you're on the waitlist. We let people in from it as we go.",
+            ],
+          },
+        ],
+      },
+      {
+        id: "use",
+        heading: "Using your code",
+        blocks: [
+          {
+            type: "steps",
+            items: [
+              "Go to [fl3x.lol/join](/join) and continue with X.",
+              "Pick your handle (we prefill it from X) and type the code. It looks like XXXX-XXXX.",
+              "Link a wallet if you want to, then open your dashboard.",
+            ],
+          },
+          { type: "note", tone: "info", text: "Codes work once. If yours says it was already used, ask the person who sent it for another one. More in [Invites and waitlist](/help/invites-and-waitlist)." },
+        ],
+      },
+    ],
+  },
+  {
+    slug: "show-your-hyperliquid-pnl",
+    title: "How to show your Hyperliquid P&L on your profile",
+    description: "Put your perps P&L and open positions from Hyperliquid on a public page, updated on their own.",
+    date: "2026-10-31",
+    tag: "Guide",
+    sections: [
+      {
+        id: "what",
+        heading: "What the widget shows",
+        blocks: [
+          { type: "p", text: "The **Hyperliquid** widget reads your account from Hyperliquid's public API: account value, P&L over the day, week, month or all time, and your open positions with their side, leverage and unrealized P&L." },
+        ],
+      },
+      {
+        id: "steps",
+        heading: "Set it up",
+        blocks: [
+          {
+            type: "steps",
+            items: [
+              "Link the EVM wallet you trade with from **Settings**. It's one free signature.",
+              "In **Customize**, add the **Hyperliquid** widget and pick that wallet.",
+              "Choose the P&L period, then save.",
+            ],
+          },
+          { type: "note", tone: "info", text: "The widget counts perps only. Spot balances on Hyperliquid aren't part of it." },
+        ],
+      },
+      {
+        id: "privacy",
+        heading: "Your address stays off the page",
+        blocks: [
+          { type: "p", text: "Visitors see the numbers. The page fetches them by widget, so the wallet address never reaches it. Pair it with a **P&L Card** for your onchain wallets and your whole trading life is on one link." },
+        ],
+      },
+    ],
+  },
+  {
+    slug: "share-your-polymarket-positions",
+    title: "How to share your Polymarket positions",
+    description: "Show your open Polymarket bets, their value and your P&L on your profile, with your @username or wallet.",
+    date: "2026-10-31",
+    tag: "Guide",
+    sections: [
+      {
+        id: "what",
+        heading: "What people see",
+        blocks: [
+          { type: "p", text: "The **Polymarket** widget lists your open positions: the market, your side, what it's worth now and how much it's up or down. The totals sit on top." },
+        ],
+      },
+      {
+        id: "steps",
+        heading: "Set it up",
+        blocks: [
+          {
+            type: "steps",
+            items: [
+              "In **Customize**, add the **Polymarket** widget.",
+              "Type your Polymarket @username, your 0x address or paste your profile link.",
+              "Save. The positions come from Polymarket's public data and refresh on their own.",
+            ],
+          },
+          { type: "note", tone: "info", text: "Polymarket positions are already public on Polymarket. The widget shows what anyone could see there, in one place on your profile." },
+        ],
+      },
+    ],
+  },
+  {
+    slug: "trading-terminal-referral-links",
+    title: "Where to put your Axiom, GMGN or Padre referral link",
+    description: "Your terminal referral link earns when people trade with it. Put it next to the numbers that make them want to.",
+    date: "2026-10-31",
+    tag: "Guide",
+    sections: [
+      {
+        id: "why",
+        heading: "Put it where the proof is",
+        blocks: [
+          { type: "p", text: "A referral link in a tweet scrolls away in a day. On your profile, it sits under your P&L, your trades and your holdings: the reasons someone would want to trade like you." },
+        ],
+      },
+      {
+        id: "steps",
+        heading: "Add it",
+        blocks: [
+          {
+            type: "steps",
+            items: [
+              "Open **Links** in your dashboard.",
+              "Pick the terminal (Axiom, GMGN, Padre, Proxima or FOMO) and type your referral handle or code.",
+              "Drag it where you want in the list. Each terminal gets its own mark on your profile.",
+            ],
+          },
+          { type: "p", text: `Free profiles get ${TIER_LIMITS.none.links} links, Premium gets ${TIER_LIMITS.premium.links}.` },
+        ],
+      },
+      {
+        id: "analytics",
+        heading: "See what gets clicked",
+        blocks: [
+          { type: "p", text: "Your analytics count clicks on every link, so you can see which terminal your visitors pick." },
+        ],
+      },
+    ],
+  },
+  {
     slug: "show-your-solana-portfolio-on-your-profile",
     title: "How to show your Solana portfolio on your profile",
     description: "Put your live Solana balance, holdings and P&L on a public profile, without ever sharing your wallet address.",

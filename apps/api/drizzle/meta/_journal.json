@@ -57,6 +57,13 @@
       "when": 1793325684936,
       "tag": "0007_wakeful_selene",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1793467746061,
+      "tag": "0008_wallet_grants",
+      "breakpoints": true
     }
   ]
 }

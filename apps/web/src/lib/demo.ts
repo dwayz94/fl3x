@@ -9,10 +9,6 @@ import type { CommunityData, MediaData, TokenData } from "./types";
 
 /** Generic art only (scripts/demo-art.py): no real people in demos. */
 const IMG = {
-  avatar: "/images/demo/avatar-1.svg",
-  avatar2: "/images/demo/avatar-2.svg",
-  avatar3: "/images/demo/avatar-3.svg",
-  avatar4: "/images/demo/avatar-4.svg",
   cover: "/images/demo/cover-1.svg",
   cover2: "/images/demo/cover-2.svg",
   cover3: "/images/demo/cover-3.svg",
@@ -23,7 +19,7 @@ const IMG = {
 };
 
 /** A real track (Spotify page + cover); title and artist come from Spotify. */
-export const DEMO_TRACK_URL = "https://open.spotify.com/track/0j2T0R9dR9qdJYsB7ciXhf";
+export const DEMO_TRACK_URL = "https://open.spotify.com/track/7KXjTSCq5nL1LoYtL7XAwS";
 
 function history(points: number, start: number, end: number, seed: number) {
   // Seeded random walk bent toward the end value, so the chart looks like a real wallet.
@@ -43,6 +39,12 @@ function history(points: number, start: number, end: number, seed: number) {
   return out;
 }
 
+const SOL_ICON = "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png";
+const BONK_ICON = "https://arweave.net/hQiPZOsRZXGXBJd_82PhVdlM_hACsT_q6wqwf5cSY7I";
+const WIF_ICON = "/images/demo/real/wif.jpg";
+const JUP_ICON = "/images/demo/real/jup.png";
+const POPCAT_ICON = "/images/demo/real/popcat.jpg";
+
 const wallet: PortfolioData = {
   valueUsd: 134_548.73,
   period: "1m",
@@ -55,7 +57,7 @@ const wallet: PortfolioData = {
     { id: "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263", chain: "solana", symbol: "BONK", name: "Bonk", iconUrl: "https://arweave.net/hQiPZOsRZXGXBJd_82PhVdlM_hACsT_q6wqwf5cSY7I", amount: 1_118_903_310, valueUsd: 31_420, change24h: 12.1 },
     { id: "demo-eth", chain: "ethereum", symbol: "ETH", name: "Ether", iconUrl: "https://icons.llamao.fi/icons/chains/rsz_ethereum?w=48&h=48", amount: 9.4, valueUsd: 21_800, change24h: 3.1 },
     { id: "demo-fl3x", chain: "solana", symbol: "FL3X", name: "FL3X", iconUrl: "/images/fl3x-icon.svg", amount: 2_400_000, valueUsd: 21_800, change24h: 73 },
-    { id: "demo-nova", chain: "solana", symbol: "NOVA", name: "Nova", iconUrl: IMG.avatar3, amount: 860_000, valueUsd: 10_228, change24h: -4.2 },
+    { id: "EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm", chain: "solana", symbol: "WIF", name: "dogwifhat", iconUrl: WIF_ICON, amount: 58_100, valueUsd: 10_228, change24h: -4.2 },
   ],
   networks: [
     { id: "solana", name: "Solana", valueUsd: 112_748.73 },
@@ -63,9 +65,6 @@ const wallet: PortfolioData = {
   ],
   wallets: 2,
 };
-
-const SOL_ICON = "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png";
-const BONK_ICON = "https://arweave.net/hQiPZOsRZXGXBJd_82PhVdlM_hACsT_q6wqwf5cSY7I";
 
 /** A month of daily values (calendar preview): mostly green days, a few red. */
 const monthly = (() => {
@@ -82,7 +81,7 @@ const trades: TradesData = {
   wallets: 1,
   items: [
     { id: "demo-1", at: new Date(Date.now() - 2 * 3_600_000).toISOString(), side: "buy", token: { address: "bonk", symbol: "BONK", name: "Bonk", iconUrl: BONK_ICON }, amount: 41_200_000, quote: { symbol: "SOL", amount: 4.2 }, valueUsd: 744 },
-    { id: "demo-2", at: new Date(Date.now() - 7 * 3_600_000).toISOString(), side: "sell", token: { address: "nova", symbol: "NOVA", name: "Nova", iconUrl: IMG.avatar3 }, amount: 120_000, quote: { symbol: "SOL", amount: 9.8 }, valueUsd: 1_736 },
+    { id: "demo-2", at: new Date(Date.now() - 7 * 3_600_000).toISOString(), side: "sell", token: { address: "wif", symbol: "WIF", name: "dogwifhat", iconUrl: WIF_ICON }, amount: 120_000, quote: { symbol: "SOL", amount: 9.8 }, valueUsd: 1_736 },
     { id: "demo-3", at: new Date(Date.now() - 26 * 3_600_000).toISOString(), side: "buy", token: { address: "fl3x", symbol: "FL3X", name: "FL3X", iconUrl: "/images/fl3x-icon.svg" }, amount: 2_400_000, quote: { symbol: "USDC", amount: 5_000 }, valueUsd: 5_000 },
     { id: "demo-4", at: new Date(Date.now() - 3 * 86_400_000).toISOString(), side: "sell", token: { address: "sol", symbol: "SOL", name: "Solana", iconUrl: SOL_ICON }, amount: 12, quote: { symbol: "USDC", amount: 2_124 }, valueUsd: 2_124 },
   ],
@@ -101,7 +100,7 @@ const hyperliquid: HyperliquidData = {
 };
 
 const polymarket: PolymarketData = {
-  name: "nova",
+  name: "fl3x",
   totalValue: 8_420,
   totalPnl: 1_260,
   url: "#",
@@ -115,7 +114,9 @@ const polymarket: PolymarketData = {
 const tokens: Record<string, TokenData> = {
   sol: { chain: "solana", address: "sol", name: "Solana", symbol: "SOL", priceUsd: 177.2, marketCap: 96_000_000_000, change24h: 4.6, imageUrl: SOL_ICON, url: "#" },
   bonk: { chain: "solana", address: "bonk", name: "Bonk", symbol: "BONK", priceUsd: 0.0000181, marketCap: 1_400_000_000, change24h: -2.4, imageUrl: BONK_ICON, url: "#" },
-  nova: { chain: "solana", address: "nova", name: "Nova", symbol: "NOVA", priceUsd: 0.0005, marketCap: 500_000, change24h: 18, imageUrl: IMG.avatar3, url: "#" },
+  wif: { chain: "solana", address: "wif", name: "dogwifhat", symbol: "WIF", priceUsd: 0.1761, marketCap: 175_974_880, change24h: 1.4, imageUrl: WIF_ICON, url: "#" },
+  jup: { chain: "solana", address: "jup", name: "Jupiter", symbol: "JUP", priceUsd: 0.2592, marketCap: 860_516_372, change24h: 2.1, imageUrl: JUP_ICON, url: "#" },
+  popcat: { chain: "solana", address: "popcat", name: "Popcat", symbol: "POPCAT", priceUsd: 0.04086, marketCap: 40_048_045, change24h: 3.9, imageUrl: POPCAT_ICON, url: "#" },
   fl3x: { chain: "solana", address: "fl3x", name: "FL3X", symbol: "FL3X", priceUsd: 0.0021, marketCap: 2_100_000, change24h: 42, imageUrl: "/images/fl3x-icon.svg", url: "#" },
 };
 
@@ -125,13 +126,31 @@ const communities: Record<string, CommunityData> = {
 };
 
 const media: Record<string, MediaData> = {
-  youtube: { provider: "youtube", title: "What a month of on-chain trading taught me", author: "Nova", thumbnailUrl: IMG.cover2, live: false, url: "#" },
-  twitch: { provider: "twitch", title: "Late-night memecoin hunting", author: "nova", thumbnailUrl: IMG.cover4, avatarUrl: IMG.avatar, live: true, viewers: 1840, url: "#" },
+  // Real channels, as our API returned them on 2026-10-31 (images copied to /images/demo/real).
+  youtube: {
+    provider: "youtube",
+    title: "Willy Woo’s Bitcoin Model Predicts $413K by 2028",
+    author: "Bankless",
+    thumbnailUrl: "/images/demo/real/bankless-video.jpg",
+    avatarUrl: "/images/demo/real/bankless.jpg",
+    publishedAt: "2026-10-30T18:39:28.000Z",
+    live: false,
+    url: "https://www.youtube.com/@Bankless",
+  },
+  twitch: {
+    provider: "twitch",
+    title: "AMP HALLOWEEN PARTY",
+    author: "kaicenat",
+    thumbnailUrl: "/images/demo/real/kaicenat.png",
+    avatarUrl: "/images/demo/real/kaicenat.png",
+    live: false,
+    url: "https://twitch.tv/kaicenat",
+  },
   spotify: {
     provider: "spotify",
-    title: "Stronger",
-    author: "Kanye West",
-    thumbnailUrl: "https://image-cdn-fa.spotifycdn.com/image/ab67616d00001e0226f7f19c7f0381e56156c94a",
+    title: "HUMBLE.",
+    author: "Kendrick Lamar",
+    thumbnailUrl: "/images/demo/real/humble.jpg",
     live: null,
     url: DEMO_TRACK_URL,
   },
@@ -170,7 +189,7 @@ export function resolveDemo(path: string, params: Record<string, string | undefi
       // The landing's real song stays fixed: the hero never waits on (or breaks with) the API.
       return params.url === DEMO_TRACK_URL ? media.spotify : media[params.url?.replace("demo:", "") ?? ""];
     case "channel":
-      return params.platform === "twitch" ? media.twitch : { ...media.youtube, avatarUrl: IMG.avatar, publishedAt: "2026-10-26T18:00:00.000Z" };
+      return params.platform === "twitch" ? media.twitch : media.youtube;
     case "followers":
       return { platform: params.platform, handle: params.handle, count: 48_210, approximate: false };
     case "spotify-now":
@@ -192,16 +211,16 @@ export const DEMO_WIDGETS: { type: WidgetType; label?: string; settings: WidgetS
   { type: "movers", settings: {} },
   { type: "calendar", settings: { network: "solana" } },
   { type: "trades", settings: {} },
-  { type: "watchlist", settings: { chain: "solana", tokens: "demo:sol, demo:bonk, demo:fl3x, demo:nova" } },
+  { type: "watchlist", settings: { chain: "solana", tokens: "demo:sol, demo:jup, demo:wif, demo:popcat" } },
   { type: "hyperliquid", settings: { period: "month" } },
   { type: "polymarket", settings: { user: "demo" } },
-  { type: "quote", settings: { quote: "Stay humble. Stack bags. Flex anyway.", author: "Nova" } },
-  { type: "token", settings: { chain: "solana", address: "demo:nova", note: "My main bag this cycle. Not financial advice." } },
+  { type: "quote", settings: { quote: "Stay humble. Stack bags. Flex anyway.", author: "FL3X" } },
+  { type: "token", settings: { chain: "solana", address: "demo:wif", note: "The hat stays on. Not financial advice." } },
   { type: "community", label: "Telegram", settings: { platform: "telegram", invite: "fl3x" } },
   { type: "community", label: "Discord", settings: { platform: "discord", invite: "fl3x" } },
-  { type: "followers", settings: { platform: "x", handle: "nova" } },
-  { type: "video", label: "YouTube, latest upload", settings: { platform: "youtube", channel: "nova" } },
-  { type: "video", label: "Twitch, live now", settings: { platform: "twitch", channel: "nova" } },
+  { type: "followers", settings: { platform: "x", handle: "fl3xdotlol" } },
+  { type: "video", label: "YouTube, latest upload", settings: { platform: "youtube", channel: "Bankless" } },
+  { type: "video", label: "Twitch", settings: { platform: "twitch", channel: "kaicenat" } },
   { type: "music", label: "My Spotify, now playing", settings: { source: "spotify" } },
   { type: "image", settings: { url: "/images/demo/photo.webp" } },
   { type: "link", label: "With button", settings: { image: IMG.cover3, title: "Genesis pass drop", body: LOREM, ctaLabel: "Mint now", url: "https://fl3x.lol" } },
@@ -275,25 +294,25 @@ export const DEMO_LAYOUTS: { id: string; label: string; widgets: Widget[] }[] = 
 
 export function demoProfile(widgets: Widget[], backgroundUrl: string | null = DEMO_BACKGROUNDS[0]!.url): FullPublicProfile {
   return {
-    username: "nova",
-    displayName: "Nova",
-    bio: "FL3X on all screens!",
-    avatarUrl: IMG.avatar,
+    username: "fl3x",
+    displayName: "FL3X",
+    bio: "Your crypto profile, live.",
+    avatarUrl: IMG.fl3x,
     badges: BADGES.map((b) => b.id),
     theme: backgroundUrl ? { ...DEFAULT_THEME, background: "image", backgroundUrl } : { ...DEFAULT_THEME, background: "plain" },
     widgets,
     links: [
       { id: "l1", kind: "website", url: "https://fl3x.lol", label: "fl3x.lol" },
       { id: "l2", kind: "discord", url: "https://discord.gg/fl3x", label: null },
-      { id: "l3", kind: "x", url: "https://x.com/fl3xlol", label: null },
-      { id: "l4", kind: "telegram", url: "https://t.me/fl3x", label: null },
+      { id: "l3", kind: "x", url: "https://x.com/fl3xdotlol", label: null },
+      { id: "l4", kind: "telegram", url: "https://t.me/fl3xdotlol", label: null },
       { id: "l5", kind: "axiom", url: "https://axiom.trade/@bjm", label: null },
       { id: "l6", kind: "gmgn", url: "https://gmgn.ai/r/panzonhl", label: null },
       { id: "l7", kind: "padre", url: "https://trade.padre.gg/rk/alxcooks", label: null },
       { id: "l8", kind: "proxima", url: "https://proxima.tools/@jay", label: null },
     ],
     tier: "premium",
-    xHandle: "nova",
+    xHandle: "fl3xdotlol",
     views: 456_432,
   };
 }

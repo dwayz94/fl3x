@@ -14,7 +14,7 @@ size() {
     *) echo 1200,675 ;;
   esac
 }
-SLUGS="${*:-launch before-after phone widgets wallets badges verified referral invite-only customize spotify analytics article-cover banner avatar avatar-pink}"
+SLUGS="${*:-launch before-after phone widgets wallets badges verified referral invite-only customize spotify analytics giveaway invite-codes claim tiers article-cover banner avatar avatar-pink}"
 for s in $SLUGS; do
   "$CHROME" --headless=new --disable-gpu --hide-scrollbars --force-device-scale-factor=2 \
     --window-size="$(size "$s")" --virtual-time-budget=10000 \

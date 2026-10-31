@@ -4,7 +4,7 @@ Tweets prêts à poster, tweet épinglé, article et images. Les textes sont en 
 
 Tout en une page, avec boutons Copier : ouvrir `docs/x-kit/kit.html` dans un navigateur (régénérée par `python3 scripts/x-kit-page.py` après une modification de ce fichier).
 
-Images : `docs/x-kit/images/` (PNG 2x, logo en bas à gauche, `fl3x.lol` en bas à droite). Pour les régénérer : lancer le site (`localhost:3000`), puis `sh scripts/x-kit.sh` (ou `sh scripts/x-kit.sh launch` pour une seule). Les visuels sont dans `apps/web/src/components/x-kit/visuals.tsx` et utilisent les vrais composants du site (carte de profil, widgets, badges) avec les données de démo : ce sont des illustrations, pas des vrais membres ni des vrais chiffres.
+Images : `docs/x-kit/images/` (PNG 2x, logo en bas à gauche, `fl3x.lol` en bas à droite). Pour les régénérer : lancer le site (`localhost:3000`), puis `sh scripts/x-kit.sh` (ou `sh scripts/x-kit.sh launch` pour une seule). Les visuels sont dans `apps/web/src/components/x-kit/visuals.tsx` et utilisent les vrais composants du site (carte de profil, widgets, badges) avec les données de démo (`lib/demo.ts`). Pas de lueur rose en fond : noir plat ou les images FL3X.
 
 | Image | Format | Usage |
 |---|---|---|
@@ -12,8 +12,8 @@ Images : `docs/x-kit/images/` (PNG 2x, logo en bas à gauche, `fl3x.lol` en bas 
 | `banner.png` | 1500×500 | Bannière du profil, coins du bas laissés vides (photo de profil à gauche, boutons sur mobile à droite) |
 | `launch.png` | 1200×675 | Tweet épinglé |
 | `article-cover.png` | 1500×600 (5:2) | Couverture de l'article |
-| Les autres | 1200×675 (16:9) | Tweets. Persona de démo « Nova », images abstraites génériques (`scripts/demo-art.py`), aucune vraie personne. Le son de démo est un vrai titre (Kanye West, « Stronger ») avec sa pochette Spotify |
-| Les autres | 1200×675 (16:9) | Tweets, voir ci-dessous |
+| Les autres | 1200×675 (16:9) | Tweets. Le profil montré est celui de FL3X. Tokens (WIF, JUP, POPCAT), chaînes (Bankless sur YouTube, kaicenat sur Twitch) et titre (Kendrick Lamar, « HUMBLE. ») sont réels, copiés le 31/10/2026 dans `public/images/demo/real`. Les montants du P&L restent des exemples |
+| `giveaway.png`, `invite-codes.png`, `claim.png`, `tiers.png` | 1200×675 | Giveaways, drops de codes, réservation du nom, tiers (limites réelles de `TIER_LIMITS`) |
 
 ---
 
@@ -44,12 +44,14 @@ Autres règles utiles trouvées dans le code :
 
 ## 2. Plan de publication
 
-- **Pré-lancement (sur invitation)** : 2 à 3 posts par jour, espacés de quelques heures (le boost des nouveaux comptes joue sur des posts de moins de 2 h). On montre le produit, widget par widget. Chaque post renvoie vers la même idée : réserve ton nom, avec une invitation ou via la waitlist (connexion X).
-- **Ouverture** : le tweet épinglé, puis 3 ou 4 posts dans la journée. Republier les plus beaux profils des membres (avec leur accord), c'est la meilleure démo possible.
-- **Après** : 2 posts par jour minimum, en alternant un widget, un badge, le classement des parrains et des vrais profils.
-- **Toujours** : répondre à chaque réponse dans la première heure, citer les profils que les membres partagent. Pas de hashtags, pas de tags en masse.
-- **Le lien** `fl3x.lol` dans le texte une fois sur deux ou trois, pas plus : le domaine est déjà sur chaque image.
-- Le token n'est pas lancé : aucun ticker, aucune adresse, aucune promesse de prix. On vend le profil, pas le token.
+- **Pré-lancement (sur invitation)** : 3 posts par jour, espacés de quelques heures (le boost des nouveaux comptes joue sur des posts de moins de 2 h). Un widget, un giveaway ou un drop de codes, une question. Chaque post renvoie vers la même idée : réserve ton nom.
+- **Giveaways** : 1 à 2 par semaine, pas plus (sinon ça sent la ferme et les gens ne répondent plus). Toujours une vraie récompense livrée, et on cite publiquement les gagnants.
+- **Drops de codes** : 2 à 3 par semaine, 5 codes à chaque fois, avec 4 caractères cachés : il faut répondre ou venir en DM pour avoir le reste. Les codes viennent de `/admin` (Invite codes).
+- **Ouverture** : le tweet épinglé, puis 3 ou 4 posts dans la journée. Republier les plus beaux profils des membres (avec leur accord).
+- **Après** : 2 posts par jour minimum, en alternant widget, badge, giveaway, vrais profils.
+- **Toujours** : répondre à chaque réponse dans la première heure. Pas de hashtags, pas de tags en masse, jamais « tag 3 friends » (signalements = -234 dans l'algorithme).
+- **Le lien** `fl3x.lol` dans le texte une fois sur deux ou trois, pas plus : le domaine est déjà sur chaque image. `fl3x.lol/@you` mène à l'inscription (et au dashboard pour un membre).
+- Le token n'est pas lancé : aucun ticker à acheter, aucune adresse de contrat, aucune promesse de prix. On vend le profil.
 
 ---
 
@@ -58,12 +60,11 @@ Autres règles utiles trouvées dans le code :
 Image : `launch.png`
 
 ```
-FL3X is open.
+FL3X is your crypto profile, live.
 
-Your crypto profile, live.
-P&L, wallets, token, community, stream, music. All on one link.
+P&L, wallets, your token, your Discord, your stream, your music. One link that updates itself.
 
-Claim your name: fl3x.lol
+Invite-only for now. Claim your name before someone else does: fl3x.lol/@you
 ```
 
 Variante plus courte (même image `launch.png`) :
@@ -74,7 +75,104 @@ One link for everything you are onchain.
 fl3x.lol/@you
 ```
 
-## 4. Avant le lancement (sur invitation)
+## 4. Bio du compte X
+
+Nom affiché : `FL3X` (ou `FL3X | invite-only` pendant le pré-lancement). Lien : `fl3x.lol`. Localisation : `onchain` ou `fl3x.lol/@you`.
+
+Bio (une au choix) :
+
+```
+Your crypto profile, live. Wallets, P&L, token, community, music: one link.
+Invite-only. Claim your name 👇
+```
+
+```
+The link in bio for onchain people.
+Live widgets, verified wallets, badges. Invite-only for now.
+```
+
+```
+fl3x.lol/@you
+Your bio link, but it moves. Hold $FL3X for Premium.
+```
+
+## 5. Giveaways et codes d'invitation
+
+Pour livrer un giveaway Premium : copier les adresses gagnantes dans `/admin` → **Wallet grants** (Premium, note « Giveaway #1 »). Le gagnant est Premium dès qu'il a lié ce wallet (signature dans Settings ou à l'inscription), même s'il n'avait pas encore de compte. Pendant le pré-lancement, lui envoyer aussi un code d'invitation, sinon il ne peut pas s'inscrire.
+
+**G1.** Image : `giveaway.png`
+```
+Drop your Solana address below.
+
+We're picking wallets from the replies for FL3X Premium: 12 widgets, the checkmark, animated backgrounds, 90-day analytics.
+
+Winners announced tomorrow.
+```
+
+**G2.** Image : `giveaway.png` (deuxième édition, texte différent)
+```
+Premium giveaway #2.
+
+Reply with your SOL wallet. 10 winners, picked tonight.
+Already on FL3X? It shows up on your profile as soon as we pick you.
+```
+
+**G3.** Sans image (réponse aux gagnants, à adapter)
+```
+Congrats, you're FL3X Premium.
+
+Sign in at fl3x.lol/join with code XXXX-XXXX and link this wallet in Settings. The checkmark is yours.
+```
+
+**G4.** Sans image (annonce des gagnants, en citant le post G1)
+```
+Winners are in. 10 wallets just got Premium.
+
+Check your replies. Didn't win? Next round on Friday.
+```
+
+**G5.** Image : `invite-codes.png`
+```
+5 invite codes. First come, first served.
+
+K7Q2-••••
+M4XW-••••
+P9ZD-••••
+T3HN-••••
+V8RC-••••
+
+Reply "FL3X" and we'll DM you the rest.
+```
+
+**G6.** Sans image
+```
+Like this and we'll drop 10 invite codes in the replies at 1K.
+```
+
+**G7.** Image : `claim.png`
+```
+Reply with the handle you want on FL3X.
+
+We'll tell you if it's still free. Best ones get an invite.
+```
+
+**G8.** Sans image
+```
+Every FL3X member gets their own invite link: fl3x.lol/invite/yourname
+
+Bring 3 friends: Contributor badge. 10: Recruiter. 25: Ambassador. 50: Legend.
+```
+
+**G9.** Image : `tiers.png`
+```
+Free profile: 4 widgets.
+Hold $FL3X: Starter.
+Hold more: Premium, 12 widgets and the checkmark.
+
+Or win it. Drop your SOL address under our pinned giveaway.
+```
+
+## 6. Avant le lancement (sur invitation)
 
 **1.** Image : `invite-only.png`
 ```
@@ -88,7 +186,7 @@ No invite? Sign in with X and you're on the waitlist.
 ```
 Your bio link, but it moves.
 
-P&L, token, Telegram, Twitch live, local time.
+P&L, token, Telegram, Twitch, YouTube, local time.
 Every widget updates on its own.
 ```
 
@@ -104,7 +202,7 @@ P&L, your token, your Discord, your stream?
 Linking a wallet on FL3X = one free signature.
 
 No transaction. No approval. No connect kit.
-Solana and EVM, as many wallets as you want, added up in one widget.
+Solana and EVM, as many wallets as you want.
 ```
 
 **5.** Image : `customize.png`
@@ -123,7 +221,7 @@ Early Adopter if you joined before launch. OG for the first 100. Contributor if 
 
 **7.** Sans image (citations)
 ```
-Quote this with your handle. We'll tell you if it's still free.
+Quote this with the handle you want. We'll tell you if it's still free.
 ```
 
 **8.** Image : `spotify.png`
@@ -131,75 +229,158 @@ Quote this with your handle. We'll tell you if it's still free.
 Your card can show what you're listening to.
 
 Connect Spotify once. Not playing? It shows the last track.
+Apple Music, Deezer and TIDAL links work too.
 ```
 
-## 5. Ouverture (après le tweet épinglé)
+**9.** Sans image
+```
+Screenshots of a wallet get old the second you post them.
 
-**9.** Image : `referral.png`
+A FL3X widget reads the chain every time someone opens your page.
+```
+
+**10.** Sans image (réponses)
+```
+Wrong answers only: what's in your wallet right now?
+```
+
+**11.** Sans image
+```
+Your Linktree doesn't know you're up 40% this month.
+```
+
+## 7. Ouverture (après le tweet épinglé)
+
+**12.** Image : `referral.png`
 ```
 Your handle is your invite link.
 
 fl3x.lol/invite/yourname
-No code to remember. The leaderboard shows who brought the most people.
+No code to remember. Badges at 3, 10, 25 and 50 friends.
 ```
 
-**10.** Image : `verified.png`
+**13.** Image : `verified.png`
 ```
 The FL3X checkmark is for Premium holders.
 
 It follows your wallet, not a subscription.
 ```
 
-**11.** Image : `analytics.png`
+**14.** Image : `analytics.png`
 ```
 Your profile comes with analytics.
 
 Views, link clicks, countries, devices, and the site each visitor came from.
 ```
 
-**12.** Image : `before-after.png`
+**15.** Image : `before-after.png`
 ```
 Send this to the friend whose bio is still a Linktree.
 ```
 
-## 6. Après l'ouverture (à recycler, jamais le même texte deux fois)
+**16.** Image : `phone.png`
+```
+One link. Every screen.
 
-**13.** Image : `phone.png` (puis de vrais profils de membres, avec leur accord)
+Built for the phone your visitors tap it on.
+```
+
+**17.** Image : `tiers.png`
+```
+Hold $FL3X, unlock more.
+
+Starter, then Premium: more widgets, more links, longer analytics, the checkmark.
+Your tier is checked from your wallet every few minutes.
+```
+
+## 8. Après l'ouverture (à recycler, jamais le même texte deux fois)
+
+**18.** (de vrais profils de membres, avec leur accord)
 ```
 Profile of the day.
 
 Reply with yours, we'll quote the best ones.
 ```
 
-**14.**
+**19.**
 ```
 Your P&L widget is built from snapshots we take ourselves, every hour.
 
 No screenshots. No editing.
 ```
 
-**15.**
+**20.**
 ```
 Twitch or YouTube on your profile?
 
 Put your channel in once. Live now? It shows the live. Offline? Your latest video.
 ```
 
-**16.**
+**21.**
 ```
 Reply with the widget you want next.
 ```
 
-**17.**
+**22.**
 ```
 Wallet addresses never reach your public profile.
 
 Visitors see the numbers, not where they come from.
 ```
 
+**23.**
+```
+New on FL3X: Hyperliquid, Polymarket, P&L Calendar, Recent Trades, Watchlist.
+
+Your whole trading life on one link.
+```
+
+**24.**
+```
+Put your Axiom, GMGN, Padre or Proxima referral link on your profile.
+
+People who like your P&L can trade with your link.
+```
+
+**25.**
+```
+Your NFTs, on your profile. Pulled from your Solana wallets, updated on their own.
+```
+
+**26.**
+```
+Rate this profile from 1 to 10.
+
+[quote d'un profil membre]
+```
+
+**27.**
+```
+Name a crypto person whose bio link deserves better. We'll send them an invite.
+```
+
+**28.**
+```
+Premium profiles can use a video background. Up to 30 seconds, MP4 or GIF.
+```
+
+**29.**
+```
+Stop sending people to 6 different links.
+
+fl3x.lol/@you
+```
+
+**30.** (chaque semaine, à partir des articles du blog)
+```
+New on the FL3X blog: [titre]
+
+fl3x.lol/blog/[slug]
+```
+
 ---
 
-## 7. Article X
+## 9. Article X
 
 Couverture : `article-cover.png`. Images dans le texte, aux endroits marqués : `widgets.png`, `wallets.png`, `badges.png`, `referral.png`.
 

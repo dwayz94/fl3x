@@ -11,6 +11,16 @@ export interface ChangelogEntry {
 export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-10-31",
+    title: "Claim a name from its link",
+    items: [
+      "Opening fl3x.lol/@name for a free name now offers to claim it right away.",
+      "fl3x.lol/@you takes you straight to sign-up.",
+      "Music widgets play Apple Music, Deezer and TIDAL tracks.",
+      "Four new guides on the Blog.",
+    ],
+  },
+  {
+    date: "2026-10-31",
     title: "Your name, your way",
     items: [
       "Names and bios keep the capitals you type.",

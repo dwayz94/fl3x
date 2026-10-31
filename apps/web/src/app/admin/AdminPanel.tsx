@@ -1,15 +1,17 @@
 "use client";
 
 import Image from "next/image";
+import { Copy01Icon, Delete02Icon, Tick02Icon } from "@hugeicons/core-free-icons";
 import Link from "next/link";
 import { useEffect, useState, type ReactNode } from "react";
 import { BADGES, LAUNCH_PHASES, siteSettingsSchema, type LaunchPhase, type SiteSettings, type Tier } from "@fl3x/shared";
 import { UnsavedBar } from "@/components/dashboard/UnsavedBar";
 import { inputClass } from "@/components/editor/Field";
 import { StatusBanner } from "@/components/landing/StatusBanner";
-import { Button } from "@/components/ui";
+import { Button, Icon } from "@/components/ui";
 import { api, ApiRequestError } from "@/lib/api";
 import { cn } from "@/lib/cn";
+import { shortAddress } from "@/lib/format";
 
 /** Kept for this tab only: closing it signs the admin out. */
 const KEY = "fl3x:admin-key";
@@ -174,6 +176,8 @@ export function AdminPanel() {
       </Card>
 
       <Members adminKey={key} />
+
+      <WalletGrants adminKey={key} />
 
       <Invites adminKey={key} />
 
@@ -351,6 +355,197 @@ function BadgeToggle({ id, name, on, onClick }: { id: string; name: string; on: 
       <img src={`/images/badges/${id}.svg`} alt="" className={cn("size-4", !on && "opacity-40 grayscale")} />
       {name}
     </button>
+  );
+}
+
+type Grant = {
+  address: string;
+  tier: "starter" | "premium";
+  note: string | null;
+  createdAt: string;
+  member: { id: string; username: string | null; tier: Tier } | null;
+};
+type GrantResult = { added: number; existing: number; invalid: number; invalidSamples: string[] };
+const TIER_LABEL = { starter: "Starter", premium: "Premium" } as const;
+
+/**
+ * Giveaways: paste Solana addresses that get a tier, joined or not. A member
+ * whose wallets include one gets at least that tier (applied at once to those
+ * who already have it, and as soon as someone links it).
+ */
+function WalletGrants({ adminKey }: { adminKey: string }) {
+  const [text, setText] = useState("");
+  const [tier, setTier] = useState<Grant["tier"]>("premium");
+  const [note, setNote] = useState("");
+  const [grants, setGrants] = useState<Grant[] | null>(null);
+  const [result, setResult] = useState<GrantResult | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const headers = { "x-admin-key": adminKey };
+
+  const refresh = async () => {
+    try {
+      setGrants(await api<Grant[]>("/admin/wallet-grants", { headers }));
+    } catch (err) {
+      setError(err instanceof ApiRequestError ? err.message : "Could not load grants");
+    }
+  };
+  useEffect(() => {
+    void refresh();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [adminKey]);
+
+  const add = async () => {
+    if (!text.trim()) return;
+    setBusy(true);
+    setError(null);
+    setResult(null);
+    try {
+      const res = await api<GrantResult>("/admin/wallet-grants", { headers, json: { addresses: text, tier, note: note.trim() || undefined } });
+      setResult(res);
+      // Only what couldn't be read stays in the box, to fix and add again.
+      setText(res.invalidSamples.join("\n"));
+      await refresh();
+    } catch (err) {
+      setError(err instanceof ApiRequestError ? err.message : "Could not add these wallets");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Card title="Wallet grants" desc="Giveaways: paste Solana addresses (one per line, or separated by commas or spaces). Whoever holds one gets at least this tier, now or as soon as they join and link it.">
+      <textarea
+        className={cn(inputClass, "h-28 resize-y py-2 font-mono text-sm")}
+        placeholder="Solana addresses…"
+        value={text}
+        spellCheck={false}
+        onChange={(e) => setText(e.target.value)}
+      />
+      <div className="mt-3 grid gap-3 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-end">
+        <div>
+          <span className="mb-1.5 block text-xs text-fg-2">Tier</span>
+          <Segmented
+            value={tier}
+            options={[
+              { id: "premium", label: "Premium" },
+              { id: "starter", label: "Starter" },
+            ]}
+            onChange={setTier}
+          />
+        </div>
+        <TextField label="Note (optional)" value={note} max={200} placeholder="Giveaway #1" onChange={setNote} />
+        <Button onClick={() => void add()} loading={busy} disabled={!text.trim()} size="md">
+          Add
+        </Button>
+      </div>
+      {error && <p className="mt-2 text-sm text-danger">{error}</p>}
+      {result && (
+        <div className="mt-3 rounded-xl bg-white/[0.04] p-3 text-sm">
+          <p>
+            <span className="text-success">{result.added} added</span>
+            <span className="text-fg-3"> · {result.existing} already there</span>
+            <span className={result.invalid ? "text-danger" : "text-fg-3"}> · {result.invalid} invalid</span>
+          </p>
+          {result.invalidSamples.length > 0 && (
+            <p className="mt-1 font-mono text-[11px] break-all text-fg-3">
+              Not Solana addresses (left in the box): {result.invalidSamples.join(", ")}
+              {result.invalid > result.invalidSamples.length && "…"}
+            </p>
+          )}
+        </div>
+      )}
+
+      <div className="mt-5">
+        <p className="mb-2 text-xs text-fg-2">{grants ? `${grants.length} granted wallet${grants.length === 1 ? "" : "s"}` : "Loading…"}</p>
+        {grants && grants.length > 0 && (
+          <ul className="flex flex-col gap-1">
+            {grants.map((g) => (
+              <GrantRow key={g.address} grant={g} adminKey={adminKey} onRemoved={() => setGrants((list) => list?.filter((x) => x.address !== g.address) ?? null)} />
+            ))}
+          </ul>
+        )}
+      </div>
+    </Card>
+  );
+}
+
+function GrantRow({ grant: g, adminKey, onRemoved }: { grant: Grant; adminKey: string; onRemoved: () => void }) {
+  const [copied, setCopied] = useState(false);
+  const [confirming, setConfirming] = useState(false);
+  const [removing, setRemoving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const remove = async () => {
+    setRemoving(true);
+    setError(null);
+    try {
+      await api(`/admin/wallet-grants/${encodeURIComponent(g.address)}`, { method: "DELETE", headers: { "x-admin-key": adminKey } });
+      onRemoved();
+    } catch (err) {
+      setError(err instanceof ApiRequestError ? err.message : "Could not remove");
+      setRemoving(false);
+      setConfirming(false);
+    }
+  };
+
+  return (
+    <li className="flex min-h-12 flex-wrap items-center gap-x-3 gap-y-1 rounded-xl bg-white/[0.03] px-3 py-2 text-sm">
+      <button
+        type="button"
+        title={g.address}
+        onClick={() => {
+          void navigator.clipboard.writeText(g.address);
+          setCopied(true);
+          setTimeout(() => setCopied(false), 1500);
+        }}
+        className="group flex items-center gap-1.5 font-mono text-fg"
+      >
+        {shortAddress(g.address)}
+        <Icon icon={copied ? Tick02Icon : Copy01Icon} size={14} className={copied ? "text-success" : "text-fg-3 group-hover:text-fg"} />
+      </button>
+      <span className="rounded-md bg-white/[0.06] px-2 py-1 text-[10px] leading-none text-fg-2">{TIER_LABEL[g.tier]}</span>
+      <span className="min-w-0 flex-1 truncate text-xs text-fg-3">
+        {g.member ? (
+          g.member.username ? (
+            <Link href={`/@${g.member.username}`} target="_blank" className="text-brand hover:underline">
+              @{g.member.username}
+            </Link>
+          ) : (
+            "joined, no username yet"
+          )
+        ) : (
+          "not joined yet"
+        )}
+        {g.note && ` · ${g.note}`}
+      </span>
+      {error && <span className="text-xs text-danger">{error}</span>}
+      {confirming ? (
+        <div className="flex items-center gap-1">
+          <button type="button" onClick={() => setConfirming(false)} className="rounded-lg px-2 py-1.5 text-xs text-fg-3 hover:text-fg">
+            Keep
+          </button>
+          <button
+            type="button"
+            disabled={removing}
+            onClick={() => void remove()}
+            className="rounded-lg bg-danger/15 px-2.5 py-1.5 text-xs text-danger transition-colors hover:bg-danger/25 disabled:opacity-50"
+          >
+            {removing ? "Removing…" : "Remove"}
+          </button>
+        </div>
+      ) : (
+        <button
+          type="button"
+          aria-label="Remove grant"
+          title="Remove grant"
+          onClick={() => setConfirming(true)}
+          className="flex size-8 items-center justify-center rounded-lg text-fg-3 transition-colors hover:bg-danger/10 hover:text-danger"
+        >
+          <Icon icon={Delete02Icon} size={16} />
+        </button>
+      )}
+    </li>
   );
 }
 

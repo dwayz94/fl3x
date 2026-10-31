@@ -24,7 +24,7 @@ def tweets(body: str):
     out = []
     for m in re.finditer(r'((?:^[^\n]*\n){0,2})```\n(.*?)\n```', body, re.M | re.S):
         head = m.group(1)
-        num = re.search(r'\*\*(\d+)\.\*\*', head)
+        num = re.search(r'\*\*(G?\d+)\.\*\*', head)
         img = re.search(r'`([\w-]+\.png)`', head)
         note = re.search(r'\(([^)]*)\)\s*$', head.strip())
         label = f'#{num.group(1)}' if num else ('Variant' if 'Variante' in head else 'Main')
@@ -109,9 +109,11 @@ def card(label: str, image: str | None, text: str, note: str | None) -> str:
 
 GROUPS = [
     ('3. Tweet épinglé', 'Pinned tweet', 'Pin it on the profile.'),
-    ('4. Avant le lancement', 'Invite-only pre-launch', '2 to 3 a day, a few hours apart.'),
-    ('5. Ouverture', 'Opening (after the pinned tweet)', ''),
-    ('6. Après', 'After opening', 'Never post the same text twice.'),
+    ('4. Bio du compte', 'Account bio', 'Name FL3X, link fl3x.lol. Pick one.'),
+    ('5. Giveaways', 'Giveaways and invite codes', 'Winners: paste their addresses in /admin → Wallet grants, and send an invite code while invite-only.'),
+    ('6. Avant le lancement', 'Invite-only pre-launch', '3 a day, a few hours apart.'),
+    ('7. Ouverture', 'Opening (after the pinned tweet)', ''),
+    ('8. Après', 'After opening', 'Never post the same text twice.'),
 ]
 
 sections = []
@@ -119,7 +121,7 @@ for key, title, hint in GROUPS:
     cards = '\n'.join(card(*t) for t in tweets(section(key)))
     sections.append(f'<section><h2 class="group">{title}</h2><p class="hint">{hint}</p>{cards}</section>')
 
-article = article_steps(section('7. Article X'))
+article = article_steps(section('9. Article X'))
 
 PROFILE = [('avatar.png', 'Profile picture (black)'), ('avatar-pink.png', 'Profile picture (pink)'), ('banner.png', 'Banner 1500×500')]
 profile = '\n'.join(

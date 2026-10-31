@@ -1,7 +1,7 @@
 "use client";
 
 import type { CSSProperties, ReactNode } from "react";
-import { BADGES, type Widget, type WidgetSettings, type WidgetSize, type WidgetType } from "@fl3x/shared";
+import { BADGES, REFERRAL_REWARDS, TIER_LIMITS, type Widget, type WidgetSettings, type WidgetSize, type WidgetType } from "@fl3x/shared";
 import { BadgeIcon } from "@/components/profile/Badges";
 import { ProfileView } from "@/components/profile/ProfileView";
 import { Brand, Verified } from "@/components/ui";
@@ -13,19 +13,12 @@ import { DemoDataProvider } from "@/lib/use-data";
 // Images for the X account (tweets, article cover, banner, avatars). Rendered
 // by /x-kit/[slug] in dev and captured to PNG by scripts/x-kit.sh. Every
 // visual carries the logo bottom-left and the domain bottom-right.
-// Illustrations only: the generic demo persona and art (lib/demo.ts,
-// scripts/demo-art.py). No real people, no real members, no real stats.
+// The profile shown is FL3X's own; tokens, channels and the track are real
+// (lib/demo.ts). No invented people, no flat glows behind the content.
 
 const PINK = "#FF97CB";
 const DOMAIN = "fl3x.lol";
-const MEDALS = ["#FFD66B", "#D9DEE8", "#E9A77A"];
-const PEOPLE = [
-  ["nova", "/images/demo/avatar-1.svg"],
-  ["kai", "/images/demo/avatar-2.svg"],
-  ["mira", "/images/demo/avatar-3.svg"],
-  ["zed", "/images/demo/avatar-4.svg"],
-  ["juno", "/images/demo/avatar-5.svg"],
-] as const;
+const FL3X_AVATAR = "/brand/fl3x-app-icon-pink.svg";
 /** The demo track (real song, real cover), as the music widget shows it. */
 const TRACK = resolveDemo("spotify-now", {}) as MediaData;
 
@@ -49,23 +42,13 @@ function Footer({ size = 1 }: { size?: number }) {
   );
 }
 
-type Glow = "top-right" | "center" | "left" | "bottom" | "none";
-const GLOWS: Record<Glow, string> = {
-  "top-right": "radial-gradient(60% 70% at 85% 10%, rgba(255,151,203,0.18), transparent 70%)",
-  center: "radial-gradient(50% 60% at 50% 45%, rgba(255,151,203,0.16), transparent 70%)",
-  left: "radial-gradient(60% 80% at 10% 50%, rgba(255,151,203,0.14), transparent 70%)",
-  bottom: "radial-gradient(70% 60% at 50% 110%, rgba(255,151,203,0.22), transparent 70%)",
-  none: "none",
-};
-
-/** Black canvas, optional FL3X art behind (darkened), soft ambient light, footer. */
-function Frame({ children, art, glow = "top-right", footer = true, bg = "#000" }: { children: ReactNode; art?: string; glow?: Glow; footer?: boolean; bg?: string }) {
+/** Black canvas, optional FL3X art behind (darkened), footer. No glow: flat black reads less generated. */
+function Frame({ children, art, footer = true, bg = "#000" }: { children: ReactNode; art?: string; footer?: boolean; bg?: string }) {
   return (
     <DemoDataProvider resolve={resolveDemo}>
       {/* Moga's ligatures (OU, CH…) read as odd glyphs at poster size: off. */}
       <div className="relative h-full w-full overflow-hidden font-secondary text-white" style={{ background: bg, fontVariantLigatures: "none", fontFeatureSettings: '"liga" 0, "dlig" 0, "clig" 0' }}>
         {art && <div className="absolute inset-0 bg-cover bg-center opacity-35" style={{ backgroundImage: `url(${art})` }} />}
-        <div className="absolute inset-0" style={{ background: GLOWS[glow] }} />
         <div className="relative z-10 h-full w-full">{children}</div>
         {footer && <Footer />}
       </div>
@@ -136,7 +119,7 @@ export const VISUALS: Record<string, Visual> = {
     width: 800,
     height: 800,
     render: () => (
-      <div className="flex h-full w-full items-center justify-center" style={{ background: "radial-gradient(60% 60% at 50% 45%, #2a0f1e, #000 75%)" }}>
+      <div className="flex h-full w-full items-center justify-center bg-black">
         {bag(undefined, 420)}
       </div>
     ),
@@ -157,7 +140,7 @@ export const VISUALS: Record<string, Visual> = {
     width: 1500,
     height: 500,
     render: () => (
-      <Frame art="/images/backgrounds/sign-bg.png" glow="center" footer={false}>
+      <Frame art="/images/backgrounds/sign-bg.png" footer={false}>
         <div className="absolute top-[78px] left-[120px] flex flex-col gap-5">
           <Big size={112}>FL[3]X ON ALL</Big>
           <Big size={112}>SCREENS</Big>
@@ -180,7 +163,7 @@ export const VISUALS: Record<string, Visual> = {
     width: 1200,
     height: 675,
     render: () => (
-      <Frame art="/images/backgrounds/hero-bg.png" glow="top-right">
+      <Frame art="/images/backgrounds/hero-bg.png">
         <div className="absolute top-[170px] left-[560px]" style={{ transform: "rotate(-4deg)" }}>
           <Card widgets={layout("classic")} scale={1.02} width={780} />
         </div>
@@ -198,7 +181,7 @@ export const VISUALS: Record<string, Visual> = {
     width: 1500,
     height: 600,
     render: () => (
-      <Frame art="/images/backgrounds/footer-bg.png" glow="left">
+      <Frame art="/images/backgrounds/footer-bg.png">
         <div className="absolute top-[110px] left-[72px] flex w-[640px] flex-col gap-6">
           <Big size={124}>Y[o]UR CRYPT[o] PROFILE, LIVE</Big>
         </div>
@@ -216,7 +199,7 @@ export const VISUALS: Record<string, Visual> = {
     width: 1200,
     height: 675,
     render: () => (
-      <Frame glow="none">
+      <Frame>
         <div className="absolute -top-[120px] -left-[160px] flex flex-col gap-4" style={{ transform: "rotate(-9deg)" }}>
           {[
             [["pnl", "large"], ["community", "long"], ["music", "large"], ["video", "long", 1], ["token", "large"]],
@@ -243,35 +226,33 @@ export const VISUALS: Record<string, Visual> = {
     ),
   },
 
-  // Oversized total, the wallets underneath.
+  // The real signature request, next to the line.
   wallets: {
     width: 1200,
     height: 675,
     render: () => (
-      <Frame glow="bottom">
-        <div className="flex h-full flex-col items-center pt-[70px]">
-          <p className="text-[24px] text-white/55">One total. Every wallet you sign for.</p>
-          <p className="mt-3 font-primary leading-none" style={{ fontSize: 190 }}>
-            $134,548<span className="text-white/35">.73</span>
-          </p>
-          <div className="mt-8 flex items-center gap-3">
-            {[
-              ["Solana", "#14F195"],
-              ["Ethereum", "#8EA2FF"],
-              ["Base", "#3C7CFF"],
-              ["Arbitrum", "#4FC3F7"],
-              ["BNB", "#F3BA2F"],
-              ["Polygon", "#A57BFF"],
-            ].map(([name, color]) => (
-              <span key={name} className="flex items-center gap-2 rounded-full bg-[#141414] px-4 py-2.5 text-[19px]">
-                <span className="size-2.5 rounded-full" style={{ background: color }} />
-                {name}
-              </span>
-            ))}
+      <Frame>
+        <div className="flex h-full items-center gap-14 pr-16 pb-20 pl-16">
+          <div className="flex w-[500px] flex-col gap-6">
+            <Big size={100}>ONE SIGN[a]TURE. NO TR[a]NSACTION.</Big>
+            <Line size={26}>Solana and EVM wallets, as many as you want. Your addresses never reach your public page.</Line>
           </div>
-          <div className="mt-10 flex items-center gap-4 rounded-[24px] bg-[#141414] py-4 pr-4 pl-6">
-            <span className="font-mono text-[18px] text-white/75">Link this wallet to FL3X · free signature, no transaction</span>
-            <span className="rounded-xl bg-brand px-6 py-3 text-[18px] text-black">Sign</span>
+          <div className="flex w-[520px] flex-col gap-5 rounded-[32px] bg-[#141414] p-8">
+            <div className="flex items-center gap-3">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/brand/fl3x-app-icon.svg" alt="" className="size-12 rounded-2xl" />
+              <div>
+                <p className="text-[22px] leading-tight">Signature request</p>
+                <p className="text-[17px] text-white/45">fl3x.lol</p>
+              </div>
+            </div>
+            <div className="rounded-2xl bg-black/50 p-5 font-mono text-[16px] leading-relaxed whitespace-pre-line text-white/75">
+              {"FL3X wants to check that you own this wallet.\n\nWallet: 7xKX…9fGh\n\nSigning is free. It does not send a transaction and gives FL3X no access to your funds."}
+            </div>
+            <div className="flex gap-3">
+              <span className="flex-1 rounded-2xl bg-white/[0.06] py-4 text-center text-[20px] text-white/60">Cancel</span>
+              <span className="flex-1 rounded-2xl bg-brand py-4 text-center text-[20px] text-black">Sign</span>
+            </div>
           </div>
         </div>
       </Frame>
@@ -283,7 +264,7 @@ export const VISUALS: Record<string, Visual> = {
     width: 1200,
     height: 675,
     render: () => (
-      <Frame glow="center">
+      <Frame>
         <div className="flex h-full flex-col items-center pt-[64px]">
           <Big size={104}>EARN Y[o]UR BADGES</Big>
           <Line size={26} className="mt-4">
@@ -292,7 +273,7 @@ export const VISUALS: Record<string, Visual> = {
           <div className="mt-12 flex w-[1040px] flex-wrap justify-center gap-x-9 gap-y-7">
             {BADGES.slice(0, 13).map((b) => (
               <div key={b.id} className="flex w-[110px] flex-col items-center gap-3">
-                <span className="flex size-[84px] items-center justify-center rounded-[26px]" style={{ background: `${b.color}1f` }}>
+                <span className="flex size-[84px] items-center justify-center rounded-[26px] bg-[#141414]">
                   <BadgeIcon id={b.id} size={44} />
                 </span>
                 <span className="text-center font-primary text-[19px] leading-none uppercase" style={{ color: b.color }}>
@@ -311,12 +292,12 @@ export const VISUALS: Record<string, Visual> = {
     width: 1200,
     height: 675,
     render: () => (
-      <Frame glow="center">
+      <Frame>
         <div className="flex h-full flex-col items-center justify-center gap-8 pb-24">
           <div className="flex items-center gap-7">
-            <Avatar src={PEOPLE[0][1]} size={150} />
+            <Avatar src={FL3X_AVATAR} size={150} />
             <span className="font-primary leading-none uppercase" style={{ fontSize: 170 }}>
-              Nova
+              <Brand>FL[3]X</Brand>
             </span>
             <Verified size={120} />
           </div>
@@ -334,7 +315,7 @@ export const VISUALS: Record<string, Visual> = {
     width: 1200,
     height: 675,
     render: () => (
-      <Frame glow="top-right">
+      <Frame>
         <div className="flex h-full">
           <div className="flex w-[54%] flex-col justify-center gap-7 pb-16 pl-14">
             <Big size={104}>Y[o]UR HANDLE IS THE INV[i]TE</Big>
@@ -344,17 +325,15 @@ export const VISUALS: Record<string, Visual> = {
             </div>
           </div>
           <div className="flex flex-1 items-center justify-center pb-16">
-            <div className="w-[440px] rounded-[28px] bg-[#0f0f0f] p-6 pb-4">
-              <p className="text-[15px] text-white/45">Top recruiters</p>
-              <p className="mb-4 font-primary text-[34px] leading-none uppercase">Leaderboard</p>
-              {[...PEOPLE.slice(0, 4).map(([n, img], i) => [n, img, [41, 27, 18, 9][i]] as const), ["you", null, 0] as const].map(([name, img, count], i) => (
-                <div key={name} className={`flex items-center gap-4 rounded-2xl px-3 py-2.5 ${name === "you" ? "bg-brand/15" : ""}`}>
-                  <span className="w-7 text-center font-primary text-[26px] leading-none" style={{ color: MEDALS[i] ?? "rgba(255,255,255,0.4)" }}>
-                    {name === "you" ? "?" : i + 1}
+            <div className="flex w-[440px] flex-col gap-3">
+              <p className="mb-1 text-[20px] text-white/55">Bring friends, earn badges</p>
+              {REFERRAL_REWARDS.map(({ badge, count }) => (
+                <div key={badge.id} className="flex items-center gap-5 rounded-2xl bg-[#141414] px-5 py-4">
+                  <BadgeIcon id={badge.id} size={40} />
+                  <span className="flex-1 font-primary text-[28px] leading-none uppercase" style={{ color: badge.color }}>
+                    {badge.name}
                   </span>
-                  <Avatar src={img} size={44} ring={name === "you" ? undefined : MEDALS[i]} />
-                  <span className="flex-1 font-primary text-[24px] leading-none uppercase">{name === "you" ? "You, next" : name}</span>
-                  <span className="font-primary text-[24px] leading-none text-white/80">{name === "you" ? "" : count}</span>
+                  <span className="text-[20px] text-white/60">{count} friends</span>
                 </div>
               ))}
             </div>
@@ -368,7 +347,7 @@ export const VISUALS: Record<string, Visual> = {
     width: 1200,
     height: 675,
     render: () => (
-      <Frame art="/images/backgrounds/sign-bg.png" glow="center">
+      <Frame art="/images/backgrounds/sign-bg.png">
         <div className="flex h-full flex-col items-center justify-center gap-8 pb-20">
           <Big size={156}>INV[i]TE [o]NLY</Big>
           <Line size={28} className="text-center">
@@ -392,7 +371,7 @@ export const VISUALS: Record<string, Visual> = {
     width: 1200,
     height: 675,
     render: () => (
-      <Frame glow="none" bg="#0b0b0b">
+      <Frame bg="#0b0b0b">
         <div className="absolute top-[56px] left-[56px] z-10 flex w-[440px] flex-col gap-5">
           <Big size={104}>DRAG. DR[o]P. FL[e]X.</Big>
           <Line size={26}>Grab a widget, the others make room. Click your name to rename it.</Line>
@@ -409,8 +388,8 @@ export const VISUALS: Record<string, Visual> = {
               <W type="clock" size="large" />
               <W type="token" size="large" />
             </div>
-            <W type="music" size="long" />
-            <W type="video" size="long" nth={1} />
+            <W type="followers" size="long" />
+            <W type="video" size="long" />
           </div>
           {/* The widget being dragged, lifted above the grid. */}
           <div className="absolute top-[54px] left-[236px] rounded-[28px] bg-[#1c1c1c] shadow-[0_30px_70px_rgba(0,0,0,0.8)]" style={{ transform: "rotate(-7deg) scale(1.08)" }}>
@@ -426,7 +405,7 @@ export const VISUALS: Record<string, Visual> = {
     width: 1200,
     height: 675,
     render: () => (
-      <Frame glow="none">
+      <Frame>
         {TRACK.thumbnailUrl && <div className="absolute inset-0 scale-125 bg-cover bg-center opacity-60 blur-[70px]" style={{ backgroundImage: `url(${TRACK.thumbnailUrl})` }} />}
         <div className="absolute inset-0 bg-black/45" />
         <div className="relative flex h-full items-center gap-14 pb-16 pl-16">
@@ -455,7 +434,7 @@ export const VISUALS: Record<string, Visual> = {
         ["Google", 7, "#FF97CB"],
       ] as const;
       return (
-        <Frame glow="top-right">
+        <Frame>
           <div className="flex h-full gap-16 pt-[70px] pl-16">
             <div className="flex w-[520px] flex-col">
               <p className="text-[24px] text-white/55">Profile views · 30 days</p>
@@ -487,12 +466,12 @@ export const VISUALS: Record<string, Visual> = {
     width: 1200,
     height: 675,
     render: () => (
-      <Frame glow="none">
+      <Frame>
         <div className="flex h-full items-center gap-10 px-14 pb-20">
           <div className="flex w-[330px] flex-col items-center gap-4">
             <p className="mb-2 font-primary text-[34px] leading-none text-white/40 uppercase">Before</p>
-            <Avatar src={PEOPLE[0][1]} size={84} />
-            <p className="text-[20px] text-white/60">@nova</p>
+            <Avatar src={null} size={84} />
+            <p className="text-[20px] text-white/60">@you</p>
             {["My X", "My Telegram", "My Discord", "My wallet", "My stream"].map((l) => (
               <span key={l} className="w-full rounded-full bg-[#1a1a1a] py-3.5 text-center text-[19px] text-white/55">
                 {l}
@@ -514,18 +493,18 @@ export const VISUALS: Record<string, Visual> = {
     width: 1200,
     height: 675,
     render: () => (
-      <Frame art="/images/backgrounds/hero-bg.png" glow="center">
+      <Frame art="/images/backgrounds/hero-bg.png">
         <div className="flex h-full items-center gap-20 pl-20">
           <div className="flex w-[560px] flex-col gap-6 pb-16">
             <Big size={120}>ONE LINK. EVERY SCREEN.</Big>
             <Line size={27}>Built for the phone your visitors tap it on. fl3x.lol/@you</Line>
           </div>
           <div className="relative mt-[170px] h-[820px] w-[400px] shrink-0 rounded-[64px] bg-[#1c1c1c] p-3.5">
-            <div className="flex h-full flex-col gap-5 overflow-hidden rounded-[52px] bg-[#0b0b0b] px-5 pt-14" style={{ background: "radial-gradient(90% 50% at 50% 0%, #3a1830, #0b0b0b 70%)" }}>
+            <div className="flex h-full flex-col gap-5 overflow-hidden rounded-[52px] bg-[#0b0b0b] px-5 pt-14" >
               <div className="flex flex-col items-center gap-3 text-center">
-                <Avatar src={PEOPLE[0][1]} size={92} />
+                <Avatar src={FL3X_AVATAR} size={92} />
                 <p className="flex items-center gap-2 font-primary text-[40px] leading-none uppercase">
-                  Nova <Verified size={26} />
+                  <Brand>FL[3]X</Brand> <Verified size={26} />
                 </p>
                 <div className="flex gap-1.5 rounded-full bg-white/[0.06] px-3 py-1.5">
                   {["premium", "og", "early-adopter", "whale", "contributor"].map((b) => (
@@ -545,5 +524,117 @@ export const VISUALS: Record<string, Visual> = {
         </div>
       </Frame>
     ),
+  },
+  // Giveaway: reply with a Solana address, winners get Premium.
+  giveaway: {
+    width: 1200,
+    height: 675,
+    render: () => (
+      <Frame art="/images/backgrounds/sign-bg.png">
+        <div className="flex h-full flex-col items-center justify-center gap-8 pb-20">
+          <Big size={136} className="text-center">
+            DR[o]P Y[o]UR S[o]L ADDRESS
+          </Big>
+          <Line size={30} className="text-center">
+            We pick wallets in the replies. Winners get FL3X Premium.
+          </Line>
+          <div className="flex items-center gap-4 rounded-2xl bg-[#141414] px-6 py-4">
+            <Verified size={34} />
+            <span className="font-mono text-[22px] text-white/70">7xKX…9fGh</span>
+            <span className="text-[22px] text-white/40">→</span>
+            <span className="font-primary text-[30px] leading-none text-brand uppercase">Premium</span>
+          </div>
+        </div>
+      </Frame>
+    ),
+  },
+
+  // Invite codes dropped in the post, half hidden.
+  "invite-codes": {
+    width: 1200,
+    height: 675,
+    render: () => (
+      <Frame>
+        <div className="flex h-full items-center gap-16 pr-16 pb-20 pl-16">
+          <div className="flex w-[520px] flex-col gap-6">
+            <Big size={116}>F[i]VE INV[i]TE C[o]DES</Big>
+            <Line size={27}>First come, first served. Use one at fl3x.lol/join before someone else does.</Line>
+          </div>
+          <div className="flex flex-1 flex-col gap-3">
+            {["K7Q2", "M4XW", "P9ZD", "T3HN", "V8RC"].map((c, i) => (
+              <div key={c} className="flex items-center justify-between rounded-2xl bg-[#141414] px-6 py-4">
+                <span className="font-mono text-[30px] tracking-[0.12em]">
+                  {c}-<span className="text-white/25">••••</span>
+                </span>
+                <span className={`text-[18px] ${i < 2 ? "text-white/35 line-through" : "text-[#2FE3AC]"}`}>{i < 2 ? "Claimed" : "Open"}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </Frame>
+    ),
+  },
+
+  // fl3x.lol/@you, the handle as the hook.
+  claim: {
+    width: 1200,
+    height: 675,
+    render: () => (
+      <Frame>
+        <div className="flex h-full flex-col items-center justify-center gap-10 pb-20">
+          <p className="font-primary leading-none uppercase" style={{ fontSize: 150 }}>
+            <span className="text-white/35">fl3x.lol/@</span>
+            <span className="text-brand">you</span>
+          </p>
+          <div className="flex items-center gap-3">
+            <div className="flex h-[68px] w-[460px] items-center rounded-2xl bg-[#141414] px-5 text-[24px]">
+              <span className="text-white/45">fl3x.lol/@</span>
+              <span>yourname</span>
+              <span className="ml-auto text-[17px] text-[#2FE3AC]">Available</span>
+            </div>
+            <span className="flex h-[68px] items-center rounded-2xl bg-brand px-7 text-[22px] text-black">Claim</span>
+          </div>
+          <Line size={26}>Short names go first.</Line>
+        </div>
+      </Frame>
+    ),
+  },
+
+  // The three tiers with their real limits.
+  tiers: {
+    width: 1200,
+    height: 675,
+    render: () => {
+      const rows = [
+        ["Free", TIER_LIMITS.none, "Hold nothing"],
+        ["Starter", TIER_LIMITS.starter, "Hold $FL3X"],
+        ["Premium", TIER_LIMITS.premium, "Hold more $FL3X"],
+      ] as const;
+      return (
+        <Frame>
+          <div className="flex h-full flex-col items-center pt-[60px]">
+            <Big size={96}>H[o]LD. UNL[o]CK.</Big>
+            <Line size={24} className="mt-3">
+              Your tier follows your wallet. No subscription.
+            </Line>
+            <div className="mt-10 flex gap-5">
+              {rows.map(([name, l, hold]) => (
+                <div key={name} className={`flex w-[320px] flex-col gap-4 rounded-[28px] p-7 ${name === "Premium" ? "bg-brand text-black" : "bg-[#141414]"}`}>
+                  <p className="flex items-center gap-3 font-primary text-[44px] leading-none uppercase">
+                    {name} {name === "Premium" && <Verified size={30} />}
+                  </p>
+                  <p className={`text-[18px] ${name === "Premium" ? "text-black/60" : "text-white/45"}`}>{hold}</p>
+                  <div className="flex flex-col gap-2 text-[21px]">
+                    <span>{l.widgets} widgets</span>
+                    <span>{l.links} links</span>
+                    <span>{l.analyticsDays}-day analytics</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </Frame>
+      );
+    },
   },
 };
