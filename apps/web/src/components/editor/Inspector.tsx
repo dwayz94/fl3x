@@ -50,7 +50,7 @@ export function Inspector(props: {
   }
 
   const def = WIDGETS[w.type];
-  const problems = widgetProblems(w);
+  const problems = widgetProblems(w, props.wallets.map((x) => x.address));
   return (
     <div className="flex flex-col gap-5">
       <div className="flex items-center justify-between border-b border-white/10 pb-5">

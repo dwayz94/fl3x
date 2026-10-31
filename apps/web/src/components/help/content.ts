@@ -1104,8 +1104,13 @@ export const HELP_GROUPS: HelpGroup[] = [
           },
           {
             id: "wallet-widget",
-            heading: "A widget says “Link a wallet in Settings”",
-            blocks: [{ type: "p", text: "P&L, Portfolio and Holdings need at least one linked wallet. Link one in [Settings](/dashboard/settings)." }],
+            heading: "I can't save: “Link a wallet first”",
+            blocks: [
+              {
+                type: "p",
+                text: "Wallet widgets (P&L, Portfolio, Holdings, NFTs, Recent Trades, Hyperliquid…) need at least one linked wallet of the right kind: Solana for Recent Trades, EVM for Hyperliquid. Link one from the widget's panel in Customize or in [Settings](/dashboard/settings). Until then the profile can't be saved, and a wallet widget left without a wallet is hidden from your public page.",
+              },
+            ],
           },
           {
             id: "limit",

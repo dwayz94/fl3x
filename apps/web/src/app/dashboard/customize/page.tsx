@@ -42,8 +42,9 @@ function Editor({ initial, tier, wallets }: { initial: EditorPayload; tier: Tier
   const [error, setError] = useState<string | null>(null);
   const dirty = useMemo(() => JSON.stringify(draft) !== JSON.stringify(saved), [draft, saved]);
   // Widgets that still miss something: the profile can't be saved until they're filled in.
-  const incomplete = useMemo(() => draft.widgets.filter((w) => widgetProblems(w).length > 0), [draft.widgets]);
-  const blocked = incomplete[0] ? `Finish your ${WIDGETS[incomplete[0].type].name} widget: ${widgetProblems(incomplete[0])[0]}` : null;
+  const addresses = useMemo(() => wallets.map((x) => x.address), [wallets]);
+  const incomplete = useMemo(() => draft.widgets.filter((w) => widgetProblems(w, addresses).length > 0), [draft.widgets, addresses]);
+  const blocked = incomplete[0] ? `Finish your ${WIDGETS[incomplete[0].type].name} widget: ${widgetProblems(incomplete[0], addresses)[0]}` : null;
   const selected = draft.widgets.find((w) => w.id === selectedId) ?? null;
 
   const [nudge, setNudge] = useState(0);

@@ -1,7 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { and, desc, eq, gte, isNotNull, sql } from "drizzle-orm";
 import { z } from "zod";
-import { normalizeUsername, validateUsername, type ExploreProfile, type FullPublicProfile, type PublicConfig } from "@fl3x/shared";
+import { normalizeUsername, validateUsername, walletProblem, type ExploreProfile, type FullPublicProfile, type PublicConfig } from "@fl3x/shared";
 import { db, schema } from "../db";
 import { env } from "../env";
 import { getSettings } from "../lib/settings";
@@ -9,6 +9,7 @@ import { notFound } from "../lib/errors";
 import { badgesFor, badgeStats, loadProfile } from "../lib/profiles";
 import { resolveInviteCode } from "../lib/invites";
 import { isUsernameTaken } from "../lib/users";
+import { verifiedWallets } from "../lib/wallets";
 
 export async function publicRoutes(app: FastifyInstance) {
 
@@ -86,7 +87,9 @@ export async function publicRoutes(app: FastifyInstance) {
     // Only show badges still owned (a tier can drop, a granted badge can be taken back).
     const owned = new Set(await badgesFor(row.user, stats));
     // Which wallets a widget adds up stays private: the page fetches values by widget id.
-    const widgets = profile.widgets.map((w) => {
+    // Wallet widgets left without a wallet (unlinked since) stay off the public page.
+    const mine = (await verifiedWallets(row.user)).map((v) => v.address);
+    const widgets = profile.widgets.filter((w) => !walletProblem(w.type, w.settings, mine)).map((w) => {
       if (!("wallets" in w.settings)) return w;
       const { wallets: _hidden, ...settings } = w.settings;
       return { ...w, settings };

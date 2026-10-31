@@ -499,9 +499,47 @@ export function stripPremium(type: WidgetType, settings: WidgetSettings): Widget
  * What still has to be filled in before a widget can be saved (empty = ready).
  * Same rules the API applies on save, so the editor can block the button first.
  */
-export function widgetProblems(w: { type: WidgetType; size: WidgetSize; settings: Record<string, unknown> }): string[] {
+/**
+ * What still keeps a widget from being saved. Pass the member's verified wallet addresses
+ * to also require that a wallet widget has at least one wallet to show.
+ */
+export function widgetProblems(w: { type: WidgetType; size: WidgetSize; settings: Record<string, unknown> }, verified?: string[]): string[] {
   const r = widgetInput.safeParse(w);
-  return r.success ? [] : r.error.issues.map((i) => i.message.replace(/^[^:]+: /, ""));
+  const problems = r.success ? [] : r.error.issues.map((i) => i.message.replace(/^[^:]+: /, ""));
+  if (verified) {
+    const wallet = walletProblem(w.type, w.settings, verified);
+    if (wallet) problems.push(wallet);
+  }
+  return problems;
+}
+
+/** The wallets family a widget's wallet field is limited to, if any. */
+function widgetNetwork(type: WidgetType, settings: Record<string, unknown>): Network | undefined {
+  const f = (WIDGETS[type].fields as readonly FieldDef[]).find((x) => x.kind === "wallets");
+  if (!f || f.kind !== "wallets" || !f.network) return undefined;
+  if (f.network === "solana" || f.network === "evm") return f.network;
+  const other = (WIDGETS[type].fields as readonly FieldDef[]).find((x) => x.key === f.network);
+  const v = settings[f.network] ?? (other && "default" in other ? other.default : undefined);
+  return v === "solana" || v === "evm" ? v : undefined;
+}
+
+/** Addresses a wallet widget would show from the member's verified ones; null when it has no wallet field. */
+export function widgetWallets(type: WidgetType, settings: Record<string, unknown>, verified: string[]): string[] | null {
+  if (!(WIDGETS[type].fields as readonly FieldDef[]).some((f) => f.kind === "wallets")) return null;
+  const pool = onNetwork(verified, widgetNetwork(type, settings));
+  const setting = settings.wallets;
+  if (setting === undefined || setting === "" || setting === "all") return pool;
+  const wanted = new Set(String(setting).split(",").map((a) => a.trim().toLowerCase()));
+  return pool.filter((a) => wanted.has(a.toLowerCase()));
+}
+
+/** Why a wallet widget can't show anything yet, or null when it can. */
+export function walletProblem(type: WidgetType, settings: Record<string, unknown>, verified: string[]): string | null {
+  const shown = widgetWallets(type, settings, verified);
+  if (shown === null || shown.length > 0) return null;
+  const network = widgetNetwork(type, settings);
+  const family = network === "solana" ? "a Solana wallet" : network === "evm" ? "an EVM wallet" : "a wallet";
+  return onNetwork(verified, network).length === 0 ? `Link ${family} first` : "Pick at least one wallet";
 }
 
 /** Full link for a "handle" field, from the settings it lives in. */

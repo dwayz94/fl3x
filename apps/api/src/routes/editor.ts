@@ -2,7 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { and, count, eq, notInArray, sql } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 import {
-  DEFAULT_THEME, PREMIUM_THEME_KEYS, TIER_LIMITS, isPremiumBackground, identityInput, linksInput, profileInput, stripPremium, widgetsInput,
+  walletProblem, WIDGETS, DEFAULT_THEME, PREMIUM_THEME_KEYS, TIER_LIMITS, isPremiumBackground, identityInput, linksInput, profileInput, stripPremium, widgetsInput,
   type ProfileTheme,
 } from "@fl3x/shared";
 import { db, schema } from "../db";
@@ -80,8 +80,12 @@ export async function editorRoutes(app: FastifyInstance) {
     // Over the limit (tier dropped, limits lowered) you can still edit and remove, just not add.
     const [{ current } = { current: 0 }] = await db.select({ current: count() }).from(schema.widgets).where(eq(schema.widgets.userId, user.id));
     if (widgets.length > Math.max(limit, current)) throw badRequest(`Your tier allows ${limit} widgets`, "limit_reached");
-    const verified = new Set((await verifiedWallets(user)).map((v) => v.address.toLowerCase()));
+    const mine = (await verifiedWallets(user)).map((v) => v.address);
+    const verified = new Set(mine.map((a) => a.toLowerCase()));
     for (const w of widgets) {
+      // A wallet widget with nothing to show ("Link a wallet") never reaches the profile.
+      const missing = walletProblem(w.type, w.settings, mine);
+      if (missing) throw badRequest(`${WIDGETS[w.type].name}: ${missing}`, "wallet_required");
       const picked = typeof w.settings.wallets === "string" && w.settings.wallets !== "all" ? w.settings.wallets.split(",") : [];
       if (picked.some((a) => !verified.has(a.trim().toLowerCase()))) {
         throw badRequest("Only your verified wallets can be displayed", "wallet_not_verified");
