@@ -7,11 +7,12 @@
 
 import { useEffect, useId, useState } from "react";
 import {
-  ArrowDownRight01Icon, ArrowUpRight01Icon, InstagramIcon, Moon02Icon, NewTwitterIcon, PauseIcon, PlayIcon, SpotifyIcon, Sun03Icon,
+  AppleMusicIcon, ArrowDownRight01Icon, ArrowUpRight01Icon, InstagramIcon, Moon02Icon, NewTwitterIcon, PauseIcon, PlayIcon, SpotifyIcon, Sun03Icon,
   TiktokIcon, TwitchIcon, YoutubeIcon,
 } from "@hugeicons/core-free-icons";
 import { PERIODS, resolveClock, zoneCity, type Widget } from "@fl3x/shared";
 import { Flag, Icon } from "@/components/ui";
+import type { AnyIcon } from "@/components/ui/Icon";
 import { usePreview } from "@/lib/audio";
 import { cn } from "@/lib/cn";
 import { fmtCompact, fmtNumber, fmtPct, fmtUsd, splitUsd } from "@/lib/format";
@@ -231,9 +232,22 @@ function PlayButton({ className, title, artist }: { className?: string; title?: 
   );
 }
 
+// One-color marks for the services without a Hugeicons icon: TIDAL's four diamonds, Deezer's equalizer.
+const diamond = (x: number, y: number) => `M${x - 4} ${y}L${x} ${y - 4}L${x + 4} ${y}L${x} ${y + 4}Z`;
+const TIDAL_MARK: AnyIcon = { viewBox: "0 0 24 24", d: [diamond(4, 9), diamond(12, 9), diamond(20, 9), diamond(12, 17)].join("") };
+const DEEZER_MARK: AnyIcon = { viewBox: "0 0 24 24", d: "M0 18h4v3H0zM5 15h4v6H5zM10 12h4v9h-4zM15 9h4v12h-4zM20 6h4v15h-4z" };
+
+/** Where a track comes from: its mark in the service's color. */
+const MUSIC_SERVICE: Record<string, { icon: AnyIcon; color: string }> = {
+  spotify: { icon: SpotifyIcon, color: "#1DB954" },
+  apple: { icon: AppleMusicIcon, color: "#FA2D48" },
+  deezer: { icon: DEEZER_MARK, color: "#A238FF" },
+  tidal: { icon: TIDAL_MARK, color: "#FFFFFF" },
+};
+
 export function MusicWidgetV2({ w }: { w: Widget }) {
   const { data, isLoading, isError, empty, live } = useMusic(w);
-  if (empty) return <WEmpty size={w.size} label="Add a Spotify link" />;
+  if (empty) return <WEmpty size={w.size} label="Add a track link" />;
   if (isError) return <WEmpty size={w.size} label={live ? "Connect Spotify in Settings" : "Track not found"} />;
   if (isLoading || !data) return <WSkeleton size={w.size} />;
 
@@ -246,7 +260,8 @@ export function MusicWidgetV2({ w }: { w: Widget }) {
       {data.thumbnailUrl && <img src={data.thumbnailUrl} alt="" className="size-full object-cover" />}
     </div>
   );
-  const logo = <Icon icon={SpotifyIcon} size={20} className="shrink-0 text-[#1DB954]" />;
+  const service = MUSIC_SERVICE[data.provider] ?? MUSIC_SERVICE.spotify!;
+  const logo = <Icon icon={service.icon} size={20} className="shrink-0" style={{ color: service.color }} />;
 
   if (w.size === "long") {
     return (

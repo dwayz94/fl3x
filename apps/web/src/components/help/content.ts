@@ -418,8 +418,8 @@ export const HELP_GROUPS: HelpGroup[] = [
               {
                 type: "list",
                 items: [
-                  "**Currently listening**: shows the track you're playing, or the last one you played. Connect Spotify in [Settings](/dashboard/settings) under Connections.",
-                  "**A track**: paste a Spotify track link (open.spotify.com/track/…) to show that track.",
+                  "**Currently listening**: shows the track you're playing, or the last one you played. Works with Spotify: connect it in [Settings](/dashboard/settings) under Connections.",
+                  "**A track**: paste a track link from Spotify, Apple Music, Deezer or TIDAL to show that track.",
                   "Visitors can play a 30-second preview when one is available.",
                 ],
               },
@@ -1138,7 +1138,7 @@ export const HELP_GROUPS: HelpGroup[] = [
             blocks: [
               {
                 type: "p",
-                text: "Previews are looked up by title and artist, and some tracks don't have one. The widget still shows the track and opens it on Spotify.",
+                text: "Previews are looked up by title and artist, and some tracks don't have one. The widget still shows the track and opens it on its service.",
               },
             ],
           },

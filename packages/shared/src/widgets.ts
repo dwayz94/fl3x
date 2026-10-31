@@ -94,6 +94,10 @@ export const HL_PERIODS = [
 ] as const;
 
 /** Widgets built on the member's wallet value (snapshotted hourly, fetched by widget id). */
+/** Track links the music widget understands (Deezer short share links are resolved by the API). */
+export const MUSIC_TRACK_PATTERN =
+  "^https://(open\\.spotify\\.com/(intl-[a-z-]+/)?track/[A-Za-z0-9]+|(www\\.)?deezer\\.com/([a-z]{2}/)?track/\\d+|link\\.deezer\\.com/|deezer\\.page\\.link/|music\\.apple\\.com/.+([?&]i=\\d+|/song/)|(listen\\.)?tidal\\.com/(browse/)?track/\\d+)";
+
 export const PORTFOLIO_WIDGET_TYPES = ["pnl", "portfolio", "holdings", "allocation", "movers", "calendar"] as const;
 
 /** Wallet families a widget can be limited to (EVM covers Ethereum, Base, BNB, Arbitrum, Robinhood…). */
@@ -224,7 +228,7 @@ export const WIDGETS = {
     name: "NFT Gallery",
     description: "NFTs from your verified Solana wallets",
     category: "crypto",
-    fields: [wallets, opacity, ...surface],
+    fields: [{ ...wallets, network: "solana" }, opacity, ...surface],
   },
   token: {
     name: "Token",
@@ -278,13 +282,13 @@ export const WIDGETS = {
   },
   music: {
     name: "Music",
-    description: "What you're listening to on Spotify, or a track you pick",
+    description: "What you're listening to on Spotify, or a track from Spotify, Apple Music, Deezer or TIDAL",
     category: "media",
     fields: [
       { key: "source", label: "Show", kind: "segmented", options: [{ id: "spotify", label: "Currently listening" }, { id: "link", label: "A track" }], default: "spotify" },
       {
-        key: "url", label: "Spotify track link", kind: "url", placeholder: "https://open.spotify.com/track/…", required: true,
-        pattern: "^https://open\\.spotify\\.com/(intl-[a-z-]+/)?track/[A-Za-z0-9]+", hint: "Paste a Spotify track link (open.spotify.com/track/…)",
+        key: "url", label: "Track link", kind: "url", placeholder: "Spotify, Apple Music, Deezer or TIDAL link", required: true,
+        pattern: MUSIC_TRACK_PATTERN, hint: "Paste a track link from Spotify, Apple Music, Deezer or TIDAL",
         when: { key: "source", is: ["link"] },
       },
       background,

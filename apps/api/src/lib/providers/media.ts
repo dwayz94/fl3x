@@ -2,7 +2,7 @@ import { env } from "../../env";
 import { cached, fetchJson } from "../cache";
 
 export interface MediaData {
-  provider: "youtube" | "spotify" | "twitch";
+  provider: "youtube" | "spotify" | "twitch" | "apple" | "deezer" | "tidal";
   title: string;
   author: string | null;
   thumbnailUrl: string | null;
@@ -58,6 +58,20 @@ export function getMedia(rawUrl: string) {
     });
   }
 
+  // Music services without Spotify's oEmbed: each has a free public source for one track.
+  if (host === "deezer.com" || host === "link.deezer.com" || host === "deezer.page.link") return deezerTrack(url);
+  if (host === "music.apple.com") {
+    // Album links name the track with ?i=, song links end with it.
+    const id = url.searchParams.get("i") ?? (url.pathname.includes("/song/") ? url.pathname.split("/").pop() : undefined);
+    if (!id || !/^\d{5,15}$/.test(id)) return Promise.reject(new Error("Not an Apple Music track link"));
+    return appleTrack(id);
+  }
+  if (host === "tidal.com" || host === "listen.tidal.com") {
+    const id = url.pathname.match(/\/track\/(\d+)/)?.[1];
+    if (!id) return Promise.reject(new Error("Not a TIDAL track link"));
+    return tidalTrack(id);
+  }
+
   if (host === "twitch.tv") {
     const login = url.pathname.split("/")[1]?.toLowerCase();
     if (!login) return Promise.resolve(null);
@@ -82,6 +96,58 @@ export function getMedia(rawUrl: string) {
   }
 
   return Promise.resolve(null);
+}
+
+/** Deezer's public API (no key). Short share links (link.deezer.com) are followed to the track first. */
+async function deezerTrack(url: URL) {
+  let id = url.pathname.match(/\/track\/(\d+)/)?.[1];
+  if (!id && url.hostname !== "www.deezer.com" && url.hostname !== "deezer.com") {
+    const res = await fetch(url.href, { redirect: "follow", headers: { "user-agent": BROWSER_UA }, signal: AbortSignal.timeout(8000) });
+    id = res.url.match(/\/track\/(\d+)/)?.[1];
+  }
+  if (!id) throw new Error("Not a Deezer track link");
+  return cached<MediaData | null>(`deezer:${id}`, 3600, async () => {
+    const t = await fetchJson<{ title?: string; link?: string; artist?: { name: string }; album?: { cover_xl?: string }; error?: unknown }>(`https://api.deezer.com/track/${id}`);
+    if (!t.title || t.error) return null;
+    return { provider: "deezer", title: t.title, author: t.artist?.name ?? null, thumbnailUrl: t.album?.cover_xl ?? null, live: null, url: t.link ?? `https://www.deezer.com/track/${id}` };
+  });
+}
+
+/** Apple's public iTunes lookup (no key), artwork asked in 600 px. */
+function appleTrack(id: string) {
+  return cached<MediaData | null>(`apple:${id}`, 3600, async () => {
+    const r = await fetchJson<{ results: { kind?: string; trackName?: string; artistName?: string; artworkUrl100?: string; trackViewUrl?: string }[] }>(`https://itunes.apple.com/lookup?id=${id}`);
+    const t = r.results.find((x) => x.trackName);
+    if (!t?.trackName) return null;
+    return {
+      provider: "apple",
+      title: t.trackName,
+      author: t.artistName ?? null,
+      thumbnailUrl: t.artworkUrl100?.replace(/\/\d+x\d+bb\./, "/600x600bb.") ?? null,
+      live: null,
+      url: t.trackViewUrl?.replace(/[?&]uo=\d+/, "") ?? `https://music.apple.com/song/${id}`,
+    };
+  });
+}
+
+/** TIDAL has no keyless API: the public track page names it in its meta tags ("Artist - Title"). */
+function tidalTrack(id: string) {
+  return cached<MediaData | null>(`tidal:${id}`, 3600, async () => {
+    // An unknown track is a 404 page: cache it as not found, not as a failure.
+    const html = await page(`https://tidal.com/browse/track/${id}`).catch((e: Error) => (e.message.endsWith("404") ? "" : Promise.reject(e)));
+    const meta = (p: string) => html.match(new RegExp(`<meta property="${p}" content="([^"]*)"`))?.[1];
+    const og = decodeXml(meta("og:title") ?? "");
+    if (!og || og.startsWith("Not Found")) return null;
+    const cut = og.indexOf(" - ");
+    return {
+      provider: "tidal",
+      title: cut > 0 ? og.slice(cut + 3) : og,
+      author: cut > 0 ? og.slice(0, cut) : null,
+      thumbnailUrl: meta("og:image") ?? null,
+      live: null,
+      url: `https://tidal.com/browse/track/${id}`,
+    };
+  });
 }
 
 const BROWSER_UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130 Safari/537.36";

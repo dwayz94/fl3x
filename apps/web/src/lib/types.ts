@@ -21,7 +21,7 @@ export interface CommunityData {
 }
 
 export interface MediaData {
-  provider: "youtube" | "spotify" | "twitch";
+  provider: "youtube" | "spotify" | "twitch" | "apple" | "deezer" | "tidal";
   title: string;
   author: string | null;
   thumbnailUrl: string | null;
