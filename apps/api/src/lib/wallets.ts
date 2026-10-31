@@ -1,6 +1,6 @@
 import { createPublicKey, randomBytes, verify } from "node:crypto";
 import bs58 from "bs58";
-import { and, eq, gt, inArray, lt } from "drizzle-orm";
+import { and, eq, gt, inArray, lt, ne } from "drizzle-orm";
 import { getAddress, isAddress, verifyMessage } from "viem";
 import { PORTFOLIO_WIDGET_TYPES, type LinkedWallet, type WalletChain } from "@fl3x/shared";
 import { db, schema } from "../db";
@@ -18,8 +18,12 @@ export const normalizeAddress = (chain: WalletChain, a: string) => (chain === "e
 export async function verifiedWallets(user: UserRow): Promise<LinkedWallet[]> {
   const rows = await db.select().from(schema.wallets).where(eq(schema.wallets.userId, user.id));
   const linked = rows.map((r) => ({ id: r.id, chain: r.chain, address: r.address, label: r.label, source: "signature" as const }));
+  // A sign-in wallet another account linked by signature belongs to that account (widgets and tier alike).
+  const claimed = user.wallets.length
+    ? new Set((await db.select({ address: schema.wallets.address }).from(schema.wallets).where(and(inArray(schema.wallets.address, user.wallets), ne(schema.wallets.userId, user.id)))).map((r) => r.address))
+    : new Set<string>();
   const login = user.wallets
-    .filter((a) => !linked.some((l) => l.address === a))
+    .filter((a) => !linked.some((l) => l.address === a) && !claimed.has(a))
     .map((address) => ({ id: `login:${address}`, chain: "solana" as const, address, label: null, source: "login" as const }));
   return [...login, ...linked];
 }

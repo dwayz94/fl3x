@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { Spinner } from "@/components/dashboard/Panel";
+import { LoadError, Spinner } from "@/components/dashboard/Panel";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft01Icon, ViewIcon, ViewOffSlashIcon } from "@hugeicons/core-free-icons";
@@ -25,7 +25,8 @@ const EASE = [0.22, 1, 0.36, 1] as const;
 
 export default function CustomizePage() {
   const { data: me } = useMe();
-  const { data, isLoading } = useEditorProfile();
+  const { data, isLoading, isError, refetch } = useEditorProfile();
+  if (isError && !data) return <LoadError screen onRetry={() => void refetch()} />;
   if (isLoading || !data || !me) return <CustomizeLoader />;
   return <Editor initial={data} tier={me.tier} wallets={me.linkedWallets} />;
 }
@@ -40,6 +41,7 @@ function Editor({ initial, tier, wallets }: { initial: EditorPayload; tier: Tier
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [avatarError, setAvatarError] = useState<string | null>(null);
   const dirty = useMemo(() => JSON.stringify(draft) !== JSON.stringify(saved), [draft, saved]);
   // Widgets that still miss something: the profile can't be saved until they're filled in.
   const addresses = useMemo(() => wallets.map((x) => x.address), [wallets]);
@@ -189,6 +191,9 @@ function Editor({ initial, tier, wallets }: { initial: EditorPayload; tier: Tier
     try {
       const token = await getToken();
       const widgets = await api<Widget[]>("/me/widgets", { method: "PUT", token, json: draft.widgets });
+      // The widgets are stored now: keep that even if the profile PUT below fails, so Discard doesn't bring back old ones.
+      setSaved((s) => ({ ...s, widgets }));
+      qc.setQueryData<EditorPayload>(["profile"], (old) => (old ? { ...old, profile: { ...old.profile, widgets } } : old));
       const profile = await api<EditableProfile>("/me/profile", {
         method: "PUT",
         token,
@@ -211,14 +216,22 @@ function Editor({ initial, tier, wallets }: { initial: EditorPayload; tier: Tier
   const changeAvatar = async () => {
     const file = await pickImage();
     if (!file) return;
+    setAvatarError(null);
+    // A failed upload shows through avatar.error (the hook's own state).
     const url = await avatar.upload(file);
-    if (!url) return setError(avatar.error);
-    // The picture saves right away, like in Settings.
-    const profile = await api<EditableProfile>("/me/identity", { method: "PATCH", token: await getToken(), json: { avatarUrl: url } });
-    setSaved((s) => ({ ...s, avatarUrl: profile.avatarUrl }));
-    setDraft((d) => ({ ...d, avatarUrl: profile.avatarUrl }));
-    qc.setQueryData<EditorPayload>(["profile"], (old) => (old ? { ...old, profile: { ...old.profile, avatarUrl: profile.avatarUrl } } : old));
+    if (!url) return;
+    try {
+      // The picture saves right away, like in Settings.
+      const profile = await api<EditableProfile>("/me/identity", { method: "PATCH", token: await getToken(), json: { avatarUrl: url } });
+      setSaved((s) => ({ ...s, avatarUrl: profile.avatarUrl }));
+      setDraft((d) => ({ ...d, avatarUrl: profile.avatarUrl }));
+      qc.setQueryData<EditorPayload>(["profile"], (old) => (old ? { ...old, profile: { ...old.profile, avatarUrl: profile.avatarUrl } } : old));
+    } catch (err) {
+      setAvatarError(err instanceof ApiRequestError ? err.message : "Could not save your picture");
+    }
   };
+  // Shown in the header whether or not there are unsaved changes (the save bar has its own messages).
+  const avatarMessage = avatarError ?? avatar.error;
 
   const discard = () => {
     setDraft(saved);
@@ -267,6 +280,7 @@ function Editor({ initial, tier, wallets }: { initial: EditorPayload; tier: Tier
         <h1 className="font-primary text-xl leading-none">Customize</h1>
         <div className="ml-auto flex items-center gap-2">
           {error && !dirty && <FieldError>{error}</FieldError>}
+          {avatarMessage && !avatar.busy && <FieldError>{avatarMessage}</FieldError>}
           {avatar.busy && <span className="text-xs text-fg-3">Uploading…</span>}
           {/* Hides both panels to see the card about as visitors will. */}
           <button

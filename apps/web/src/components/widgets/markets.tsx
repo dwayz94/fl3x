@@ -265,7 +265,7 @@ export function TradesWidget({ w }: { w: Widget }) {
   const list = (
     <ul className="flex min-w-0 flex-1 flex-col gap-2">
       {items.map((t) => (
-        <li key={t.signature} className="flex min-w-0 items-center gap-2">
+        <li key={t.id} className="flex min-w-0 items-center gap-2">
           <span className="w-9 shrink-0 rounded-md py-0.5 text-center font-primary text-[11px] leading-none text-bg" style={{ background: t.side === "buy" ? UP : DOWN }}>
             {t.side === "buy" ? "BUY" : "SELL"}
           </span>

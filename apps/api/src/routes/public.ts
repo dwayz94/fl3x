@@ -41,7 +41,7 @@ export async function publicRoutes(app: FastifyInstance) {
   });
 
   /** The public directory: published profiles, most viewed over 30 days or newest first. */
-  const exploreQuery = z.object({ sort: z.enum(["popular", "new"]).default("popular"), limit: z.coerce.number().int().min(1).max(5000).default(60) });
+  const exploreQuery = z.object({ sort: z.enum(["popular", "new"]).default("popular"), limit: z.coerce.number().int().min(1).max(1000).default(60) });
   app.get("/explore", { config: { rateLimit: { max: 60, timeWindow: "1 minute" } } }, async (req): Promise<ExploreProfile[]> => {
     const { sort, limit } = exploreQuery.parse(req.query);
     const since = new Date(Date.now() - 30 * 86_400_000);

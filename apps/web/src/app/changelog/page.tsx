@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { ArticlePage } from "@/components/shared/ArticlePage";
 import { CHANGELOG } from "@/content/changelog";
 import { fmtDate } from "@/content/dates";
+import { shareMetadata } from "@/lib/seo";
 
 const description = "Everything new on FL3X: widgets, features and fixes, newest first.";
 
@@ -9,7 +10,7 @@ export const metadata: Metadata = {
   title: "Changelog",
   description,
   alternates: { canonical: "/changelog" },
-  openGraph: { url: "/changelog", title: "FL3X Changelog", description },
+  ...shareMetadata({ url: "/changelog", title: "FL3X Changelog", description }),
 };
 
 export default function ChangelogPage() {

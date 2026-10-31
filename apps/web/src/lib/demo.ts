@@ -81,10 +81,10 @@ const monthly = (() => {
 const trades: TradesData = {
   wallets: 1,
   items: [
-    { signature: "demo-1", at: new Date(Date.now() - 2 * 3_600_000).toISOString(), side: "buy", token: { address: "bonk", symbol: "BONK", name: "Bonk", iconUrl: BONK_ICON }, amount: 41_200_000, quote: { symbol: "SOL", amount: 4.2 }, valueUsd: 744 },
-    { signature: "demo-2", at: new Date(Date.now() - 7 * 3_600_000).toISOString(), side: "sell", token: { address: "nova", symbol: "NOVA", name: "Nova", iconUrl: IMG.avatar3 }, amount: 120_000, quote: { symbol: "SOL", amount: 9.8 }, valueUsd: 1_736 },
-    { signature: "demo-3", at: new Date(Date.now() - 26 * 3_600_000).toISOString(), side: "buy", token: { address: "fl3x", symbol: "FL3X", name: "FL3X", iconUrl: "/images/fl3x-icon.svg" }, amount: 2_400_000, quote: { symbol: "USDC", amount: 5_000 }, valueUsd: 5_000 },
-    { signature: "demo-4", at: new Date(Date.now() - 3 * 86_400_000).toISOString(), side: "sell", token: { address: "sol", symbol: "SOL", name: "Solana", iconUrl: SOL_ICON }, amount: 12, quote: { symbol: "USDC", amount: 2_124 }, valueUsd: 2_124 },
+    { id: "demo-1", at: new Date(Date.now() - 2 * 3_600_000).toISOString(), side: "buy", token: { address: "bonk", symbol: "BONK", name: "Bonk", iconUrl: BONK_ICON }, amount: 41_200_000, quote: { symbol: "SOL", amount: 4.2 }, valueUsd: 744 },
+    { id: "demo-2", at: new Date(Date.now() - 7 * 3_600_000).toISOString(), side: "sell", token: { address: "nova", symbol: "NOVA", name: "Nova", iconUrl: IMG.avatar3 }, amount: 120_000, quote: { symbol: "SOL", amount: 9.8 }, valueUsd: 1_736 },
+    { id: "demo-3", at: new Date(Date.now() - 26 * 3_600_000).toISOString(), side: "buy", token: { address: "fl3x", symbol: "FL3X", name: "FL3X", iconUrl: "/images/fl3x-icon.svg" }, amount: 2_400_000, quote: { symbol: "USDC", amount: 5_000 }, valueUsd: 5_000 },
+    { id: "demo-4", at: new Date(Date.now() - 3 * 86_400_000).toISOString(), side: "sell", token: { address: "sol", symbol: "SOL", name: "Solana", iconUrl: SOL_ICON }, amount: 12, quote: { symbol: "USDC", amount: 2_124 }, valueUsd: 2_124 },
   ],
 };
 

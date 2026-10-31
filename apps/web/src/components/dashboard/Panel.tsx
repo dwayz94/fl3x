@@ -46,3 +46,16 @@ export function Spinner({ screen }: { screen?: boolean }) {
     </div>
   );
 }
+
+/** When a page's data can't load (API down, expired session): says so with a retry instead of spinning forever. */
+export function LoadError({ onRetry, screen }: { onRetry: () => void; screen?: boolean }) {
+  return (
+    <div className={cn("flex flex-col items-center justify-center gap-3 px-6 text-center", screen ? "fixed inset-0 z-40 bg-[#0b0b0b]" : "min-h-[50vh]")}>
+      <p className="font-primary text-3xl">Can&apos;t reach FL3X</p>
+      <p className="max-w-sm text-sm text-fg-3">We couldn&apos;t load your profile. Try again in a moment.</p>
+      <button type="button" onClick={onRetry} className="rounded-xl bg-brand px-4 py-2 text-sm text-bg">
+        Try again
+      </button>
+    </div>
+  );
+}

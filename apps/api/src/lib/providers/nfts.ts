@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import type { NftData } from "@fl3x/shared";
 import { cached } from "../cache";
 import { env } from "../../env";
@@ -42,7 +43,8 @@ function walletNfts(owner: string) {
       // Only web images: data: URIs can weigh megabytes.
       if (!image || !/^https?:\/\//.test(image)) return [];
       const collection = a.grouping?.find((g) => g.group_key === "collection")?.collection_metadata?.name || null;
-      return [{ id: a.id, name: a.content?.metadata?.name?.trim() || "Untitled", image, collection }];
+      // The mint would lead to the owner (the member's wallet) on an explorer: only a hash leaves the API.
+      return [{ id: createHash("sha256").update(a.id).digest("hex").slice(0, 16), name: a.content?.metadata?.name?.trim() || "Untitled", image, collection }];
     });
   });
 }

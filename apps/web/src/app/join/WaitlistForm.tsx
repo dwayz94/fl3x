@@ -20,7 +20,7 @@ const setIntent = (on: boolean) => {
 
 /** Waitlist = sign in with X. No form: the handle comes from the linked account. */
 export function WaitlistForm({ desiredUsername, onBack }: { desiredUsername: string; onBack: () => void }) {
-  const { authenticated, login, linkTwitter, getToken } = useAuth();
+  const { authenticated, pending, login, linkTwitter, getToken } = useAuth();
   const { data: me } = useMe();
   const qc = useQueryClient();
   const status = useQuery({
@@ -79,6 +79,8 @@ export function WaitlistForm({ desiredUsername, onBack }: { desiredUsername: str
   }
 
   const signedInWithoutX = authenticated && me && !me.xHandle;
+  // Already signed in with X (the auto-join failed): the button joins again instead of reopening sign-in.
+  const canJoin = authenticated && Boolean(me?.xHandle);
   const error = join.error ?? status.error;
 
   return (
@@ -89,14 +91,15 @@ export function WaitlistForm({ desiredUsername, onBack }: { desiredUsername: str
       />
       <Button
         className="w-full"
-        loading={join.isPending || (authenticated && status.isLoading)}
+        loading={pending || join.isPending || (authenticated && status.isLoading)}
         onClick={() => {
           setIntent(true);
-          if (signedInWithoutX) linkTwitter();
+          if (canJoin) join.mutate();
+          else if (signedInWithoutX) linkTwitter();
           else login({ xOnly: true });
         }}
       >
-        {signedInWithoutX ? "Link" : "Continue with"} <Icon icon={NewTwitterIcon} size={18} />
+        {canJoin ? "Join the waitlist" : <>{signedInWithoutX ? "Link" : "Continue with"} <Icon icon={NewTwitterIcon} size={18} /></>}
       </Button>
       {error && (
         <div className="mt-3 w-full">

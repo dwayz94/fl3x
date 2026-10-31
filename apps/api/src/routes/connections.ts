@@ -4,7 +4,7 @@ import { z } from "zod";
 import { db, schema } from "../db";
 import { env } from "../env";
 import { requireUser } from "../lib/auth";
-import { badRequest, notFound } from "../lib/errors";
+import { badRequest, forbidden, notFound } from "../lib/errors";
 import { cached, fetchJson } from "../lib/cache";
 import type { MediaData } from "../lib/providers/media";
 import { decrypt, encrypt, readState, signState } from "../lib/secrets";
@@ -107,13 +107,22 @@ export async function connectionRoutes(app: FastifyInstance) {
     return { url: `https://accounts.spotify.com/authorize?${q}` };
   });
 
+  // Spotify comes back here, but the account is only attached by the web page, with the member's own session
+  // (POST /me/connections/spotify/finish): an authorize link passed to someone else can't attach their Spotify.
   app.get("/connections/spotify/callback", async (req, reply) => {
     const q = z.object({ code: z.string().optional(), state: z.string(), error: z.string().optional() }).parse(req.query);
-    const state = readState<{ u: string }>(q.state);
-    const back = (status: string) => reply.redirect(`${web()}/dashboard/settings?spotify=${status}`);
-    if (!state || q.error || !q.code) return back("cancelled");
+    if (q.error || !q.code || !readState<{ u: string }>(q.state)) return reply.redirect(`${web()}/dashboard/settings?spotify=cancelled`);
+    const next = new URLSearchParams({ spotify_code: q.code, spotify_state: q.state });
+    return reply.redirect(`${web()}/dashboard/settings?${next}`);
+  });
+
+  app.post("/me/connections/spotify/finish", async (req) => {
+    const user = await requireUser(req);
+    const body = z.object({ code: z.string().min(1).max(1000), state: z.string().max(2000) }).parse(req.body);
+    const state = readState<{ u: string }>(body.state);
+    if (!state || state.u !== user.id) throw forbidden("This Spotify link was started from another account");
     try {
-      const t = await spotifyToken({ grant_type: "authorization_code", code: q.code, redirect_uri: redirectUri() });
+      const t = await spotifyToken({ grant_type: "authorization_code", code: body.code, redirect_uri: redirectUri() });
       const me = await fetchJson<{ display_name: string | null; id: string }>("https://api.spotify.com/v1/me", { headers: { authorization: `Bearer ${t.access_token}` } });
       const values = {
         accountName: me.display_name ?? me.id,
@@ -123,12 +132,12 @@ export async function connectionRoutes(app: FastifyInstance) {
       };
       await db
         .insert(schema.connections)
-        .values({ userId: state.u, provider: "spotify", ...values })
+        .values({ userId: user.id, provider: "spotify", ...values })
         .onConflictDoUpdate({ target: [schema.connections.userId, schema.connections.provider], set: values });
-      return back("connected");
+      return { ok: true, accountName: values.accountName };
     } catch (err) {
       req.log.warn(err);
-      return back("error");
+      throw badRequest("Spotify didn't confirm the connection, try again", "spotify_failed");
     }
   });
 

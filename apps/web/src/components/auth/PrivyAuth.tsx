@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { PrivyProvider, useLinkWithOAuth, useLoginWithOAuth, usePrivy } from "@privy-io/react-auth";
 import { toSolanaWalletConnectors } from "@privy-io/react-auth/solana";
 import { useQueryClient } from "@tanstack/react-query";
@@ -42,10 +42,24 @@ function PrivyBridge({ children }: { children: ReactNode }) {
   const privy = usePrivy();
   // X sign-in skips the Privy modal: the button goes straight to X's authorize page,
   // and these hooks (mounted on every signed-in page) finish the flow when X sends the user back.
-  const { initOAuth: loginWithX } = useLoginWithOAuth();
+  const { initOAuth: loginWithX, state: xState } = useLoginWithOAuth();
   const { initOAuth: linkX } = useLinkWithOAuth();
   const queryClient = useQueryClient();
   const synced = useRef<string | null>(null);
+
+  // Coming back from X (?privy_oauth_code=…): Privy needs a moment to finish the sign-in. Until it does
+  // (or fails, or 20 s pass), pages show "Confirming with X" instead of the sign-in button again.
+  const [returning, setReturning] = useState(false);
+  useEffect(() => {
+    if (!/[?&]privy_oauth_(code|state)=/.test(window.location.search)) return;
+    setReturning(true);
+    const t = setTimeout(() => setReturning(false), 20_000);
+    return () => clearTimeout(t);
+  }, []);
+  useEffect(() => {
+    if (privy.authenticated || xState.status === "error") setReturning(false);
+  }, [privy.authenticated, xState.status]);
+  const pending = !privy.authenticated && (returning || xState.status === "loading");
 
   // Sync linked accounts (X handle, wallets) to our API whenever they change.
   const accountsKey = privy.user?.linkedAccounts.map((a) => a.type + ("address" in a ? a.address : "")).join(",") ?? "";
@@ -63,6 +77,7 @@ function PrivyBridge({ children }: { children: ReactNode }) {
       configured: true,
       ready: privy.ready,
       authenticated: privy.authenticated,
+      pending,
       login: (opts) => (opts?.xOnly ? void loginWithX({ provider: "twitter" }).catch(() => {}) : privy.login()),
       logout: async () => {
         await privy.logout();
@@ -72,7 +87,7 @@ function PrivyBridge({ children }: { children: ReactNode }) {
       linkTwitter: () => void linkX({ provider: "twitter" }).catch(() => {}),
       getToken: () => privy.getAccessToken(),
     }),
-    [privy, queryClient, loginWithX, linkX],
+    [privy, queryClient, loginWithX, linkX, pending],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

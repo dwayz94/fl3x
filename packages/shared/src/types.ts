@@ -125,8 +125,8 @@ export interface NftData {
 /** Last swaps of a member's verified Solana wallets (Recent Trades widget). Addresses are never included. */
 export interface TradesData {
   items: {
-    /** Transaction signature (links to Solscan). */
-    signature: string;
+    /** Opaque id (a hash): the real signature would lead to the wallet on an explorer. */
+    id: string;
     at: string;
     /** "buy": SOL / a stablecoin out, a token in. "sell": the other way. */
     side: "buy" | "sell";

@@ -16,7 +16,8 @@ export function Hero() {
   const [error, setError] = useState<string | null>(null);
   const name = username.trim().toLowerCase();
   const availability = useAvailability(name);
-  const taken = availability && availability !== "checking" && !availability.available;
+  // A failed check doesn't block: /join checks the name again.
+  const taken = availability && availability !== "checking" && !availability.available && !availability.error;
 
   const claim = (e: React.FormEvent) => {
     e.preventDefault();

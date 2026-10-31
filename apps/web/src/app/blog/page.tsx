@@ -5,6 +5,7 @@ import { ArticlePage } from "@/components/shared/ArticlePage";
 import { Icon } from "@/components/ui";
 import { POSTS } from "@/content/blog";
 import { fmtDate } from "@/content/dates";
+import { shareMetadata } from "@/lib/seo";
 
 const description = "Guides for crypto people: showing your portfolio, tracking your P&L, staying safe with your wallets.";
 
@@ -12,7 +13,7 @@ export const metadata: Metadata = {
   title: "Blog",
   description,
   alternates: { canonical: "/blog" },
-  openGraph: { url: "/blog", title: "FL3X Blog", description },
+  ...shareMetadata({ url: "/blog", title: "FL3X Blog", description }),
 };
 
 export default function BlogPage() {

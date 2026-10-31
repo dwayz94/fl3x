@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import type { FullPublicProfile } from "@fl3x/shared";
 import { PublicProfile } from "@/components/profile/PublicProfile";
 import { site } from "@/config/site";
+import { shareMetadata } from "@/lib/seo";
 
 /**
  * null only when the profile really doesn't exist. Any other failure (API
@@ -31,8 +32,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     description: profile.bio ?? `${name} on FL3X`,
     alternates: { canonical: `/@${profile.username}` },
     // Images come from opengraph-image.tsx / twitter-image.tsx (large card with the profile).
-    openGraph: { title: `${name} on FL3X`, url: `/@${profile.username}` },
-    twitter: { card: "summary_large_image", title: `${name} on FL3X` },
+    ...shareMetadata({ url: `/@${profile.username}`, title: `${name} on FL3X`, description: profile.bio ?? `${name} on FL3X`, ownImages: true }),
   };
 }
 

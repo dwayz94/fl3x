@@ -22,9 +22,12 @@ export function PublicProfile({ profile }: { profile: FullPublicProfile }) {
   const theme = effectiveTheme(profile.theme, profile.tier);
   useEffect(() => {
     // One view per tab session, so refreshes don't inflate the count.
+    // Blocked storage (privacy modes, some in-app browsers) throws: count the view and move on.
     const key = `fl3x:viewed:${profile.username}`;
-    if (sessionStorage.getItem(key)) return;
-    sessionStorage.setItem(key, "1");
+    try {
+      if (sessionStorage.getItem(key)) return;
+      sessionStorage.setItem(key, "1");
+    } catch {}
     track(profile.username, "view");
   }, [profile.username]);
 

@@ -6,13 +6,13 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Download01Icon, Logout01Icon, NewTwitterIcon } from "@hugeicons/core-free-icons";
 import type { EditableProfile, Me } from "@fl3x/shared";
 import { useAuth, useMe } from "@/components/auth/AuthProvider";
-import { PageHeader, Spinner } from "@/components/dashboard/Panel";
+import { LoadError, PageHeader, Spinner } from "@/components/dashboard/Panel";
 import { ConnectionsPanel } from "@/components/dashboard/ConnectionsPanel";
 import { CopyField } from "@/components/dashboard/CopyField";
 import { UnsavedBar } from "@/components/dashboard/UnsavedBar";
 import { WalletsPanel } from "@/components/dashboard/WalletsPanel";
 import { inputClass } from "@/components/editor/Field";
-import { Icon, ImageInput, Verified } from "@/components/ui";
+import { FieldError, Icon, ImageInput, Verified } from "@/components/ui";
 import { site } from "@/config/site";
 import { api, ApiRequestError } from "@/lib/api";
 import { useEditorProfile, type EditorPayload } from "@/lib/use-profile";
@@ -160,7 +160,7 @@ function DeleteAccount({ username, onClose }: { username: string; onClose: () =>
 function IdentityForm({ me }: { me: Me }) {
   const { getToken } = useAuth();
   const qc = useQueryClient();
-  const { data } = useEditorProfile();
+  const { data, isError, refetch } = useEditorProfile();
   const [name, setName] = useState("");
   const [bio, setBio] = useState("");
   const [saving, setSaving] = useState(false);
@@ -172,8 +172,10 @@ function IdentityForm({ me }: { me: Me }) {
     setBio(data?.profile.bio ?? "");
     setError(null);
   };
+  // Only when the saved name or bio change: an avatar upload also updates the cache and must keep what's being typed.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(reset, [data]);
+  useEffect(reset, [data?.profile.displayName, data?.profile.bio]);
+  if (isError && !data) return <LoadError onRetry={() => void refetch()} />;
   if (!data) return <Spinner />;
 
   const patch = async (body: { displayName?: string | null; bio?: string | null; avatarUrl?: string | null }) => {
@@ -206,6 +208,8 @@ function IdentityForm({ me }: { me: Me }) {
           <p className="mt-2 line-clamp-2 text-xs text-fg-2">{bio || <span className="text-fg-3">No bio yet</span>}</p>
         </div>
       </div>
+      {/* With no unsaved text the bar is hidden: an avatar error shows here instead. */}
+      {error && !dirty && <FieldError>{error}</FieldError>}
 
       <Field label="Display name" count={`${name.length}/32`}>
         <input className={inputClass} maxLength={32} value={name} onChange={(e) => setName(e.target.value)} placeholder={username} />

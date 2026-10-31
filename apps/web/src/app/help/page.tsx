@@ -3,12 +3,16 @@ import Link from "next/link";
 import { ArrowRight01Icon, Mail01Icon } from "@hugeicons/core-free-icons";
 import { HELP_GROUPS } from "@/components/help/content";
 import { Brand, Icon } from "@/components/ui";
+import { shareMetadata } from "@/lib/seo";
+
+const description =
+  "How FL3X works: claiming your name, invites, widgets, links, wallets, tiers and $FL3X, referrals, analytics and your account.";
 
 export const metadata: Metadata = {
   title: "Help Center",
-  description: "How FL3X works: claiming your name, invites, widgets, links, wallets, tiers and $FL3X, referrals, analytics and your account.",
+  description,
   alternates: { canonical: "/help" },
-  openGraph: { url: "/help" },
+  ...shareMetadata({ url: "/help", title: "Help Center | FL3X", description }),
 };
 
 export default function HelpHome() {

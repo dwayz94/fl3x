@@ -20,12 +20,23 @@ async function requireMember(req: Parameters<typeof requireUser>[0]): Promise<Us
   return refreshTier(user);
 }
 
-/** True when the URL is one of our uploads stored as a video background (video or animated WebP). */
-async function isUploadedVideo(url: string | undefined): Promise<boolean> {
-  const id = url?.startsWith(`${env.API_PUBLIC_URL}/media/`) ? /\/media\/([0-9a-f-]{36})\.\w+$/.exec(url)?.[1] : undefined;
+/**
+ * True when the URL is one of the FL3X preset images or our own still-image uploads. Free profiles may
+ * only use those as an "image" background: an outside GIF or an uploaded video (animated WebP) would move, which is Premium.
+ */
+async function isStillBackground(url: string | undefined): Promise<boolean> {
+  if (url && /^\/images\/backgrounds\/[a-z0-9-]+\.png$/.test(url)) return true;
+  let parsed: URL;
+  try {
+    parsed = new URL(url ?? "");
+  } catch {
+    return false;
+  }
+  if (parsed.origin !== new URL(env.API_PUBLIC_URL).origin) return false;
+  const id = /^\/media\/([0-9a-f-]{36})\.webp$/i.exec(parsed.pathname)?.[1]?.toLowerCase();
   if (!id) return false;
   const [row] = await db.select({ kind: schema.media.kind }).from(schema.media).where(eq(schema.media.id, id)).limit(1);
-  return row?.kind === "video";
+  return Boolean(row) && row!.kind !== "video";
 }
 
 export async function editorRoutes(app: FastifyInstance) {
@@ -42,7 +53,7 @@ export async function editorRoutes(app: FastifyInstance) {
     if (user.tier !== "premium") {
       for (const key of PREMIUM_THEME_KEYS) (theme as unknown as Record<string, unknown>)[key] = DEFAULT_THEME[key];
       // Animated and video / GIF backgrounds are Premium too, even passed off as an "image".
-      if (isPremiumBackground(theme.background) || (theme.background === "image" && (await isUploadedVideo(theme.backgroundUrl)))) {
+      if (isPremiumBackground(theme.background) || (theme.background === "image" && !(await isStillBackground(theme.backgroundUrl)))) {
         theme.background = "plain";
       }
     }

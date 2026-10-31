@@ -4,6 +4,7 @@ import { ArticlePage } from "@/components/shared/ArticlePage";
 import { site } from "@/config/site";
 import { fmtCompact } from "@/lib/format";
 import { getPublicConfig } from "@/lib/server-api";
+import { shareMetadata } from "@/lib/seo";
 
 const description = "$FL3X is the FL3X token on Solana. Holding it unlocks Starter and Premium profiles: more widgets, fonts, animated backgrounds and a checkmark. No subscription.";
 
@@ -11,7 +12,7 @@ export const metadata: Metadata = {
   title: "$FL3X token",
   description,
   alternates: { canonical: "/token" },
-  openGraph: { url: "/token", title: "The $FL3X token", description },
+  ...shareMetadata({ url: "/token", title: "The $FL3X token", description }),
 };
 
 export default async function TokenPage() {

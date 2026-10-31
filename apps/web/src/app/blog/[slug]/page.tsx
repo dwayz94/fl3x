@@ -5,6 +5,7 @@ import { ArticlePage } from "@/components/shared/ArticlePage";
 import { site } from "@/config/site";
 import { findPost, POSTS } from "@/content/blog";
 import { fmtDate } from "@/content/dates";
+import { shareMetadata } from "@/lib/seo";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -22,7 +23,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     title: post.title,
     description: post.description,
     alternates: { canonical: path },
-    openGraph: { type: "article", url: path, title: post.title, description: post.description, publishedTime: post.date },
+    ...shareMetadata({ url: path, title: post.title, description: post.description, openGraph: { type: "article", publishedTime: post.date } }),
   };
 }
 

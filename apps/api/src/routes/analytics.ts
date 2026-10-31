@@ -53,7 +53,8 @@ export async function analyticsRoutes(app: FastifyInstance) {
     if (!owner) throw notFound();
     // Daily rotating, salted hash: counts unique visitors without storing IPs.
     const day = new Date().toISOString().slice(0, 10);
-    const visitorHash = createHash("sha256").update(`${env.ANALYTICS_SALT}:${day}:${body.ip}:${body.userAgent}`).digest("hex").slice(0, 32);
+    // IP only: the user agent is whatever the client sends, so it can't tell visitors apart (changing it would fake views).
+    const visitorHash = createHash("sha256").update(`${env.ANALYTICS_SALT}:${day}:${body.ip}`).digest("hex").slice(0, 32);
     // The hash rotates daily, so this counts today only: one view per visitor and
     // profile, and a cap on clicks. Keeps the public counter honest.
     const [{ seen } = { seen: 0 }] = await db

@@ -5,6 +5,7 @@ import { Brand, Verified } from "@/components/ui";
 import { cn } from "@/lib/cn";
 import { getExplore } from "@/lib/explore";
 import { fmtCompact } from "@/lib/format";
+import { shareMetadata } from "@/lib/seo";
 
 const description = "Discover crypto traders, creators and builders on FL3X: live portfolios, P&L, tokens and communities.";
 
@@ -12,7 +13,7 @@ export const metadata: Metadata = {
   title: "Explore profiles",
   description,
   alternates: { canonical: "/explore" },
-  openGraph: { url: "/explore", title: "Explore FL3X profiles", description },
+  ...shareMetadata({ url: "/explore", title: "Explore FL3X profiles", description }),
 };
 
 const TABS = [

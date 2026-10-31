@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { USERNAME_MAX, USERNAME_MIN } from "@fl3x/shared";
 import { site } from "@/config/site";
 
 /**
@@ -7,7 +8,8 @@ import { site } from "@/config/site";
  */
 // The dev default only exists locally; production must share the API's real key.
 const internalKey = process.env.INTERNAL_API_KEY ?? (process.env.NODE_ENV === "production" ? "" : "dev-internal-key");
-const USERNAME = /^[a-z0-9_]{2,32}$/i;
+// Same characters and length as validateUsername (shared), without the reserved list: team profiles may use one.
+const USERNAME = new RegExp(`^[a-z0-9_-]{${USERNAME_MIN},${USERNAME_MAX}}$`, "i");
 
 export async function POST(req: NextRequest) {
   const body = (await req.json().catch(() => null)) as { username?: string; kind?: string; target?: string; referrer?: string } | null;

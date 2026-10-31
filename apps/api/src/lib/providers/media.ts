@@ -1,5 +1,6 @@
 import { env } from "../../env";
 import { cached, fetchJson } from "../cache";
+import { badRequest } from "../errors";
 
 export interface MediaData {
   provider: "youtube" | "spotify" | "twitch" | "apple" | "deezer" | "tidal";
@@ -36,12 +37,14 @@ export async function twitchAppToken() {
 
 export function getMedia(rawUrl: string) {
   const url = new URL(rawUrl);
+  // Default ports only: whatever we fetch is rebuilt from the service's own address below.
+  if (url.port) return Promise.reject(badRequest("Unsupported media link"));
   const host = url.hostname.replace(/^(www|m|open)\./, "");
 
   if (host === "youtube.com" || host === "youtu.be") {
     // Keyed by video id: query strings (?si=, tracking, junk) don't create new entries or upstream calls.
     const id = host === "youtu.be" ? url.pathname.slice(1) : (url.searchParams.get("v") ?? url.pathname.split("/").filter(Boolean).pop() ?? "");
-    if (!/^[\w-]{6,20}$/.test(id)) return Promise.reject(new Error("Not a YouTube video link"));
+    if (!/^[\w-]{6,20}$/.test(id)) return Promise.reject(badRequest("Not a YouTube video link"));
     const clean = `https://www.youtube.com/watch?v=${id}`;
     return cached<MediaData>(`yt:${id}`, 3600, async () => {
       const o = await fetchJson<OEmbed>(`https://www.youtube.com/oembed?format=json&url=${encodeURIComponent(clean)}`);
@@ -50,11 +53,15 @@ export function getMedia(rawUrl: string) {
   }
 
   if (host === "spotify.com") {
-    return cached<MediaData>(`spotify:${url.pathname.replace(/^\/intl-[a-z-]+/, "")}`, 3600, async () => {
-      const o = await fetchJson<OEmbed>(`https://open.spotify.com/oembed?url=${encodeURIComponent(url.href)}`);
+    // Rebuilt from type + id: the cache key, the fetch and the stored link never carry the asker's query or port.
+    const m = /^(?:\/intl-[a-z-]+)?\/(track|album|playlist|episode|show|artist)\/([A-Za-z0-9]{10,30})/.exec(url.pathname);
+    if (!m) return Promise.reject(badRequest("Not a Spotify link"));
+    const clean = `https://open.spotify.com/${m[1]}/${m[2]}`;
+    return cached<MediaData>(`spotify:/${m[1]}/${m[2]}`, 3600, async () => {
+      const o = await fetchJson<OEmbed>(`https://open.spotify.com/oembed?url=${encodeURIComponent(clean)}`);
       // oEmbed has no artist: the public page names it in its meta tags.
-      const author = o.author_name ?? (await spotifyArtist(url.href));
-      return { provider: "spotify", title: o.title, author, thumbnailUrl: o.thumbnail_url ?? null, live: null, url: url.href };
+      const author = o.author_name ?? (await spotifyArtist(clean));
+      return { provider: "spotify", title: o.title, author, thumbnailUrl: o.thumbnail_url ?? null, live: null, url: clean };
     });
   }
 
@@ -63,18 +70,18 @@ export function getMedia(rawUrl: string) {
   if (host === "music.apple.com") {
     // Album links name the track with ?i=, song links end with it.
     const id = url.searchParams.get("i") ?? (url.pathname.includes("/song/") ? url.pathname.split("/").pop() : undefined);
-    if (!id || !/^\d{5,15}$/.test(id)) return Promise.reject(new Error("Not an Apple Music track link"));
+    if (!id || !/^\d{5,15}$/.test(id)) return Promise.reject(badRequest("Not an Apple Music track link"));
     return appleTrack(id);
   }
   if (host === "tidal.com" || host === "listen.tidal.com") {
     const id = url.pathname.match(/\/track\/(\d+)/)?.[1];
-    if (!id) return Promise.reject(new Error("Not a TIDAL track link"));
+    if (!id) return Promise.reject(badRequest("Not a TIDAL track link"));
     return tidalTrack(id);
   }
 
   if (host === "twitch.tv") {
     const login = url.pathname.split("/")[1]?.toLowerCase();
-    if (!login) return Promise.resolve(null);
+    if (!login || !/^[a-z0-9_]{3,25}$/.test(login)) return Promise.reject(badRequest("Not a Twitch channel link"));
     return cached<MediaData>(`twitch:${login}`, 120, async () => {
       const base: MediaData = { provider: "twitch", title: login, author: login, thumbnailUrl: null, live: null, url: `https://twitch.tv/${login}` };
       if (!env.TWITCH_CLIENT_ID) return base;
@@ -101,11 +108,16 @@ export function getMedia(rawUrl: string) {
 /** Deezer's public API (no key). Short share links (link.deezer.com) are followed to the track first. */
 async function deezerTrack(url: URL) {
   let id = url.pathname.match(/\/track\/(\d+)/)?.[1];
-  if (!id && url.hostname !== "www.deezer.com" && url.hostname !== "deezer.com") {
-    const res = await fetch(url.href, { redirect: "follow", headers: { "user-agent": BROWSER_UA }, signal: AbortSignal.timeout(8000) });
-    id = res.url.match(/\/track\/(\d+)/)?.[1];
+  const short = /^\/(s\/)?[A-Za-z0-9]{4,20}$/.exec(url.pathname);
+  if (!id && short && (url.hostname === "link.deezer.com" || url.hostname === "deezer.page.link")) {
+    // Short share links: followed once, the track id they lead to is cached a day.
+    id =
+      (await cached<string | null>(`deezer-link:${url.hostname}${url.pathname}`, 86_400, async () => {
+        const res = await fetch(`https://${url.hostname}${url.pathname}`, { redirect: "follow", headers: { "user-agent": BROWSER_UA }, signal: AbortSignal.timeout(8000) });
+        return res.url.match(/\/track\/(\d+)/)?.[1] ?? null;
+      })) ?? undefined;
   }
-  if (!id) throw new Error("Not a Deezer track link");
+  if (!id) throw badRequest("Not a Deezer track link");
   return cached<MediaData | null>(`deezer:${id}`, 3600, async () => {
     const t = await fetchJson<{ title?: string; link?: string; artist?: { name: string }; album?: { cover_xl?: string }; error?: unknown }>(`https://api.deezer.com/track/${id}`);
     if (!t.title || t.error) return null;

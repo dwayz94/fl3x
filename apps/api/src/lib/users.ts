@@ -1,4 +1,4 @@
-import { and, count, eq, isNull, sql } from "drizzle-orm";
+import { and, count, eq, inArray, isNull, ne, sql } from "drizzle-orm";
 import { TIER_LIMITS, tierForBalance, type Me } from "@fl3x/shared";
 import { db, schema } from "../db";
 import { env } from "../env";
@@ -39,8 +39,14 @@ export async function refreshTier(user: UserRow, force = false): Promise<UserRow
   }
   try {
     const linked = await db.select({ address: schema.wallets.address }).from(schema.wallets).where(and(eq(schema.wallets.userId, user.id), eq(schema.wallets.chain, "solana")));
+    // A sign-in wallet that another account already linked by signature counts for that account only:
+    // the same tokens must never give two accounts a tier.
+    const login = user.wallets.filter((a) => !a.startsWith("0x"));
+    const claimed = login.length
+      ? new Set((await db.select({ address: schema.wallets.address }).from(schema.wallets).where(and(inArray(schema.wallets.address, login), ne(schema.wallets.userId, user.id)))).map((r) => r.address))
+      : new Set<string>();
     // $FL3X is a Solana token: only Solana addresses count (sign-in wallets can be EVM too).
-    const solana = [...user.wallets, ...linked.map((l) => l.address)].filter((a) => !a.startsWith("0x"));
+    const solana = [...login.filter((a) => !claimed.has(a)), ...linked.map((l) => l.address)].filter((a) => !a.startsWith("0x"));
     const balance = await totalTokenBalance([...new Set(solana)]);
     const [row] = await db
       .update(schema.users)

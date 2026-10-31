@@ -60,6 +60,11 @@ export async function buildApp() {
     if (status && status < 500) {
       return reply.status(status).send({ error: "request_error", message: (err as Error).message });
     }
+    // Widget data whose source failed (rate limit, outage, cooling down): the source's fault, not a bug.
+    if (req.url.startsWith("/data/")) {
+      req.log.warn({ err: (err as Error).message, url: req.url }, "upstream failed");
+      return reply.status(502).send({ error: "upstream", message: "This data source is unavailable right now" });
+    }
     req.log.error(err);
     captureError(err, { method: req.method, route: req.routeOptions.url });
     return reply.status(500).send({ error: "internal", message: "Something went wrong" });

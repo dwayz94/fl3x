@@ -6,32 +6,40 @@ import { CheckmarkCircle02Icon, LockIcon } from "@hugeicons/core-free-icons";
 import { BADGES, type EditableProfile } from "@fl3x/shared";
 import { BadgeIcon } from "@/components/profile/Badges";
 import { useAuth } from "@/components/auth/AuthProvider";
-import { PageHeader, Spinner } from "@/components/dashboard/Panel";
-import { Icon } from "@/components/ui";
-import { api } from "@/lib/api";
+import { LoadError, PageHeader, Spinner } from "@/components/dashboard/Panel";
+import { FieldError, Icon } from "@/components/ui";
+import { api, ApiRequestError } from "@/lib/api";
 import { cn } from "@/lib/cn";
 import { useEditorProfile, type EditorPayload } from "@/lib/use-profile";
 
 export default function BadgesPage() {
   const { getToken } = useAuth();
   const qc = useQueryClient();
-  const { data } = useEditorProfile();
+  const { data, isError, refetch } = useEditorProfile();
   const [busy, setBusy] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  if (isError && !data) return <LoadError onRetry={() => void refetch()} />;
   if (!data) return <Spinner />;
   const { profile, ownedBadges } = data;
   // Unlocked badges first, the rest keep the catalogue order.
   const sorted = [...BADGES].sort((a, b) => Number(ownedBadges.includes(b.id)) - Number(ownedBadges.includes(a.id)));
 
   const toggle = async (id: string) => {
+    // One toggle at a time (all buttons are disabled meanwhile), built from the latest cache, not this render.
+    if (busy) return;
     setBusy(id);
-    const badges = profile.badges.includes(id) ? profile.badges.filter((b) => b !== id) : [...profile.badges, id];
+    setError(null);
+    const current = qc.getQueryData<EditorPayload>(["profile"])?.profile ?? profile;
+    const badges = current.badges.includes(id) ? current.badges.filter((b) => b !== id) : [...current.badges, id];
     try {
       const next = await api<EditableProfile>("/me/profile", {
         method: "PUT",
         token: await getToken(),
-        json: { displayName: profile.displayName, bio: profile.bio, avatarUrl: profile.avatarUrl, badges, theme: profile.theme },
+        json: { displayName: current.displayName, bio: current.bio, avatarUrl: current.avatarUrl, badges, theme: current.theme },
       });
       qc.setQueryData<EditorPayload>(["profile"], (old) => (old ? { ...old, profile: { ...old.profile, badges: next.badges } } : old));
+    } catch (err) {
+      setError(err instanceof ApiRequestError ? err.message : "Could not update your badges");
     } finally {
       setBusy(null);
     }
@@ -43,6 +51,7 @@ export default function BadgesPage() {
       <p className="mb-3 text-xs text-fg-3">
         {ownedBadges.length}/{BADGES.length} unlocked
       </p>
+      {error && <div className="mb-3"><FieldError>{error}</FieldError></div>}
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {sorted.map((b) => {
           const owned = ownedBadges.includes(b.id);
@@ -51,7 +60,7 @@ export default function BadgesPage() {
             <button
               key={b.id}
               type="button"
-              disabled={!owned || busy === b.id}
+              disabled={!owned || busy !== null}
               onClick={() => toggle(b.id)}
               className={cn(
                 "flex items-center gap-3 rounded-2xl border bg-[#0d0d0d] p-4 text-left transition-colors",

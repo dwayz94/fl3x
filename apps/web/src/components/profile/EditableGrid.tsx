@@ -142,12 +142,19 @@ export function EditableGrid({ widgets, editor, className, style }: { widgets: W
       pointer.current = { x: p.x, y: p.y };
       if (p.pointerType !== "mouse") p.timer = window.setTimeout(() => press.current === p && start(p), LONG_PRESS_MS);
     };
+    // Touch: once the long press has picked a widget up, a vertical move must drag it, not scroll the page
+    // (the slots allow pan-y, and a scroll would cancel the pointer). Before that, scrolling works as usual.
+    const noScroll = (e: TouchEvent) => {
+      if (dragRef.current && e.cancelable) e.preventDefault();
+    };
     window.addEventListener("pointermove", move, { passive: false });
+    window.addEventListener("touchmove", noScroll, { passive: false });
     window.addEventListener("pointerup", up);
     window.addEventListener("pointercancel", up);
     window.addEventListener("fl3x-slot-down", down);
     return () => {
       window.removeEventListener("pointermove", move);
+      window.removeEventListener("touchmove", noScroll);
       window.removeEventListener("pointerup", up);
       window.removeEventListener("pointercancel", up);
       window.removeEventListener("fl3x-slot-down", down);

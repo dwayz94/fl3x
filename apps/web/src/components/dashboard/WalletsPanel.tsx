@@ -9,7 +9,7 @@ import { Icon } from "@/components/ui";
 import { ChainTile, CHAINS } from "@/components/wallet/chain";
 import { ConnectWalletModal } from "@/components/wallet/ConnectWalletModal";
 import { EmptyWallets, LinkWalletButton } from "@/components/wallet/LinkWallet";
-import { api } from "@/lib/api";
+import { api, ApiRequestError } from "@/lib/api";
 import { shortAddress } from "@/lib/format";
 
 /** Linked wallets (Solana + EVM). Each one is proven with a signature, combined in wallet widgets. */
@@ -37,13 +37,17 @@ function WalletRow({ wallet: w }: { wallet: LinkedWallet }) {
   const qc = useQueryClient();
   const [confirming, setConfirming] = useState(false);
   const [removing, setRemoving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const remove = async () => {
     setRemoving(true);
+    setError(null);
     try {
       qc.setQueryData(["me"], await api<Me>(`/me/wallets/${w.id}`, { method: "DELETE", token: await getToken() }));
       void qc.invalidateQueries({ queryKey: ["portfolio"] });
       void qc.invalidateQueries({ queryKey: ["nfts"] });
+    } catch (err) {
+      setError(err instanceof ApiRequestError ? err.message : "Could not remove this wallet");
     } finally {
       setRemoving(false);
       setConfirming(false);
@@ -55,9 +59,16 @@ function WalletRow({ wallet: w }: { wallet: LinkedWallet }) {
       <ChainTile chain={w.chain} size={36} />
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm">{w.label || `${CHAINS[w.chain].label} wallet`}</p>
-        <p className="truncate font-mono text-[11px] text-fg-3" title={w.address}>
-          {shortAddress(w.address)}
-        </p>
+        {/* A failed removal shows in place of the address (the row keeps its height). */}
+        {error ? (
+          <p className="truncate text-[11px] text-danger" title={error}>
+            {error}
+          </p>
+        ) : (
+          <p className="truncate font-mono text-[11px] text-fg-3" title={w.address}>
+            {shortAddress(w.address)}
+          </p>
+        )}
       </div>
       {w.source === "login" ? (
         <span className="rounded-md bg-white/[0.06] px-2 py-1 text-[10px] leading-none text-fg-3">Sign-in wallet</span>

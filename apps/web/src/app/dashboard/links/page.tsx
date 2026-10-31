@@ -6,7 +6,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { ArrowDown01Icon, ArrowUp01Icon, Delete02Icon, DragDropVerticalIcon } from "@hugeicons/core-free-icons";
 import { buildLinkUrl, handleFromInput, isValidLinkHandle, LINK_KINDS, type LinkKind, type ProfileLink } from "@fl3x/shared";
 import { useAuth } from "@/components/auth/AuthProvider";
-import { PageHeader, Spinner } from "@/components/dashboard/Panel";
+import { LoadError, PageHeader, Spinner } from "@/components/dashboard/Panel";
 import { UnsavedBar } from "@/components/dashboard/UnsavedBar";
 import { inputClass } from "@/components/editor/Field";
 import { linkIcons } from "@/components/profile/links";
@@ -23,7 +23,8 @@ const withKeys = (ls: Draft[]): Row[] => ls.map((l) => ({ ...l, key: l.id ?? cry
 const strip = (rs: Row[]): Draft[] => rs.map(({ key: _key, ...l }) => l);
 
 export default function LinksPage() {
-  const { data } = useEditorProfile();
+  const { data, isError, refetch } = useEditorProfile();
+  if (isError && !data) return <LoadError onRetry={() => void refetch()} />;
   if (!data) return <Spinner />;
   return <LinksEditor initial={data.profile.links} limit={data.limits.links} />;
 }
@@ -107,7 +108,7 @@ function LinksEditor({ initial, limit }: { initial: ProfileLink[]; limit: number
           {(kind === "custom" || kind === "website") && (
             <input className={cn(inputClass, "w-40")} placeholder="Label" maxLength={40} value={label} onChange={(e) => setLabel(e.target.value)} />
           )}
-          <div className={cn(inputClass, "flex w-80 items-center gap-0 pr-0 focus-within:border-brand")}>
+          <div className={cn(inputClass, "flex w-full items-center gap-0 pr-0 sm:w-80 focus-within:border-brand")}>
             <span className="shrink-0 text-fg-3">{current?.prefix || "https://"}</span>
             <input
               className="h-full min-w-0 flex-1 bg-transparent outline-none placeholder:text-fg-3"

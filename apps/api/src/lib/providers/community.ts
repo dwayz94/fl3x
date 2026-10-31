@@ -32,7 +32,8 @@ export function getCommunity(rawUrl: string) {
 
   if (host === "discord.gg" || host === "discord.com") {
     const code = discordCode(url);
-    if (!code) return Promise.resolve(null);
+    // Same rules as the link field: anything else would only make new cache entries and upstream calls.
+    if (!code || !/^[A-Za-z0-9_-]{2,32}$/.test(code)) return Promise.resolve(null);
     return cached<CommunityData | null>(`discord:${code}`, 600, async () => {
       const inv = await fetchJson<DiscordInvite>(`https://discord.com/api/v10/invites/${code}?with_counts=true`);
       if (!inv.guild) return null;
@@ -49,7 +50,7 @@ export function getCommunity(rawUrl: string) {
 
   if (host === "t.me" || host === "telegram.me") {
     const handle = url.pathname.split("/")[1];
-    if (!handle) return Promise.resolve(null);
+    if (!handle || !/^[A-Za-z0-9_-]{2,32}$/.test(handle)) return Promise.resolve(null);
     // Public preview page; no bot token needed.
     return cached<CommunityData | null>(`telegram:${handle.toLowerCase()}`, 1800, async () => {
       const res = await fetch(`https://t.me/${handle}`, { signal: AbortSignal.timeout(8000) });

@@ -8,6 +8,7 @@ import { HelpFade } from "@/components/help/Fade";
 import { HelpToc } from "@/components/help/Toc";
 import { Icon } from "@/components/ui";
 import { getPublicConfig } from "@/lib/server-api";
+import { shareMetadata } from "@/lib/seo";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -25,7 +26,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     title: doc.page.title,
     description: doc.page.description,
     alternates: { canonical: path },
-    openGraph: { url: path, title: `${doc.page.title} | FL3X Help`, description: doc.page.description },
+    ...shareMetadata({ url: path, title: `${doc.page.title} | FL3X Help`, description: doc.page.description }),
   };
 }
 

@@ -1,8 +1,8 @@
 "use client";
 
-import { useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { SpotifyIcon } from "@hugeicons/core-free-icons";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { Button, FieldError, Icon } from "@/components/ui";
@@ -19,7 +19,32 @@ export function ConnectionsPanel() {
   const [busy, setBusy] = useState(false);
   const { data } = useQuery({ queryKey: ["connections"], queryFn: async () => api<Connections>("/me/connections", { token: await getToken() }) });
   const spotify = data?.connected.find((c) => c.provider === "spotify");
-  const status = params.get("spotify");
+  const router = useRouter();
+  const pathname = usePathname();
+  const [finished, setFinished] = useState(false);
+  const status = finished ? "connected" : params.get("spotify");
+
+  // Back from Spotify: this page attaches the account with your own session, then cleans the URL.
+  const code = params.get("spotify_code");
+  const state = params.get("spotify_state");
+  const finishing = useRef(false);
+  useEffect(() => {
+    if (!code || !state || finishing.current) return;
+    finishing.current = true;
+    setBusy(true);
+    void (async () => {
+      try {
+        await api("/me/connections/spotify/finish", { token: await getToken(), json: { code, state } });
+        await qc.invalidateQueries({ queryKey: ["connections"] });
+        setFinished(true);
+      } catch (err) {
+        setError(err instanceof ApiRequestError ? err.message : "Spotify connection failed, try again.");
+      } finally {
+        setBusy(false);
+        router.replace(pathname, { scroll: false });
+      }
+    })();
+  }, [code, state, getToken, qc, router, pathname]);
 
   const connect = async () => {
     setError(null);
@@ -33,10 +58,16 @@ export function ConnectionsPanel() {
     }
   };
   const disconnect = async () => {
+    setError(null);
     setBusy(true);
-    await api("/me/connections/spotify", { method: "DELETE", token: await getToken() });
-    await qc.invalidateQueries({ queryKey: ["connections"] });
-    setBusy(false);
+    try {
+      await api("/me/connections/spotify", { method: "DELETE", token: await getToken() });
+      await qc.invalidateQueries({ queryKey: ["connections"] });
+    } catch (err) {
+      setError(err instanceof ApiRequestError ? err.message : "Could not disconnect Spotify");
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (

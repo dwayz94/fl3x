@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { TIER_LIMITS } from "@fl3x/shared";
 import { ArticlePage } from "@/components/shared/ArticlePage";
 import { site } from "@/config/site";
+import { shareMetadata } from "@/lib/seo";
 
 const description = "FL3X is a profile made of live widgets for crypto people: verified wallets, real numbers, your communities and your content at fl3x.lol/@you.";
 
@@ -9,7 +10,7 @@ export const metadata: Metadata = {
   title: "About",
   description,
   alternates: { canonical: "/about" },
-  openGraph: { url: "/about", title: "About FL3X", description },
+  ...shareMetadata({ url: "/about", title: "About FL3X", description }),
 };
 
 export default function AboutPage() {

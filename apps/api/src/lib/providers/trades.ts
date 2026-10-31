@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import type { TradesData } from "@fl3x/shared";
 import { env } from "../../env";
 import { cached, fetchJson } from "../cache";
@@ -161,7 +162,7 @@ export async function getTrades(wallets: string[]): Promise<TradesData> {
       const m = meta.get(t.mint);
       const quotePrice = t.quoteMint === SOL ? sol : 1;
       return {
-        signature: t.signature,
+        id: createHash("sha256").update(t.signature).digest("hex").slice(0, 16),
         at: t.at,
         side: t.side,
         token: { address: t.mint, symbol: m?.symbol ?? `${t.mint.slice(0, 4)}…`, name: m?.name ?? null, iconUrl: m?.icon ?? null },

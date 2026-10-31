@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Cancel01Icon, CheckmarkCircle02Icon, NewTwitterIcon, Ticket01Icon } from "@hugeicons/core-free-icons";
-import { validateUsername, type Me } from "@fl3x/shared";
+import { USERNAME_MIN, validateUsername, type Me } from "@fl3x/shared";
 import { useAuth, useMe } from "@/components/auth/AuthProvider";
 import { WalletsPanel } from "@/components/dashboard/WalletsPanel";
 import { Button, buttonClass, FieldError, Icon, Input } from "@/components/ui";
@@ -20,18 +20,32 @@ import { useEditorProfile } from "@/lib/use-profile";
 import { WaitlistForm, wantsWaitlist } from "./WaitlistForm";
 import { useAvailability } from "@/lib/use-availability";
 
-type InviteCheck = { valid: boolean; inviter: string | null };
+/** `error`: the API couldn't be reached, which says nothing about the code. */
+type InviteCheck = { valid: boolean; inviter: string | null; error?: true };
 
 function useInvite(code: string) {
   const [invite, setInvite] = useState<InviteCheck | "checking" | null>(null);
   useEffect(() => {
     setInvite(null);
-    if (code.length < 4) return;
+    // Referral links carry a handle, which can be as short as a username.
+    if (code.length < USERNAME_MIN) return;
     setInvite("checking");
+    // A slower answer for an older code must not overwrite the current one.
+    let stale = false;
     const t = setTimeout(() => {
-      api<InviteCheck>(`/invites/${encodeURIComponent(code)}`).then(setInvite).catch(() => setInvite({ valid: false, inviter: null }));
+      api<InviteCheck>(`/invites/${encodeURIComponent(code)}`)
+        .then((r) => !stale && setInvite(r))
+        .catch((err) => {
+          if (stale) return;
+          // 4xx = the API answered: the code is not valid. Anything else is a network / server failure.
+          const answered = err instanceof ApiRequestError && err.status >= 400 && err.status < 500 && err.status !== 429;
+          setInvite(answered ? { valid: false, inviter: null } : { valid: false, inviter: null, error: true });
+        });
     }, 300);
-    return () => clearTimeout(t);
+    return () => {
+      stale = true;
+      clearTimeout(t);
+    };
   }, [code]);
   return invite;
 }
@@ -100,7 +114,9 @@ function InviteField({ code, setCode, invite, optional }: { code: string; setCod
             ? "checking"
             : invite && {
                 ok: invite.valid,
-                text: invite.valid ? (invite.inviter ? `Invited by @${invite.inviter}` : "Valid invite") : "Invalid or fully used code",
+                text: invite.valid
+                  ? invite.inviter ? `Invited by @${invite.inviter}` : "Valid invite"
+                  : invite.error ? "Can't check the code right now. Try again." : "Invalid or fully used code",
               }
         }
       />
@@ -131,7 +147,7 @@ function StepTitle({ title, body }: { title: string; body: React.ReactNode }) {
 export function JoinFlow() {
   const params = useSearchParams();
   const router = useRouter();
-  const { ready, authenticated, login, configured } = useAuth();
+  const { ready, authenticated, pending, login, configured } = useAuth();
   const { data: me, isLoading: meLoading } = useMe();
   const { data: config } = useConfig();
   const inviteOnly = (config?.phase ?? "invite_only") === "invite_only";
@@ -143,6 +159,9 @@ export function JoinFlow() {
   const [showWaitlist, setShowWaitlist] = useState(false);
   // Set once this visit claims a name, so the last steps show instead of the redirect.
   const claimedHere = useRef(false);
+  // Back from X: keep saying so until the account is loaded, not just until Privy is done.
+  const confirming = useRef(false);
+  if (pending) confirming.current = true;
   const invite = useInvite(code);
 
   const go = (next: Step) => {
@@ -174,7 +193,7 @@ export function JoinFlow() {
   }, [me?.xHandle]);
 
   if (showWaitlist) return <WaitlistForm desiredUsername={username} onBack={() => setShowWaitlist(false)} />;
-  if (!ready || (authenticated && meLoading)) return <Loading />;
+  if (!ready || pending || (authenticated && meLoading)) return <Loading label={confirming.current ? "Confirming with X…" : undefined} />;
 
   return (
     <motion.div
@@ -388,10 +407,11 @@ function ReadyStep({ username }: { username: string }) {
   );
 }
 
-function Loading() {
+function Loading({ label }: { label?: string }) {
   return (
-    <div className="flex justify-center py-12">
+    <div className="flex flex-col items-center gap-4 py-12">
       <span className="size-6 animate-spin rounded-full border-2 border-brand border-t-transparent" />
+      {label && <p className="text-sm text-fg-2">{label}</p>}
     </div>
   );
 }

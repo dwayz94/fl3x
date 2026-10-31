@@ -4,12 +4,13 @@ import { FamousCreators, Hero, HolderTiers, StatusBanner, WhyFl3x } from "@/comp
 import { faqs } from "@/components/landing/WhyFl3x";
 import { site } from "@/config/site";
 import { getPublicConfig } from "@/lib/server-api";
+import { shareMetadata } from "@/lib/seo";
 
 export const metadata: Metadata = {
   // The home page carries the brand line in the tab instead of "… | FL3X".
   title: { absolute: `${site.name}: your on-chain identity` },
   alternates: { canonical: "/" },
-  openGraph: { url: "/" },
+  ...shareMetadata({ url: "/", ownImages: true }),
 };
 
 /** What search engines read about FL3X itself (the brand and the site). */

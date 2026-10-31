@@ -8,7 +8,7 @@ import { useAuth, useMe } from "@/components/auth/AuthProvider";
 import { PageHeader, Spinner } from "@/components/dashboard/Panel";
 import { ConnectWalletModal } from "@/components/wallet/ConnectWalletModal";
 import { Brand, Icon, Verified } from "@/components/ui";
-import { api } from "@/lib/api";
+import { api, ApiRequestError } from "@/lib/api";
 import { cn } from "@/lib/cn";
 import { fmtCompact, fmtNumber } from "@/lib/format";
 import { useConfig } from "@/lib/use-config";
@@ -47,6 +47,7 @@ export default function PlanPage() {
   const { data: config } = useConfig();
   const qc = useQueryClient();
   const [refreshing, setRefreshing] = useState(false);
+  const [refreshError, setRefreshError] = useState<string | null>(null);
   const [linking, setLinking] = useState(false);
   if (!me || !config) return <Spinner />;
 
@@ -63,8 +64,11 @@ export default function PlanPage() {
 
   const refresh = async () => {
     setRefreshing(true);
+    setRefreshError(null);
     try {
       qc.setQueryData(["me"], await api<Me>("/me/refresh-tier", { method: "POST", token: await getToken() }));
+    } catch (err) {
+      setRefreshError(err instanceof ApiRequestError ? err.message : "Could not check your balance");
     } finally {
       setRefreshing(false);
     }
@@ -98,6 +102,7 @@ export default function PlanPage() {
                 <Icon icon={RefreshIcon} size={16} className={refreshing ? "animate-spin" : undefined} />
               </button>
             </p>
+            {refreshError && <p className="mt-1 text-xs text-danger">{refreshError}</p>}
           </div>
         </div>
 

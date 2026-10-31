@@ -24,7 +24,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...POSTS.map((p): [string, number] => [`/blog/${p.slug}`, 0.6]),
     ...COMPARISONS.map((c): [string, number] => [`/vs/${c.slug}`, 0.6]),
   ];
-  const profiles = await getExplore("new", 5000);
+  const profiles = await getExplore("new", 1000);
   return [
     ...pages.map(([path, priority]) => ({ url: `${site.url}${path}`, changeFrequency: "weekly" as const, priority })),
     ...profiles.map((p) => ({ url: `${site.url}/@${p.username}`, changeFrequency: "daily" as const, priority: 0.5 })),

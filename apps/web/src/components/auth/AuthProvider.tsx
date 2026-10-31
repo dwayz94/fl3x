@@ -34,6 +34,7 @@ function DevAuth({ children }: { children: ReactNode }) {
       configured: true,
       ready,
       authenticated: Boolean(user),
+      pending: false,
       login: () => {
         window.location.href = `/dev?next=${encodeURIComponent(window.location.pathname)}`;
       },

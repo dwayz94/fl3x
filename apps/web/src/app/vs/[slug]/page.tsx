@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { ArticlePage } from "@/components/shared/ArticlePage";
 import { COMPARISONS, findComparison } from "@/content/compare";
+import { shareMetadata } from "@/lib/seo";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -19,7 +20,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     title: `FL3X vs ${c.name}`,
     description: c.description,
     alternates: { canonical: path },
-    openGraph: { url: path, title: `FL3X vs ${c.name}`, description: c.description },
+    ...shareMetadata({ url: path, title: `FL3X vs ${c.name}`, description: c.description }),
   };
 }
 
