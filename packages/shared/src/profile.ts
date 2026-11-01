@@ -239,7 +239,7 @@ export interface EditableProfile {
 
 export interface FullPublicProfile extends EditableProfile {
   tier: Tier;
-  /** Made by the team for someone who hasn't signed in yet: the page invites them to claim it, and stays out of search. */
+  /** Made by the team for someone who hasn't signed in yet: the page invites them to claim it. */
   claimable?: boolean;
   badgeStats?: { memberNumber: number | null; referrals: number };
   xHandle: string | null;

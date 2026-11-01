@@ -38,7 +38,7 @@ export function PublicProfile({ profile }: { profile: FullPublicProfile }) {
     >
       {/* Premium animated background, behind everything, fixed to the viewport. */}
       <AnimatedBackdrop theme={theme} className="fixed inset-0 -z-10" />
-      {/* A profile the team built for someone: says so, and lets them take it. */}
+      {/* A profile the team built for someone: same page, share card and tags as any profile, plus this way to take it. */}
       {profile.claimable && (
         <Link
           href="/join"

@@ -478,7 +478,7 @@ function ReservedProfiles({ adminKey }: { adminKey: string }) {
   return (
     <Card
       title="Reserved profiles"
-      desc="Hold a handle for someone known and build their profile ahead (Premium). It's public at its link (out of search and Explore) with a “Claim” tag. The first time they sign in with that X account, it's theirs."
+      desc="Hold a handle for someone known and build their profile ahead (Premium). It's public at its link like any profile (out of Explore), with a “Claim” tag. The first time they sign in with that X account, it's theirs."
     >
       <form
         className="grid gap-2 sm:grid-cols-[1fr_1fr_1fr_auto]"
