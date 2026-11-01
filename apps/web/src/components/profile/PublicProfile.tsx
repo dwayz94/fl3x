@@ -42,7 +42,7 @@ export function PublicProfile({ profile }: { profile: FullPublicProfile }) {
       {profile.claimable && (
         <Link
           href="/join"
-          className="fixed bottom-4 left-1/2 z-20 -translate-x-1/2 rounded-full bg-black/60 px-4 py-2 text-sm whitespace-nowrap backdrop-blur-md transition-colors hover:bg-black/80"
+          className="fixed top-4 left-1/2 z-20 -translate-x-1/2 rounded-full bg-black/60 px-4 py-2 text-sm whitespace-nowrap backdrop-blur-md transition-colors hover:bg-black/80"
         >
           Is this you? <span className="text-brand">Claim @{profile.username}</span>
         </Link>
