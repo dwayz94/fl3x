@@ -25,7 +25,6 @@ const PROFILE: FullPublicProfile = {
   links: [
     { id: "h-x", kind: "x", url: site.social.x, label: null },
     { id: "h-dc", kind: "discord", url: site.social.discord, label: null },
-    { id: "h-tg", kind: "telegram", url: site.social.telegram, label: null },
   ],
 };
 

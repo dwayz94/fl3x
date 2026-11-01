@@ -23,7 +23,7 @@ const jsonLd = {
       name: site.name,
       url: site.url,
       logo: `${site.url}/icon-512.png`,
-      sameAs: [site.social.x, site.social.discord, site.social.telegram],
+      sameAs: [site.social.x, site.social.discord],
     },
     { "@type": "WebSite", "@id": `${site.url}/#site`, name: site.name, url: site.url, description: site.description, publisher: { "@id": `${site.url}/#org` } },
     // The landing FAQ, so it can show as answers right in search results.

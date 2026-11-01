@@ -13,7 +13,6 @@ export const site = {
   social: {
     x: "https://x.com/fl3xdotlol",
     discord: "https://discord.gg/fl3x",
-    telegram: "https://t.me/fl3xdotlol",
     github: "https://github.com/fl3x-lol",
   },
 } as const;

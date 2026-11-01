@@ -1,11 +1,10 @@
-import { DiscordIcon, GithubIcon, NewTwitterIcon, TelegramIcon } from "@hugeicons/core-free-icons";
+import { DiscordIcon, GithubIcon, NewTwitterIcon } from "@hugeicons/core-free-icons";
 import { site } from "@/config/site";
 import { Icon } from "@/components/ui";
 
 const links = [
   { icon: NewTwitterIcon, href: site.social.x, label: "X" },
   { icon: DiscordIcon, href: site.social.discord, label: "Discord" },
-  { icon: TelegramIcon, href: site.social.telegram, label: "Telegram" },
   { icon: GithubIcon, href: site.social.github, label: "GitHub" },
 ];
 
