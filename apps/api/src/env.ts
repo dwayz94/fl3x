@@ -14,6 +14,12 @@ const schema = z.object({
   HELIUS_API_KEY: z.string().default(""),
   // Optional: archive RPC for the EVM history rebuilt from the chain (alchemy.com, free tier; turn each network on in the app). Falls back to dRPC.
   ALCHEMY_API_KEY: z.string().default(""),
+  // Optional: uploads in Cloudflare R2 (served from MEDIA_PUBLIC_URL, the bucket's custom domain) instead of Postgres.
+  R2_ACCOUNT_ID: z.string().default(""),
+  R2_ACCESS_KEY_ID: z.string().default(""),
+  R2_SECRET_ACCESS_KEY: z.string().default(""),
+  R2_BUCKET: z.string().default(""),
+  MEDIA_PUBLIC_URL: z.string().default(""),
   // Optional: higher Jupiter price API limits (portal.jup.ag)
   JUPITER_API_KEY: z.string().default(""),
   // Optional: every EVM token in a wallet (moralis.com). Without it: native + major tokens via public RPCs.

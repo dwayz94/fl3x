@@ -186,6 +186,8 @@ export function AdminPanel() {
 
       <Invites adminKey={key} />
 
+      <MediaStorage adminKey={key} />
+
       <UnsavedBar dirty={dirty} saving={saving} savedFlash={flash} error={error} nudge={nudge} onDiscard={() => setDraft(toDraft(saved))} onSave={() => void save()} />
     </main>
   );
@@ -800,6 +802,49 @@ function GrantRow({ grant: g, adminKey, onRemoved }: { grant: Grant; adminKey: s
         </button>
       )}
     </li>
+  );
+}
+
+/** One-time move of uploads from Postgres to Cloudflare R2, in batches, then profile URLs point to the R2 domain. */
+function MediaStorage({ adminKey }: { adminKey: string }) {
+  const [state, setState] = useState<{ moved: number; left: number | null; done: boolean; running: boolean; error: string | null }>({
+    moved: 0,
+    left: null,
+    done: false,
+    running: false,
+    error: null,
+  });
+  const run = async () => {
+    setState((s) => ({ ...s, running: true, error: null }));
+    let moved = 0;
+    try {
+      for (;;) {
+        const r = await api<{ moved: number; left: number; urlsRewritten: boolean }>("/admin/media/move-to-r2", {
+          method: "POST",
+          headers: { "x-admin-key": adminKey },
+          json: { batch: 25 },
+        });
+        moved += r.moved;
+        setState((s) => ({ ...s, moved, left: r.left }));
+        if (r.left === 0) return setState((s) => ({ ...s, done: r.urlsRewritten, running: false }));
+      }
+    } catch (err) {
+      setState((s) => ({ ...s, running: false, error: err instanceof ApiRequestError ? err.message : "Move failed" }));
+    }
+  };
+  return (
+    <Card title="Media storage" desc="Moves uploads (avatars, backgrounds, videos) from the database to Cloudflare R2, then points profiles to the CDN. Safe to run again.">
+      <div className="flex flex-wrap items-center gap-3">
+        <Button size="md" onClick={() => void run()} disabled={state.running}>
+          {state.running ? "Moving…" : "Move uploads to R2"}
+        </Button>
+        <span className="text-sm text-fg-2">
+          {state.left === null ? "" : `${state.moved} moved · ${state.left} left`}
+          {state.done && " · profile links updated"}
+        </span>
+      </div>
+      {state.error && <p className="mt-2 text-sm text-danger">{state.error}</p>}
+    </Card>
   );
 }
 

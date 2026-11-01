@@ -6,7 +6,7 @@ import {
   type ProfileTheme,
 } from "@fl3x/shared";
 import { db, schema } from "../db";
-import { env } from "../env";
+import { mediaIdOf } from "../lib/storage";
 import { requireUser } from "../lib/auth";
 import { badRequest, forbidden } from "../lib/errors";
 import { badgesFor, loadProfile } from "../lib/profiles";
@@ -26,14 +26,8 @@ async function requireMember(req: Parameters<typeof requireUser>[0]): Promise<Us
  */
 async function isStillBackground(url: string | undefined): Promise<boolean> {
   if (url && /^\/images\/backgrounds\/[a-z0-9-]+\.png$/.test(url)) return true;
-  let parsed: URL;
-  try {
-    parsed = new URL(url ?? "");
-  } catch {
-    return false;
-  }
-  if (parsed.origin !== new URL(env.API_PUBLIC_URL).origin) return false;
-  const id = /^\/media\/([0-9a-f-]{36})\.webp$/i.exec(parsed.pathname)?.[1]?.toLowerCase();
+  // Our own still upload (served by the API or from R2), never a video.
+  const id = url?.endsWith(".webp") ? mediaIdOf(url) : null;
   if (!id) return false;
   const [row] = await db.select({ kind: schema.media.kind }).from(schema.media).where(eq(schema.media.id, id)).limit(1);
   return Boolean(row) && row!.kind !== "video";

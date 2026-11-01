@@ -5,8 +5,8 @@ import { and, count, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { MAX_BACKGROUND_VIDEO_BYTES, MAX_BACKGROUND_VIDEO_SECONDS } from "@fl3x/shared";
 import { db, schema } from "../db";
-import { env } from "../env";
 import { requireUser } from "../lib/auth";
+import { mediaUrl, saveMedia } from "../lib/storage";
 import { badRequest, forbidden, HttpError, notFound } from "../lib/errors";
 import { refreshTier } from "../lib/users";
 import { readVideo, sniffVideo, VideoError } from "../lib/video";
@@ -110,11 +110,8 @@ export async function mediaRoutes(app: FastifyInstance) {
         if (err instanceof HttpError) throw err;
         throw badRequest("This image could not be read (max 25 megapixels)", "bad_image");
       }
-      const [row] = await db
-        .insert(schema.media)
-        .values({ userId: user.id, kind, mime: "image/webp", bytes: out.data, width: out.info.width, height: out.info.height })
-        .returning({ id: schema.media.id });
-      return { url: `${env.API_PUBLIC_URL}/media/${row!.id}.webp`, width: out.info.width, height: out.info.height };
+      const saved = await saveMedia({ userId: user.id, kind, mime: "image/webp", bytes: out.data, width: out.info.width, height: out.info.height });
+      return { url: saved.url, width: out.info.width, height: out.info.height };
     }
 
     const [{ value: videos } = { value: 0 }] = await db
@@ -190,20 +187,11 @@ export async function mediaRoutes(app: FastifyInstance) {
       throw badRequest("Only MP4, WebM and GIF files", "bad_type");
     }
 
-    const [row] = await db
-      .insert(schema.media)
-      .values({ userId: user.id, kind: "video", mime: stored.mime, bytes: stored.bytes, width: stored.width, height: stored.height, durationMs: stored.durationMs })
-      .returning({ id: schema.media.id });
-    let posterUrl: string | null = null;
-    if (poster && posterInfo) {
-      const [p] = await db
-        .insert(schema.media)
-        .values({ userId: user.id, kind: "poster", mime: "image/webp", bytes: poster, width: posterInfo.width, height: posterInfo.height })
-        .returning({ id: schema.media.id });
-      posterUrl = `${env.API_PUBLIC_URL}/media/${p!.id}.webp`;
-    }
+    const saved = await saveMedia({ userId: user.id, kind: "video", mime: stored.mime, bytes: stored.bytes, width: stored.width, height: stored.height, durationMs: stored.durationMs });
+    const posterUrl =
+      poster && posterInfo ? (await saveMedia({ userId: user.id, kind: "poster", mime: "image/webp", bytes: poster, width: posterInfo.width, height: posterInfo.height })).url : null;
     return {
-      url: `${env.API_PUBLIC_URL}/media/${row!.id}.${stored.ext}`,
+      url: saved.url,
       poster: posterUrl,
       width: stored.width,
       height: stored.height,
@@ -216,8 +204,14 @@ export async function mediaRoutes(app: FastifyInstance) {
     const id = req.params.file.replace(/\.(webp|mp4|webm)$/, "");
     if (!z.uuid().safeParse(id).success) throw notFound();
     const where = eq(schema.media.id, id);
-    const [meta] = await db.select({ mime: schema.media.mime, size: sql<number>`octet_length(${schema.media.bytes})` }).from(schema.media).where(where).limit(1);
+    const [meta] = await db
+      .select({ mime: schema.media.mime, stored: schema.media.stored, size: sql<number>`octet_length(${schema.media.bytes})` })
+      .from(schema.media)
+      .where(where)
+      .limit(1);
     if (!meta) throw notFound();
+    // Moved to R2: old links (profiles, shared images) follow to the CDN for good.
+    if (meta.stored === "r2") return reply.header("cache-control", "public, max-age=31536000, immutable").redirect(mediaUrl(id, meta.mime, "r2"), 301);
     const size = Number(meta.size);
     reply
       .header("content-type", meta.mime)

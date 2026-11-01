@@ -10,6 +10,7 @@ import { generateCode } from "../lib/codes";
 import { badRequest, conflict, forbidden, notFound } from "../lib/errors";
 import { previewCode, signTeamSession } from "../lib/secrets";
 import { rebuildHistory } from "../lib/providers/history";
+import { moveMediaToR2, r2Enabled } from "../lib/storage";
 import { getSettings, saveSettings } from "../lib/settings";
 import { isUsernameTaken, refreshTier, refreshTiersForWallets } from "../lib/users";
 import { chainOf, isSolanaAddress, normalizeAddress } from "../lib/wallets";
@@ -229,6 +230,13 @@ export async function adminRoutes(app: FastifyInstance) {
     if (!row) throw notFound("No such wallet");
     const [user] = await db.select().from(schema.users).where(eq(schema.users.id, req.params.id)).limit(1);
     return adminUser(user!);
+  });
+
+  /** Moves uploads still kept in Postgres to R2, a batch per call; the last one rewrites profile URLs to the R2 domain. */
+  app.post("/admin/media/move-to-r2", async (req) => {
+    const { batch } = z.object({ batch: z.number().int().min(1).max(200).default(25) }).parse(req.body ?? {});
+    if (!r2Enabled()) throw badRequest("R2 isn't configured on the API", "r2_off");
+    return moveMediaToR2(batch);
   });
 
   /** Redo a wallet's past rebuilt from the chain (P&L and portfolio history before our hourly snapshots). */

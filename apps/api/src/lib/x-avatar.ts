@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import sharp from "sharp";
 import { db, schema } from "../db";
-import { env } from "../env";
+import { saveMedia } from "./storage";
 import type { UserRow } from "./users";
 
 /** X's image CDN: a hotlinked picture we haven't copied yet. */
@@ -28,11 +28,8 @@ export async function adoptXAvatar(user: UserRow): Promise<void> {
       .webp({ quality: 85 })
       .toBuffer({ resolveWithObject: true });
 
-    const [media] = await db
-      .insert(schema.media)
-      .values({ userId: user.id, kind: "avatar", mime: "image/webp", bytes: out.data, width: out.info.width, height: out.info.height })
-      .returning({ id: schema.media.id });
-    await db.update(schema.profiles).set({ avatarUrl: `${env.API_PUBLIC_URL}/media/${media!.id}.webp` }).where(eq(schema.profiles.userId, user.id));
+    const saved = await saveMedia({ userId: user.id, kind: "avatar", mime: "image/webp", bytes: out.data, width: out.info.width, height: out.info.height });
+    await db.update(schema.profiles).set({ avatarUrl: saved.url }).where(eq(schema.profiles.userId, user.id));
   } catch {
     // X unreachable or an odd image: the profile keeps what it had.
   }

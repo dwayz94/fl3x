@@ -173,7 +173,9 @@ export const media = pgTable("media", {
   userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   kind: text("kind", { enum: ["avatar", "background", "widget", "video", "poster"] }).notNull(),
   mime: text("mime").notNull(),
-  bytes: bytea("bytes").notNull(),
+  /** The file itself while it's kept in Postgres; null once it lives in R2 (`stored`). */
+  bytes: bytea("bytes"),
+  stored: text("stored", { enum: ["db", "r2"] }).notNull().default("db"),
   width: integer("width").notNull(),
   height: integer("height").notNull(),
   /** Videos and animations only. */
