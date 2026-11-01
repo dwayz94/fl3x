@@ -20,6 +20,9 @@ const FOMO: BrandIcon = { viewBox: "35 28 968 968", d: "M370 263C293 269 218 314
 /** GMGN's pixel frog, eyes and mouth cut out. */
 const GMGN: BrandIcon = { viewBox: "-2 -2 28 28", d: "M8 0h4v2h-4zM16 0h4v2h-4zM6 2h16v2h-16zM6 4h2v2h-2zM10 4h6v2h-6zM20 4h2v2h-2zM2 6h2v2h-2zM6 6h2v2h-2zM10 6h6v2h-6zM20 6h2v2h-2zM0 8h24v2h-24zM0 10h24v2h-24zM0 12h4v2h-4zM8 12h16v2h-16zM2 14h18v2h-18zM8 16h16v2h-16zM8 18h16v2h-16zM6 20h18v2h-18zM6 22h18v2h-18z" };
 
+/** Kick's blocky K. */
+const KICK: BrandIcon = { viewBox: "0 0 24 24", d: "M3 3h6v18H3zM9 9h3v6H9zM12 6h3v4h-3zM15 3h6v5h-6zM12 14h3v4h-3zM15 16h6v5h-6z" };
+
 export const linkIcons: Record<LinkKind, AnyIcon> = {
   x: NewTwitterIcon,
   discord: DiscordIcon,
@@ -31,6 +34,7 @@ export const linkIcons: Record<LinkKind, AnyIcon> = {
   fomo: FOMO,
   youtube: YoutubeIcon,
   twitch: TwitchIcon,
+  kick: KICK,
   tiktok: TiktokIcon,
   instagram: InstagramIcon,
   github: GithubIcon,

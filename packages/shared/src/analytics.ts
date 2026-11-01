@@ -20,6 +20,7 @@ export const TRAFFIC_SOURCES = [
   { id: "tiktok", label: "TikTok", hosts: ["tiktok.com"] },
   { id: "instagram", label: "Instagram", hosts: ["instagram.com", "l.instagram.com"] },
   { id: "twitch", label: "Twitch", hosts: ["twitch.tv"] },
+  { id: "kick", label: "Kick", hosts: ["kick.com"] },
   { id: "google", label: "Google", hosts: ["google."] },
   { id: "other", label: "Other sites", hosts: [] },
   { id: "direct", label: "Direct", hosts: [] },

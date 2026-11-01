@@ -478,7 +478,7 @@ function ReservedProfiles({ adminKey }: { adminKey: string }) {
   return (
     <Card
       title="Reserved profiles"
-      desc="Hold a handle for someone known and build their profile ahead (Premium). Hidden from everyone except the preview link. The first time they sign in with that X account, it's theirs."
+      desc="Hold a handle for someone known and build their profile ahead (Premium). It's public at its link (out of search and Explore) with a “Claim” tag. The first time they sign in with that X account, it's theirs."
     >
       <form
         className="grid gap-2 sm:grid-cols-[1fr_1fr_1fr_auto]"
@@ -513,7 +513,7 @@ function ReservedRow({ member: m, adminKey, onChange, onRemoved }: { member: Mem
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const headers = { "x-admin-key": adminKey };
-  const previewUrl = `${window.location.origin}/@${m.username}?preview=${m.previewCode}`;
+  const profileUrl = `${window.location.origin}/@${m.username}`;
 
   const build = async () => {
     setError(null);
@@ -556,12 +556,12 @@ function ReservedRow({ member: m, adminKey, onChange, onRemoved }: { member: Mem
             size="sm"
             variant="secondary"
             onClick={() => {
-              void navigator.clipboard.writeText(previewUrl);
+              void navigator.clipboard.writeText(profileUrl);
               setCopied(true);
               setTimeout(() => setCopied(false), 1500);
             }}
           >
-            {copied ? "Copied" : "Copy preview link"}
+            {copied ? "Copied" : "Copy link"}
           </Button>
           <Button size="sm" variant="secondary" onClick={() => setOpen((o) => !o)}>
             Wallets

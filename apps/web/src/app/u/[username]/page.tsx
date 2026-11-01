@@ -60,7 +60,8 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
   const name = profile.displayName ?? profile.username;
   return {
     title: `${name} (@${profile.username})`,
-    ...(preview && { robots: { index: false } }),
+    // Not claimed by its owner yet: reachable by link, kept out of search.
+    ...((preview || profile.claimable) && { robots: { index: false } }),
     description: profile.bio ?? `${name} on FL3X`,
     alternates: { canonical: `/@${profile.username}` },
     // Images come from opengraph-image.tsx / twitter-image.tsx (large card with the profile).

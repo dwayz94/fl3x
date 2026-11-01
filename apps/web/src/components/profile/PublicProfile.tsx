@@ -38,6 +38,15 @@ export function PublicProfile({ profile }: { profile: FullPublicProfile }) {
     >
       {/* Premium animated background, behind everything, fixed to the viewport. */}
       <AnimatedBackdrop theme={theme} className="fixed inset-0 -z-10" />
+      {/* A profile the team built for someone: says so, and lets them take it. */}
+      {profile.claimable && (
+        <Link
+          href="/join"
+          className="fixed bottom-4 left-1/2 z-20 -translate-x-1/2 rounded-full bg-black/60 px-4 py-2 text-sm whitespace-nowrap backdrop-blur-md transition-colors hover:bg-black/80"
+        >
+          Is this you? <span className="text-brand">Claim @{profile.username}</span>
+        </Link>
+      )}
       {/* Only the signed-in owner sees this. */}
       {owner && (
         <Link

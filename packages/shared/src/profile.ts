@@ -18,6 +18,7 @@ export const LINK_KINDS = [
   { id: "fomo", label: "FOMO", prefix: "fomo.family/r/", handle: "[A-Za-z0-9_-]{2,32}", placeholder: "yourcode" },
   { id: "youtube", label: "YouTube", prefix: "youtube.com/@", handle: "[A-Za-z0-9._-]{3,30}", placeholder: "yourchannel" },
   { id: "twitch", label: "Twitch", prefix: "twitch.tv/", handle: "[A-Za-z0-9_]{3,25}", placeholder: "yourchannel" },
+  { id: "kick", label: "Kick", prefix: "kick.com/", handle: "[A-Za-z0-9_-]{3,25}", placeholder: "yourchannel" },
   { id: "tiktok", label: "TikTok", prefix: "tiktok.com/@", handle: "[A-Za-z0-9._]{2,24}", placeholder: "yourhandle" },
   { id: "instagram", label: "Instagram", prefix: "instagram.com/", handle: "[A-Za-z0-9._]{1,30}", placeholder: "yourhandle" },
   { id: "github", label: "GitHub", prefix: "github.com/", handle: "[A-Za-z0-9-]{1,39}", placeholder: "yourname" },
@@ -238,6 +239,8 @@ export interface EditableProfile {
 
 export interface FullPublicProfile extends EditableProfile {
   tier: Tier;
+  /** Made by the team for someone who hasn't signed in yet: the page invites them to claim it, and stays out of search. */
+  claimable?: boolean;
   badgeStats?: { memberNumber: number | null; referrals: number };
   xHandle: string | null;
   views: number;
