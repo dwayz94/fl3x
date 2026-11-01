@@ -115,7 +115,23 @@ export const walletSnapshots = pgTable("wallet_snapshots", {
   wallet: text("wallet").notNull(),
   valueUsd: doublePrecision("value_usd").notNull(),
   takenAt: timestamp("taken_at", { withTimezone: true }).notNull().defaultNow(),
+  /** Rebuilt from the chain (history.ts) rather than read live by the hourly job. */
+  rebuilt: boolean("rebuilt").notNull().default(false),
 }, (t) => [index("wallet_snapshots_wallet_time_idx").on(t.wallet, t.takenAt)]);
+
+/**
+ * Past values rebuilt from the chain, once per wallet, so a new widget shows
+ * the last days and months right away (see providers/history.ts). Rows go in
+ * wallet_snapshots like the hourly ones.
+ */
+export const walletBackfills = pgTable("wallet_backfills", {
+  wallet: text("wallet").primaryKey(),
+  status: text("status", { enum: ["done", "failed"] }).notNull(),
+  /** Oldest moment rebuilt (less than a year back when the wallet has too many transactions to read). */
+  fromAt: timestamp("from_at", { withTimezone: true }),
+  points: integer("points").notNull().default(0),
+  finishedAt: timestamp("finished_at", { withTimezone: true }).notNull().defaultNow(),
+});
 
 /** Postgres-backed cache for third-party API responses. */
 export const dataCache = pgTable("data_cache", {

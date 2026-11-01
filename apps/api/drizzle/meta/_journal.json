@@ -71,6 +71,20 @@
       "when": 1793536475221,
       "tag": "0009_reserved_profiles",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1793538480115,
+      "tag": "0010_wallet_backfills",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1793539942952,
+      "tag": "0011_rebuilt_snapshots",
+      "breakpoints": true
     }
   ]
 }

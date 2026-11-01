@@ -709,20 +709,20 @@ export const HELP_GROUPS: HelpGroup[] = [
         slug: "portfolio-and-pnl",
         icon: ChartLineData01Icon,
         title: "Portfolio and P&L",
-        description: "Where the numbers come from, and why history starts when you add a widget.",
+        description: "Where the numbers come from, and how far back your history goes.",
         sections: [
           {
             id: "snapshots",
-            heading: "Hourly snapshots",
+            heading: "Your past, from the chain",
             blocks: [
               {
                 type: "p",
-                text: "Every hour, FL3X records the value of each wallet shown in a P&L, Portfolio or Holdings widget. Charts and P&L are built from these snapshots, plus the live value right now.",
+                text: "The first time a Solana wallet shows up in a P&L, Portfolio or Holdings widget, FL3X rebuilds its value over the past year from its transactions on the chain. From then on, FL3X records the value of every wallet every hour.",
               },
               {
                 type: "note",
                 tone: "info",
-                text: "History starts the first time a wallet is shown in one of these widgets. A wallet you just added has no past yet: give it a few hours, and the longer periods fill in over time.",
+                text: "Rebuilding takes up to a minute for a busy wallet: the longer periods appear on their own. Tokens without a public price history (fresh memecoins) are valued at the price of your own swaps. EVM wallets (Ethereum, Base…) start their history when they're added, for now.",
               },
             ],
           },
@@ -736,7 +736,7 @@ export const HELP_GROUPS: HelpGroup[] = [
               },
               {
                 type: "p",
-                text: `Periods: ${PERIODS.map((p) => p.label).join(", ")}. If history doesn't go back that far yet, the start is the oldest snapshot we have.`,
+                text: `Periods: ${PERIODS.map((p) => p.label).join(", ")}. If a wallet is younger than the period (or too busy to read it all), the start is the oldest point we have.`,
               },
               {
                 type: "p",
@@ -1098,7 +1098,7 @@ export const HELP_GROUPS: HelpGroup[] = [
             blocks: [
               {
                 type: "p",
-                text: "History starts when a wallet first appears in a wallet widget, and snapshots are hourly. Come back in a few hours. See [Portfolio and P&L](/help/portfolio-and-pnl).",
+                text: "A Solana wallet's past is rebuilt from the chain the first time it appears in a wallet widget: refresh the page a minute later. EVM wallets start their history when they're added, with a value every hour. See [Portfolio and P&L](/help/portfolio-and-pnl).",
               },
             ],
           },

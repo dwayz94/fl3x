@@ -17,11 +17,15 @@ export interface EvmPosition {
   valueUsd: number;
 }
 
-interface Network {
+export interface Network {
   id: string;
   name: string;
   chainId: number;
   rpc: string;
+  /** Free RPC that serves past state (balances at an old block), for the history rebuilt from the chain. */
+  archive?: string;
+  /** Alchemy network slug (https://<slug>.g.alchemy.com), tried first when ALCHEMY_API_KEY is set. */
+  alchemy?: string;
   llama: string;
   moralis: string;
   native: { symbol: string; name: string; llama: string };
@@ -33,7 +37,7 @@ const ETH = { symbol: "ETH", name: "Ether", llama: "coingecko:ethereum" };
 
 export const EVM_NETWORKS: Network[] = [
   {
-    id: "ethereum", name: "Ethereum", chainId: 1, rpc: "https://ethereum-rpc.publicnode.com", llama: "ethereum", moralis: "eth", native: ETH,
+    alchemy: "eth-mainnet", id: "ethereum", name: "Ethereum", chainId: 1, rpc: "https://ethereum-rpc.publicnode.com", archive: "https://eth.drpc.org", llama: "ethereum", moralis: "eth", native: ETH,
     tokens: [
       ["0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", "USDC", 6],
       ["0xdac17f958d2ee523a2206206994597c13d831ec7", "USDT", 6],
@@ -47,7 +51,7 @@ export const EVM_NETWORKS: Network[] = [
     ],
   },
   {
-    id: "base", name: "Base", chainId: 8453, rpc: "https://base-rpc.publicnode.com", llama: "base", moralis: "base", native: ETH,
+    alchemy: "base-mainnet", id: "base", name: "Base", chainId: 8453, rpc: "https://base-rpc.publicnode.com", archive: "https://base.drpc.org", llama: "base", moralis: "base", native: ETH,
     tokens: [
       ["0x833589fcd6edb6e08f4c7c32d4f71b54bda02913", "USDC", 6],
       ["0x4200000000000000000000000000000000000006", "WETH", 18],
@@ -57,7 +61,7 @@ export const EVM_NETWORKS: Network[] = [
     ],
   },
   {
-    id: "arbitrum", name: "Arbitrum", chainId: 42161, rpc: "https://arbitrum-one-rpc.publicnode.com", llama: "arbitrum", moralis: "arbitrum", native: ETH,
+    alchemy: "arb-mainnet", id: "arbitrum", name: "Arbitrum", chainId: 42161, rpc: "https://arbitrum-one-rpc.publicnode.com", llama: "arbitrum", moralis: "arbitrum", native: ETH,
     tokens: [
       ["0xaf88d065e77c8cc2239327c5edb3a432268e5831", "USDC", 6],
       ["0xfd086bc7cd5c481dcc9c85ebe478a1c0b69fcbb9", "USDT", 6],
@@ -66,7 +70,7 @@ export const EVM_NETWORKS: Network[] = [
     ],
   },
   {
-    id: "optimism", name: "Optimism", chainId: 10, rpc: "https://optimism-rpc.publicnode.com", llama: "optimism", moralis: "optimism", native: ETH,
+    alchemy: "opt-mainnet", id: "optimism", name: "Optimism", chainId: 10, rpc: "https://optimism-rpc.publicnode.com", archive: "https://optimism.drpc.org", llama: "optimism", moralis: "optimism", native: ETH,
     tokens: [
       ["0x0b2c639c533813f4aa9d7837caf62653d097ff85", "USDC", 6],
       ["0x4200000000000000000000000000000000000042", "OP", 18],
@@ -74,7 +78,7 @@ export const EVM_NETWORKS: Network[] = [
     ],
   },
   {
-    id: "bsc", name: "BNB Chain", chainId: 56, rpc: "https://bsc-rpc.publicnode.com", llama: "bsc", moralis: "bsc",
+    alchemy: "bnb-mainnet", id: "bsc", name: "BNB Chain", chainId: 56, rpc: "https://bsc-rpc.publicnode.com", llama: "bsc", moralis: "bsc",
     native: { symbol: "BNB", name: "BNB", llama: "coingecko:binancecoin" },
     tokens: [
       ["0x55d398326f99059ff775485246999027b3197955", "USDT", 18],
@@ -83,7 +87,7 @@ export const EVM_NETWORKS: Network[] = [
     ],
   },
   {
-    id: "polygon", name: "Polygon", chainId: 137, rpc: "https://polygon-bor-rpc.publicnode.com", llama: "polygon", moralis: "polygon",
+    alchemy: "polygon-mainnet", id: "polygon", name: "Polygon", chainId: 137, rpc: "https://polygon-bor-rpc.publicnode.com", archive: "https://polygon.drpc.org", llama: "polygon", moralis: "polygon",
     native: { symbol: "POL", name: "Polygon", llama: "coingecko:polygon-ecosystem-token" },
     tokens: [
       ["0x3c499c542cef5e3811e1192ce70d8cc03d5c3359", "USDC", 6],
@@ -104,19 +108,50 @@ const tokenIcon = (n: Network, address: string) => `https://token-icons.llamao.f
 
 type RpcResult = { id: number; result?: string; error?: unknown };
 
-/** One JSON-RPC batch per network: native balance + balanceOf for each known token. */
-async function balancesOn(n: Network, owner: string): Promise<{ native: bigint; tokens: bigint[] }> {
+/** RPCs that serve past state for a network, best first: Alchemy (when keyed), then the free dRPC (3 calls per batch at most). */
+export function archiveEndpoints(n: Network): { url: string; batch: number }[] {
+  return [
+    ...(env.ALCHEMY_API_KEY && n.alchemy ? [{ url: `https://${n.alchemy}.g.alchemy.com/v2/${env.ALCHEMY_API_KEY}`, batch: 100 }] : []),
+    ...(n.archive ? [{ url: n.archive, batch: 3 }] : []),
+  ];
+}
+
+/** Balances at an old block: the first archive that answers. */
+async function balancesAt(n: Network, owner: string, block: number): Promise<{ native: bigint; tokens: bigint[] }> {
+  let last: unknown = new Error(`${n.id}: no archive RPC`);
+  for (const endpoint of archiveEndpoints(n)) {
+    try {
+      return await readBalances(n, owner, `0x${block.toString(16)}`, endpoint.url, endpoint.batch);
+    } catch (err) {
+      last = err;
+    }
+  }
+  throw last;
+}
+
+/** One JSON-RPC batch per network: native balance + balanceOf for each known token (now, or at an old block on an archive RPC). */
+export async function balancesOn(n: Network, owner: string, block: number | "latest" = "latest"): Promise<{ native: bigint; tokens: bigint[] }> {
+  return block === "latest" ? readBalances(n, owner, "latest", n.rpc, Infinity) : balancesAt(n, owner, block);
+}
+
+async function readBalances(n: Network, owner: string, tag: string, url: string, size: number): Promise<{ native: bigint; tokens: bigint[] }> {
   const data = (token: string) => ({ to: token, data: `0x70a08231000000000000000000000000${owner.slice(2).toLowerCase()}` });
   const batch = [
-    { jsonrpc: "2.0", id: 0, method: "eth_getBalance", params: [owner, "latest"] },
-    ...n.tokens.map(([token], i) => ({ jsonrpc: "2.0", id: i + 1, method: "eth_call", params: [data(token), "latest"] })),
+    { jsonrpc: "2.0", id: 0, method: "eth_getBalance", params: [owner, tag] },
+    ...n.tokens.map(([token], i) => ({ jsonrpc: "2.0", id: i + 1, method: "eth_call", params: [data(token), tag] })),
   ];
-  const res = await fetchJson<RpcResult[]>(n.rpc, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(batch) });
+  const parts = await Promise.all(
+    Array.from({ length: Math.ceil(batch.length / Math.min(size, batch.length)) }, (_, k) =>
+      fetchJson<RpcResult[]>(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(batch.slice(k * size, (k + 1) * size)) }),
+    ),
+  );
+  const res = parts.flat();
+  if (tag !== "latest" && res.some((r) => r.error)) throw new Error(`${n.id}: no state at block ${tag}`);
   const byId = new Map(res.map((r) => [r.id, r.result && r.result !== "0x" ? BigInt(r.result) : 0n]));
   return { native: byId.get(0) ?? 0n, tokens: n.tokens.map((_, i) => byId.get(i + 1) ?? 0n) };
 }
 
-const units = (raw: bigint, decimals: number) => Number(raw) / 10 ** decimals;
+export const units = (raw: bigint, decimals: number) => Number(raw) / 10 ** decimals;
 
 async function llamaPrices(keys: string[]): Promise<Record<string, number>> {
   if (keys.length === 0) return {};

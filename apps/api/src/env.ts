@@ -12,6 +12,8 @@ const schema = z.object({
   SOLANA_RPC_URL: z.string().url().default("https://api.mainnet-beta.solana.com"),
   // Optional: Recent trades widget (helius.dev, Enhanced Transactions). Falls back to the api-key of a Helius SOLANA_RPC_URL.
   HELIUS_API_KEY: z.string().default(""),
+  // Optional: archive RPC for the EVM history rebuilt from the chain (alchemy.com, free tier; turn each network on in the app). Falls back to dRPC.
+  ALCHEMY_API_KEY: z.string().default(""),
   // Optional: higher Jupiter price API limits (portal.jup.ag)
   JUPITER_API_KEY: z.string().default(""),
   // Optional: every EVM token in a wallet (moralis.com). Without it: native + major tokens via public RPCs.

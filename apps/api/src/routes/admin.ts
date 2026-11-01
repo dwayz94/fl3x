@@ -9,6 +9,7 @@ import { env } from "../env";
 import { generateCode } from "../lib/codes";
 import { badRequest, conflict, forbidden, notFound } from "../lib/errors";
 import { previewCode, signTeamSession } from "../lib/secrets";
+import { rebuildHistory } from "../lib/providers/history";
 import { getSettings, saveSettings } from "../lib/settings";
 import { isUsernameTaken, refreshTier, refreshTiersForWallets } from "../lib/users";
 import { chainOf, isSolanaAddress, normalizeAddress } from "../lib/wallets";
@@ -228,6 +229,15 @@ export async function adminRoutes(app: FastifyInstance) {
     if (!row) throw notFound("No such wallet");
     const [user] = await db.select().from(schema.users).where(eq(schema.users.id, req.params.id)).limit(1);
     return adminUser(user!);
+  });
+
+  /** Redo a wallet's past rebuilt from the chain (P&L and portfolio history before our hourly snapshots). */
+  app.post("/admin/history/rebuild", async (req) => {
+    const { address } = z.object({ address: z.string().trim().min(32).max(64) }).parse(req.body);
+    const chain = chainOf(address);
+    if (!chain) throw badRequest("Unknown wallet address format", "bad_address");
+    await rebuildHistory(normalizeAddress(chain, address), (m) => req.log.warn(m));
+    return { started: true };
   });
 
   /** Live site settings (phase, token mint, thresholds, banner): edited from /admin, applied without a restart. */

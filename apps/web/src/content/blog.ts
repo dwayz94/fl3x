@@ -235,8 +235,8 @@ export const POSTS: BlogPost[] = [
         id: "how",
         heading: "How FL3X counts your P&L",
         blocks: [
-          { type: "p", text: "Every hour, FL3X takes a snapshot of the value of the wallets your widgets show. Your P&L over a period is the change between those snapshots." },
-          { type: "note", tone: "info", text: "History starts the first time a wallet is shown on your profile. Add your P&L widget early and the chart fills in from there." },
+          { type: "p", text: "When you add a Solana wallet, FL3X rebuilds its value over the past year from the chain, then records it every hour. Your P&L over a period is the change in value between its start and now." },
+          { type: "note", tone: "info", text: "No waiting for history to build up: your last 7 days, 30 days or year show as soon as the rebuild is done, usually within a minute. EVM wallets start their history when they're added, for now." },
         ],
       },
       {

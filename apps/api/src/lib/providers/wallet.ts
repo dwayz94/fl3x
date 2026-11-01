@@ -5,11 +5,12 @@ import { env } from "../../env";
 import { cached, fetchJson } from "../cache";
 import { isEvmAddress } from "../wallets";
 import { evmNetworkName, evmPositions } from "./evm";
+import { ensureHistory } from "./history";
 
-const SOL_MINT = "So11111111111111111111111111111111111111112";
+export const SOL_MINT = "So11111111111111111111111111111111111111112";
 const TOKEN_PROGRAMS = ["TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA", "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"];
 
-async function rpc<T>(method: string, params: unknown[]): Promise<T> {
+export async function rpc<T>(method: string, params: unknown[]): Promise<T> {
   const json = await fetchJson<{ result?: T; error?: { message: string } }>(env.SOLANA_RPC_URL, {
     method: "POST",
     headers: { "content-type": "application/json" },
@@ -26,7 +27,7 @@ export const JUP = env.JUPITER_API_KEY ? "https://api.jup.ag" : "https://lite-ap
 export const jupHeaders = (): Record<string, string> => (env.JUPITER_API_KEY ? { "x-api-key": env.JUPITER_API_KEY } : {});
 const MAX_PRICED_MINTS = 200; // spam-token wallets can hold thousands
 
-async function prices(mints: string[]): Promise<{ prices: Record<string, number>; complete: boolean }> {
+export async function prices(mints: string[]): Promise<{ prices: Record<string, number>; complete: boolean }> {
   const out: Record<string, number> = {};
   let complete = true;
   const list = mints.slice(0, MAX_PRICED_MINTS);
@@ -65,7 +66,8 @@ interface Valuation {
 
 const TOP_POSITIONS = 8;
 
-async function solanaValuation(wallet: string): Promise<Valuation> {
+/** Every balance of a Solana wallet right now, by mint (SOL and wrapped SOL under SOL_MINT). */
+export async function solanaBalances(wallet: string): Promise<Map<string, number>> {
   const [lamports, ...accounts] = await Promise.all([
     rpc<{ value: number }>("getBalance", [wallet]),
     ...TOKEN_PROGRAMS.map((programId) => rpc<TokenAccounts>("getTokenAccountsByOwner", [wallet, { programId }, { encoding: "jsonParsed" }])),
@@ -77,6 +79,11 @@ async function solanaValuation(wallet: string): Promise<Valuation> {
       if (tokenAmount.uiAmount) balances.set(mint, (balances.get(mint) ?? 0) + tokenAmount.uiAmount);
     }
   }
+  return balances;
+}
+
+async function solanaValuation(wallet: string): Promise<Valuation> {
+  const balances = await solanaBalances(wallet);
   // Largest balances first so the cap keeps what most likely matters.
   const mints = [...balances.entries()].sort((a, b) => (a[0] === SOL_MINT ? -1 : b[0] === SOL_MINT ? 1 : b[1] - a[1])).map(([m]) => m);
   const { prices: p, complete } = await prices(mints);
@@ -163,10 +170,12 @@ function combineHistory(rows: { wallet: string; at: Date; valueUsd: number }[], 
 
 /**
  * Combined value of any mix of Solana and EVM wallets plus the change over
- * the period, from our own hourly snapshots. History starts when a wallet
- * is first shown on FL3X.
+ * the period, from our hourly snapshots and, before them, the history
+ * rebuilt from the chain (history.ts).
  */
 export async function getPortfolio(wallets: string[], period: PeriodId): Promise<PortfolioData> {
+  // First time a wallet is shown: its past is rebuilt from the chain in the background.
+  for (const w of wallets) void ensureHistory(w, (m) => console.warn(m));
   const settled = await Promise.allSettled(wallets.map((w) => currentValue(w)));
   const valuations = settled.flatMap((r) => (r.status === "fulfilled" ? [r.value] : []));
   if (wallets.length > 0 && valuations.length === 0) throw (settled[0] as PromiseRejectedResult).reason;
@@ -257,4 +266,6 @@ export async function snapshotWallets(wallets: string[], log: (msg: string) => v
       log(`snapshot ${w} failed: ${(err as Error).message}`);
     }
   }
+  // Then the past of wallets nobody opened since it was added (one at a time, it's heavy; done once each).
+  for (const w of wallets) await ensureHistory(w, log);
 }
