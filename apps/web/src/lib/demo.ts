@@ -305,7 +305,6 @@ export function demoProfile(widgets: Widget[], backgroundUrl: string | null = DE
       { id: "l1", kind: "website", url: "https://fl3x.lol", label: "fl3x.lol" },
       { id: "l2", kind: "discord", url: "https://discord.gg/fl3x", label: null },
       { id: "l3", kind: "x", url: "https://x.com/fl3xdotlol", label: null },
-      { id: "l4", kind: "telegram", url: "https://t.me/fl3xdotlol", label: null },
       { id: "l5", kind: "axiom", url: "https://axiom.trade/@bjm", label: null },
       { id: "l6", kind: "gmgn", url: "https://gmgn.ai/r/panzonhl", label: null },
       { id: "l7", kind: "padre", url: "https://trade.padre.gg/rk/alxcooks", label: null },
