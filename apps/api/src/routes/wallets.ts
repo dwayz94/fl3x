@@ -39,7 +39,8 @@ export async function walletRoutes(app: FastifyInstance) {
     if (!chain) throw badRequest("Unknown wallet address format", "bad_address");
     const addr = normalizeAddress(chain, body.address);
 
-    const mine = await verifiedWallets(user);
+    const [teamAdded] = await db.select().from(schema.wallets).where(and(eq(schema.wallets.chain, chain), eq(schema.wallets.address, addr), eq(schema.wallets.signed, false))).limit(1);
+    const mine = (await verifiedWallets(user)).filter((w) => w.id !== teamAdded?.id);
     if (mine.some((w) => w.address.toLowerCase() === addr.toLowerCase())) throw conflict("This wallet is already linked", "already_linked");
     if (mine.length >= MAX_WALLETS) throw badRequest(`You can link up to ${MAX_WALLETS} wallets`, "wallet_limit");
 
@@ -49,6 +50,8 @@ export async function walletRoutes(app: FastifyInstance) {
     const ok = await verifyWalletSignature(chain, body.address, challengeMessage(addr, body.nonce, expiresAt), body.signature);
     if (!ok) throw badRequest("The signature doesn't match this wallet", "bad_signature");
 
+    // A signature beats an address the team added by hand: the row moves to the signer, signed.
+    if (teamAdded) await db.delete(schema.wallets).where(eq(schema.wallets.id, teamAdded.id));
     const [taken] = await db.select().from(schema.wallets).where(and(eq(schema.wallets.chain, chain), eq(schema.wallets.address, addr))).limit(1);
     // Also someone else's sign-in wallet: the same tokens must not give two accounts a tier.
     const [login] = taken ? [] : await db.select({ id: schema.users.id }).from(schema.users).where(and(arrayContains(schema.users.wallets, [body.address]), ne(schema.users.id, user.id))).limit(1);

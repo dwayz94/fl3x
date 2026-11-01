@@ -25,8 +25,14 @@ export const users = pgTable("users", {
   invitedById: uuid("invited_by_id"),
   invitedWithCode: text("invited_with_code"),
   onboardedAt: timestamp("onboarded_at", { withTimezone: true }),
+  /**
+   * Profile made ahead by the team for someone known (lowercase X handle):
+   * hidden from the public until that X account signs in and takes it over.
+   * Its privy_id is a "reserved:" placeholder until then.
+   */
+  reservedFor: text("reserved_for"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-}, (t) => [index("users_invited_by_idx").on(t.invitedById)]);
+}, (t) => [index("users_invited_by_idx").on(t.invitedById), index("users_reserved_for_idx").on(t.reservedFor)]);
 
 /** ownerId null = genesis code minted by the team. */
 export const inviteCodes = pgTable("invite_codes", {
@@ -129,6 +135,8 @@ export const wallets = pgTable("wallets", {
   /** Base58 for Solana, lowercase 0x hex for EVM. */
   address: text("address").notNull(),
   label: text("label"),
+  /** false: added by the team from /admin without a signature (founders and reserved profiles). Shows in widgets, never counts for a tier. */
+  signed: boolean("signed").notNull().default(true),
   verifiedAt: timestamp("verified_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [uniqueIndex("wallets_chain_address_idx").on(t.chain, t.address), index("wallets_user_idx").on(t.userId)]);
 

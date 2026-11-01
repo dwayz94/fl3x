@@ -1,16 +1,17 @@
 import type { FastifyInstance } from "fastify";
-import { timingSafeEqual } from "node:crypto";
+import { randomUUID, timingSafeEqual } from "node:crypto";
 import bs58 from "bs58";
-import { arrayContains, arrayOverlaps, desc, eq, inArray, or, sql } from "drizzle-orm";
+import { and, arrayContains, arrayOverlaps, desc, eq, inArray, isNotNull, or, sql } from "drizzle-orm";
 import { z } from "zod";
-import { BADGES, siteSettingsSchema } from "@fl3x/shared";
+import { BADGES, normalizeUsername, siteSettingsSchema, validateUsername } from "@fl3x/shared";
 import { db, schema } from "../db";
 import { env } from "../env";
 import { generateCode } from "../lib/codes";
-import { badRequest, forbidden, notFound } from "../lib/errors";
+import { badRequest, conflict, forbidden, notFound } from "../lib/errors";
+import { previewCode, signTeamSession } from "../lib/secrets";
 import { getSettings, saveSettings } from "../lib/settings";
-import { refreshTier, refreshTiersForWallets } from "../lib/users";
-import { isSolanaAddress } from "../lib/wallets";
+import { isUsernameTaken, refreshTier, refreshTiersForWallets } from "../lib/users";
+import { chainOf, isSolanaAddress, normalizeAddress } from "../lib/wallets";
 
 const createInvites = z.object({
   count: z.number().int().min(1).max(500).default(1),
@@ -51,10 +52,24 @@ function isSolanaKey(a: string) {
   }
 }
 
+const reserveProfile = z.object({
+  username: z.string().trim().min(1).max(40),
+  xHandle: z.string().trim().regex(/^@?[A-Za-z0-9_]{1,15}$/, "Not an X handle"),
+  displayName: z.string().trim().max(40).optional(),
+  tier: z.enum(["starter", "premium"]).optional(),
+});
+
+async function reservedUser(id: string) {
+  if (!z.uuid().safeParse(id).success) throw notFound("No such reserved profile");
+  const [user] = await db.select().from(schema.users).where(and(eq(schema.users.id, id), isNotNull(schema.users.reservedFor))).limit(1);
+  if (!user) throw notFound("No such reserved profile (already taken over?)");
+  return user;
+}
+
 /** What /admin shows about a member. */
 async function adminUser(u: typeof schema.users.$inferSelect) {
   const [profile] = await db.select().from(schema.profiles).where(eq(schema.profiles.userId, u.id)).limit(1);
-  const wallets = await db.select({ chain: schema.wallets.chain, address: schema.wallets.address }).from(schema.wallets).where(eq(schema.wallets.userId, u.id));
+  const wallets = await db.select({ id: schema.wallets.id, chain: schema.wallets.chain, address: schema.wallets.address, signed: schema.wallets.signed }).from(schema.wallets).where(eq(schema.wallets.userId, u.id));
   return {
     id: u.id,
     username: u.username,
@@ -68,13 +83,17 @@ async function adminUser(u: typeof schema.users.$inferSelect) {
     onboardedAt: u.onboardedAt,
     signInWallets: u.wallets,
     linkedWallets: wallets,
+    /** Made ahead by the team, waiting for this X handle to sign in. */
+    reservedFor: u.reservedFor,
+    previewCode: u.reservedFor && u.username ? previewCode(u.username) : null,
     profile: profile ? { displayName: profile.displayName, avatarUrl: profile.avatarUrl ?? u.xAvatarUrl, published: profile.isPublished } : null,
   };
 }
 
 export async function adminRoutes(app: FastifyInstance) {
-  app.addHook("onRequest", async (req) => {
-    if (!isAdminKey(req.headers["x-admin-key"])) throw forbidden();
+  // Without the key, these routes answer exactly like a route that doesn't exist: nothing tells they're here.
+  app.addHook("onRequest", async (req, reply) => {
+    if (!isAdminKey(req.headers["x-admin-key"])) return reply.code(404).send({ message: `Route ${req.method}:${req.url} not found`, error: "Not Found", statusCode: 404 });
   });
 
   /**
@@ -132,6 +151,83 @@ export async function adminRoutes(app: FastifyInstance) {
     }
     // Founder and a gifted tier both change the tier: recompute it now.
     return adminUser(body.tierOverride !== undefined || body.founder !== undefined ? await refreshTier(row!, true) : row!);
+  });
+
+  /**
+   * Reserved profiles: the team claims a handle for someone known and builds
+   * their profile ahead. Hidden from the public (except the private preview
+   * link) until that X account signs in, which takes the account over.
+   */
+  app.get("/admin/reserved", async () => {
+    const rows = await db.select().from(schema.users).where(isNotNull(schema.users.reservedFor)).orderBy(desc(schema.users.createdAt));
+    return Promise.all(rows.map(adminUser));
+  });
+
+  app.post("/admin/reserved", async (req) => {
+    const body = reserveProfile.parse(req.body);
+    const username = normalizeUsername(body.username);
+    const check = validateUsername(username);
+    if (!check.valid) throw badRequest(check.message, "bad_username");
+    if (await isUsernameTaken(username)) throw conflict("This username is already taken", "username_taken");
+    const handle = body.xHandle.replace(/^@/, "");
+    const [existing] = await db
+      .select({ username: schema.users.username })
+      .from(schema.users)
+      .where(or(sql`lower(${schema.users.xHandle}) = ${handle.toLowerCase()}`, eq(schema.users.reservedFor, handle.toLowerCase())))
+      .limit(1);
+    if (existing) throw conflict(`@${handle} already has a FL3X account${existing.username ? ` (@${existing.username})` : ""}`, "x_taken");
+    const user = await db.transaction(async (tx) => {
+      const [row] = await tx
+        .insert(schema.users)
+        .values({ privyId: `reserved:${randomUUID()}`, username, xHandle: handle, reservedFor: handle.toLowerCase(), tierOverride: body.tier ?? null, onboardedAt: new Date() })
+        .returning();
+      await tx.insert(schema.profiles).values({ userId: row!.id, displayName: body.displayName || handle });
+      return row!;
+    });
+    return adminUser(await refreshTier(user, true));
+  });
+
+  /** A session to build the profile in the dashboard. Only while nobody has taken the account over. */
+  app.post<{ Params: { id: string } }>("/admin/reserved/:id/session", async (req) => {
+    const user = await reservedUser(req.params.id);
+    return { token: signTeamSession(user.id), username: user.username };
+  });
+
+  app.delete<{ Params: { id: string } }>("/admin/reserved/:id", async (req) => {
+    const user = await reservedUser(req.params.id);
+    await db.delete(schema.users).where(and(eq(schema.users.id, user.id), isNotNull(schema.users.reservedFor)));
+    return { ok: true };
+  });
+
+  /**
+   * Founders and reserved profiles can show any address in their wallet
+   * widgets, without a signature. Never counts for a tier; a real signature
+   * on the same address takes it over.
+   */
+  app.post<{ Params: { id: string } }>("/admin/users/:id/wallets", async (req) => {
+    if (!z.uuid().safeParse(req.params.id).success) throw notFound("No such user");
+    const body = z.object({ address: z.string().trim().min(32).max(64), label: z.string().trim().max(40).optional() }).parse(req.body);
+    const [user] = await db.select().from(schema.users).where(eq(schema.users.id, req.params.id)).limit(1);
+    if (!user) throw notFound("No such user");
+    if (user.role !== "admin" && !user.reservedFor) throw forbidden("Only founders and reserved profiles");
+    const chain = chainOf(body.address);
+    if (!chain) throw badRequest("Unknown wallet address format", "bad_address");
+    const address = normalizeAddress(chain, body.address);
+    const [taken] = await db.select({ userId: schema.wallets.userId }).from(schema.wallets).where(and(eq(schema.wallets.chain, chain), eq(schema.wallets.address, address))).limit(1);
+    if (taken) throw conflict(taken.userId === user.id ? "Already on this account" : "This wallet is linked to another FL3X account", "wallet_taken");
+    await db.insert(schema.wallets).values({ userId: user.id, chain, address, label: body.label || null, signed: false });
+    return adminUser(user);
+  });
+
+  app.delete<{ Params: { id: string; walletId: string } }>("/admin/users/:id/wallets/:walletId", async (req) => {
+    if (!z.uuid().safeParse(req.params.id).success || !z.uuid().safeParse(req.params.walletId).success) throw notFound("No such wallet");
+    const [row] = await db
+      .delete(schema.wallets)
+      .where(and(eq(schema.wallets.id, req.params.walletId), eq(schema.wallets.userId, req.params.id), eq(schema.wallets.signed, false)))
+      .returning();
+    if (!row) throw notFound("No such wallet");
+    const [user] = await db.select().from(schema.users).where(eq(schema.users.id, req.params.id)).limit(1);
+    return adminUser(user!);
   });
 
   /** Live site settings (phase, token mint, thresholds, banner): edited from /admin, applied without a restart. */

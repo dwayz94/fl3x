@@ -2,6 +2,7 @@ import { and, arrayOverlaps, count, eq, inArray, isNull, ne, or, sql } from "dri
 import { TIER_LIMITS, tierForBalance, type Me } from "@fl3x/shared";
 import { db, schema } from "../db";
 import { env } from "../env";
+import { generateCode } from "./codes";
 import { getSettings } from "./settings";
 import { devAuth, fetchIdentity } from "./privy";
 import { totalTokenBalance } from "./solana";
@@ -14,13 +15,38 @@ export const TIER_TTL_MS = 5 * 60 * 1000;
 
 /** Create or refresh the local user from Privy's linked accounts. */
 export async function syncUser(privyId: string): Promise<UserRow> {
+  // A reserved profile opened by the team: no Privy account behind it yet.
+  if (privyId.startsWith("reserved:")) {
+    const [row] = await db.select().from(schema.users).where(eq(schema.users.privyId, privyId)).limit(1);
+    return refreshTier(row!);
+  }
   const identity = await fetchIdentity(privyId);
+  const claimed = await takeOverReserved(privyId, identity.xHandle, identity);
+  if (claimed) return refreshTier(claimed, true);
   const [row] = await db
     .insert(schema.users)
     .values({ privyId, ...identity })
     .onConflictDoUpdate({ target: schema.users.privyId, set: identity })
     .returning();
   return refreshTier(row!, true);
+}
+
+/**
+ * First sign-in of an X account the team made a profile for: that account
+ * becomes theirs (username, profile, widgets), instead of a new empty one.
+ */
+async function takeOverReserved(privyId: string, xHandle: string | null, identity: Partial<UserRow>): Promise<UserRow | null> {
+  if (!xHandle) return null;
+  const [known] = await db.select({ id: schema.users.id }).from(schema.users).where(eq(schema.users.privyId, privyId)).limit(1);
+  if (known) return null;
+  const [row] = await db
+    .update(schema.users)
+    .set({ ...identity, privyId, reservedFor: null })
+    .where(and(eq(schema.users.reservedFor, xHandle.toLowerCase()), sql`${schema.users.privyId} like 'reserved:%'`))
+    .returning();
+  // Their own invite code starts now: before, /invite/<handle> would have shown the profile exists.
+  if (row) await db.insert(schema.inviteCodes).values({ code: generateCode(), ownerId: row.id, maxUses: TIER_LIMITS[row.tier].invites });
+  return row ?? null;
 }
 
 const RANK = { none: 0, starter: 1, premium: 2 } as const;
@@ -37,10 +63,11 @@ const highest = (a: UserRow["tierOverride"], b: UserRow["tierOverride"]): UserRo
  * same tokens, or the same giveaway grant, must never tier two accounts).
  */
 async function tierWallets(user: UserRow): Promise<string[]> {
-  const linked = await db.select({ address: schema.wallets.address }).from(schema.wallets).where(and(eq(schema.wallets.userId, user.id), eq(schema.wallets.chain, "solana")));
+  // Wallets the team added without a signature (founders, reserved profiles) show in widgets but never tier anyone.
+  const linked = await db.select({ address: schema.wallets.address }).from(schema.wallets).where(and(eq(schema.wallets.userId, user.id), eq(schema.wallets.chain, "solana"), eq(schema.wallets.signed, true)));
   const login = user.wallets.filter((a) => !a.startsWith("0x"));
   const claimed = login.length
-    ? new Set((await db.select({ address: schema.wallets.address }).from(schema.wallets).where(and(inArray(schema.wallets.address, login), ne(schema.wallets.userId, user.id)))).map((r) => r.address))
+    ? new Set((await db.select({ address: schema.wallets.address }).from(schema.wallets).where(and(inArray(schema.wallets.address, login), ne(schema.wallets.userId, user.id), eq(schema.wallets.signed, true)))).map((r) => r.address))
     : new Set<string>();
   // $FL3X is a Solana token: only Solana addresses count (sign-in wallets can be EVM too).
   return [...new Set([...login.filter((a) => !claimed.has(a)), ...linked.map((l) => l.address)].filter((a) => !a.startsWith("0x")))];

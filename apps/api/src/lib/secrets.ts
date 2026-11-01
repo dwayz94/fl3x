@@ -35,3 +35,36 @@ export function readState<T>(state: string): T | null {
   const data = JSON.parse(Buffer.from(payload, "base64url").toString()) as T & { exp: number };
   return data.exp > Date.now() ? data : null;
 }
+
+const teamMac = (payload: string) => createHmac("sha256", `team:${env.CONNECTIONS_SECRET}`).update(payload).digest("base64url");
+
+/**
+ * Session the team uses to build a reserved profile from /admin ("team.<userId>.<exp>.<sig>").
+ * Its own key, so neither an OAuth state nor a preview code can stand in for it.
+ */
+export function signTeamSession(userId: string, ttlMs = 12 * 60 * 60 * 1000) {
+  const payload = `${userId}.${Date.now() + ttlMs}`;
+  return `team.${payload}.${teamMac(payload)}`;
+}
+
+/** The user id behind a valid, unexpired team session, or null. */
+export function readTeamSession(token: string): string | null {
+  const [prefix, userId, exp, sig] = token.split(".");
+  if (prefix !== "team" || !userId || !exp || !sig) return null;
+  const expected = Buffer.from(teamMac(`${userId}.${exp}`));
+  const given = Buffer.from(sig);
+  if (expected.length !== given.length || !timingSafeEqual(expected, given)) return null;
+  return Number(exp) > Date.now() ? userId : null;
+}
+
+/** Code in the private link to a reserved profile (/@name?preview=…), so it can be shown before it's claimed. */
+export function previewCode(username: string) {
+  return createHmac("sha256", `preview:${env.CONNECTIONS_SECRET}`).update(username).digest("base64url").slice(0, 16);
+}
+
+export function isPreviewCode(username: string, given: unknown) {
+  if (typeof given !== "string") return false;
+  const a = Buffer.from(previewCode(username));
+  const b = Buffer.from(given);
+  return a.length === b.length && timingSafeEqual(a, b);
+}

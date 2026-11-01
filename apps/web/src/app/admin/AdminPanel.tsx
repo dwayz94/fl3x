@@ -12,6 +12,7 @@ import { Button, Icon } from "@/components/ui";
 import { api, ApiRequestError } from "@/lib/api";
 import { cn } from "@/lib/cn";
 import { shortAddress } from "@/lib/format";
+import { teamSession } from "@/lib/team-session";
 
 /** Kept for this tab only: closing it signs the admin out. */
 const KEY = "fl3x:admin-key";
@@ -69,11 +70,13 @@ export function AdminPanel() {
     } catch (err) {
       sessionStorage.removeItem(KEY);
       setKey(null);
-      setError(err instanceof ApiRequestError && err.status === 403 ? "Wrong admin key" : "Can't reach the API");
+      // Without the right key the API answers 404, as if /admin didn't exist.
+      setError(err instanceof ApiRequestError && (err.status === 404 || err.status === 403) ? "Wrong admin key" : "Can't reach the API");
     }
   };
 
   useEffect(() => {
+    teamSession.rememberAdminPath(window.location.pathname);
     const k = sessionStorage.getItem(KEY);
     if (k) void load(k);
   }, []);
@@ -177,6 +180,8 @@ export function AdminPanel() {
 
       <Members adminKey={key} />
 
+      <ReservedProfiles adminKey={key} />
+
       <WalletGrants adminKey={key} />
 
       <Invites adminKey={key} />
@@ -218,6 +223,10 @@ type Member = {
   founder: boolean;
   badges: string[];
   profile: { displayName: string | null; avatarUrl: string | null } | null;
+  linkedWallets: { id: string; chain: "solana" | "evm"; address: string; signed: boolean }[];
+  /** Made ahead by the team, waiting for this X handle to sign in. */
+  reservedFor: string | null;
+  previewCode: string | null;
 };
 const TEAM_BADGES = BADGES.filter((b) => b.unlock.kind === "granted");
 
@@ -337,9 +346,250 @@ function Members({ adminKey }: { adminKey: string }) {
               })}
             </div>
           </div>
+
+          {(member.founder || member.reservedFor) && (
+            <TeamWallets
+              member={member}
+              adminKey={adminKey}
+              onChange={(next) => {
+                setMember(next);
+                setResults((r) => r?.map((m) => (m.id === next.id ? next : m)) ?? null);
+              }}
+            />
+          )}
         </div>
       )}
     </Card>
+  );
+}
+
+/**
+ * Founders and reserved profiles only: any address, no signature, for their
+ * wallet widgets. Never counts for a tier; a real signature takes it over.
+ */
+function TeamWallets({ member, adminKey, onChange }: { member: Member; adminKey: string; onChange: (m: Member) => void }) {
+  const [address, setAddress] = useState("");
+  const [label, setLabel] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const headers = { "x-admin-key": adminKey };
+  const unsigned = member.linkedWallets.filter((w) => !w.signed);
+
+  const run = async (call: () => Promise<Member>) => {
+    setBusy(true);
+    setError(null);
+    try {
+      onChange(await call());
+      setAddress("");
+      setLabel("");
+    } catch (err) {
+      setError(err instanceof ApiRequestError ? err.message : "Could not save");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div>
+      <p className="mb-2 text-xs text-fg-2">Wallets without signature</p>
+      {unsigned.length > 0 && (
+        <ul className="mb-2 flex flex-col gap-1">
+          {unsigned.map((w) => (
+            <li key={w.id} className="flex items-center gap-3 rounded-xl bg-white/[0.03] px-3 py-2 text-sm">
+              <span className="rounded-md bg-white/[0.06] px-2 py-1 text-[10px] leading-none text-fg-2 uppercase">{w.chain}</span>
+              <span className="flex-1 truncate font-mono" title={w.address}>
+                {shortAddress(w.address)}
+              </span>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => void run(() => api<Member>(`/admin/users/${member.id}/wallets/${w.id}`, { method: "DELETE", headers }))}
+                aria-label="Remove wallet"
+                className="flex size-8 items-center justify-center rounded-lg text-fg-3 transition-colors hover:bg-danger/10 hover:text-danger"
+              >
+                <Icon icon={Delete02Icon} size={16} />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      <form
+        className="flex flex-col gap-2 sm:flex-row"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (address.trim()) void run(() => api<Member>(`/admin/users/${member.id}/wallets`, { method: "POST", headers, json: { address: address.trim(), label: label.trim() || undefined } }));
+        }}
+      >
+        <input className={cn(inputClass, "font-mono")} placeholder="Solana or EVM address" value={address} onChange={(e) => setAddress(e.target.value)} spellCheck={false} />
+        <input className={cn(inputClass, "sm:w-40")} placeholder="Label (optional)" value={label} maxLength={40} onChange={(e) => setLabel(e.target.value)} />
+        <Button type="submit" size="md" className="shrink-0" disabled={busy || !address.trim()}>
+          Add
+        </Button>
+      </form>
+      {error && <p className="mt-2 text-sm text-danger">{error}</p>}
+      <p className="mt-1.5 text-[11px] text-fg-3">Shows in their wallet widgets like a linked wallet. Never counts for a tier. If the real owner signs for it, it moves to them.</p>
+    </div>
+  );
+}
+
+/**
+ * Profiles built ahead for known people: the handle is held, the profile is
+ * hidden (except the private preview link), and it becomes theirs the first
+ * time they sign in with that X account.
+ */
+function ReservedProfiles({ adminKey }: { adminKey: string }) {
+  const [list, setList] = useState<Member[] | null>(null);
+  const [username, setUsername] = useState("");
+  const [xHandle, setXHandle] = useState("");
+  const [displayName, setDisplayName] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const headers = { "x-admin-key": adminKey };
+
+  const reload = () =>
+    api<Member[]>("/admin/reserved", { headers })
+      .then(setList)
+      .catch(() => setError("Could not load reserved profiles"));
+  useEffect(() => {
+    void reload();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const create = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      await api<Member>("/admin/reserved", {
+        method: "POST",
+        headers,
+        json: { username: username.trim(), xHandle: (xHandle.trim() || username.trim()).replace(/^@/, ""), displayName: displayName.trim() || undefined, tier: "premium" },
+      });
+      setUsername("");
+      setXHandle("");
+      setDisplayName("");
+      await reload();
+    } catch (err) {
+      setError(err instanceof ApiRequestError ? err.message : "Could not reserve");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Card
+      title="Reserved profiles"
+      desc="Hold a handle for someone known and build their profile ahead (Premium). Hidden from everyone except the preview link. The first time they sign in with that X account, it's theirs."
+    >
+      <form
+        className="grid gap-2 sm:grid-cols-[1fr_1fr_1fr_auto]"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (username.trim()) void create();
+        }}
+      >
+        <input className={inputClass} placeholder="FL3X username" value={username} onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/\s/g, ""))} spellCheck={false} />
+        <input className={inputClass} placeholder="X handle (same if empty)" value={xHandle} onChange={(e) => setXHandle(e.target.value.replace(/\s/g, ""))} spellCheck={false} />
+        <input className={inputClass} placeholder="Display name" value={displayName} maxLength={40} onChange={(e) => setDisplayName(e.target.value)} />
+        <Button type="submit" size="md" disabled={busy || !username.trim()}>
+          Reserve
+        </Button>
+      </form>
+      {error && <p className="mt-2 text-sm text-danger">{error}</p>}
+      {list && list.length === 0 && <p className="mt-3 text-sm text-fg-3">No reserved profile yet.</p>}
+      {list && list.length > 0 && (
+        <ul className="mt-4 flex flex-col gap-2">
+          {list.map((m) => (
+            <ReservedRow key={m.id} member={m} adminKey={adminKey} onChange={(next) => setList((l) => l?.map((x) => (x.id === next.id ? next : x)) ?? null)} onRemoved={() => void reload()} />
+          ))}
+        </ul>
+      )}
+    </Card>
+  );
+}
+
+function ReservedRow({ member: m, adminKey, onChange, onRemoved }: { member: Member; adminKey: string; onChange: (m: Member) => void; onRemoved: () => void }) {
+  const [copied, setCopied] = useState(false);
+  const [confirming, setConfirming] = useState(false);
+  const [open, setOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const headers = { "x-admin-key": adminKey };
+  const previewUrl = `${window.location.origin}/@${m.username}?preview=${m.previewCode}`;
+
+  const build = async () => {
+    setError(null);
+    try {
+      const s = await api<{ token: string; username: string }>(`/admin/reserved/${m.id}/session`, { method: "POST", headers });
+      teamSession.set(s);
+      window.location.href = "/dashboard/customize";
+    } catch (err) {
+      setError(err instanceof ApiRequestError ? err.message : "Could not open it");
+    }
+  };
+  const remove = async () => {
+    try {
+      await api(`/admin/reserved/${m.id}`, { method: "DELETE", headers });
+      onRemoved();
+    } catch (err) {
+      setError(err instanceof ApiRequestError ? err.message : "Could not delete");
+      setConfirming(false);
+    }
+  };
+
+  return (
+    <li className="flex flex-col gap-3 rounded-2xl bg-white/[0.03] p-3">
+      <div className="flex flex-wrap items-center gap-3">
+        <span className="size-10 shrink-0 overflow-hidden rounded-full bg-white/10">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          {m.profile?.avatarUrl && <img src={m.profile.avatarUrl} alt="" className="size-full object-cover" />}
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="truncate font-primary text-lg leading-none uppercase">{m.profile?.displayName || m.username}</p>
+          <p className="mt-1 text-xs text-fg-3">
+            @{m.username} · for X @{m.xHandle} · {m.tier}
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <Button size="sm" onClick={() => void build()}>
+            Build profile
+          </Button>
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={() => {
+              void navigator.clipboard.writeText(previewUrl);
+              setCopied(true);
+              setTimeout(() => setCopied(false), 1500);
+            }}
+          >
+            {copied ? "Copied" : "Copy preview link"}
+          </Button>
+          <Button size="sm" variant="secondary" onClick={() => setOpen((o) => !o)}>
+            Wallets
+          </Button>
+          {confirming ? (
+            <>
+              <button type="button" onClick={() => setConfirming(false)} className="rounded-lg px-2 py-1.5 text-xs text-fg-3 hover:text-fg">
+                Keep
+              </button>
+              <button type="button" onClick={() => void remove()} className="rounded-lg bg-danger/15 px-2.5 py-1.5 text-xs text-danger hover:bg-danger/25">
+                Delete
+              </button>
+            </>
+          ) : (
+            <button
+              type="button"
+              aria-label="Delete reserved profile"
+              onClick={() => setConfirming(true)}
+              className="flex size-8 items-center justify-center rounded-lg text-fg-3 transition-colors hover:bg-danger/10 hover:text-danger"
+            >
+              <Icon icon={Delete02Icon} size={16} />
+            </button>
+          )}
+        </div>
+      </div>
+      {error && <p className="text-sm text-danger">{error}</p>}
+      {open && <TeamWallets member={m} adminKey={adminKey} onChange={onChange} />}
+    </li>
   );
 }
 

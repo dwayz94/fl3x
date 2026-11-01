@@ -1,11 +1,12 @@
 import type { FastifyInstance } from "fastify";
-import { and, desc, eq, gte, isNotNull, sql } from "drizzle-orm";
+import { and, desc, eq, gte, isNotNull, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
 import { normalizeUsername, validateUsername, walletProblem, type ExploreProfile, type FullPublicProfile, type PublicConfig } from "@fl3x/shared";
 import { db, schema } from "../db";
 import { env } from "../env";
 import { getSettings } from "../lib/settings";
 import { notFound } from "../lib/errors";
+import { isPreviewCode } from "../lib/secrets";
 import { badgesFor, badgeStats, loadProfile } from "../lib/profiles";
 import { resolveInviteCode } from "../lib/invites";
 import { isUsernameTaken } from "../lib/users";
@@ -64,13 +65,13 @@ export async function publicRoutes(app: FastifyInstance) {
       .from(schema.users)
       .innerJoin(schema.profiles, eq(schema.profiles.userId, schema.users.id))
       .leftJoin(views, eq(views.userId, schema.users.id))
-      .where(and(isNotNull(schema.users.username), eq(schema.profiles.isPublished, true)))
+      .where(and(isNotNull(schema.users.username), eq(schema.profiles.isPublished, true), isNull(schema.users.reservedFor)))
       .orderBy(...(sort === "new" ? [desc(schema.users.createdAt)] : [desc(sql`coalesce(${views.views}, 0)`), desc(schema.users.createdAt)]))
       .limit(limit);
     return rows.map(({ tier, ...r }) => ({ ...r, username: r.username!, verified: tier === "premium", views: Number(r.views), joinedAt: r.joinedAt.toISOString() }));
   });
 
-  app.get<{ Params: { username: string } }>("/profiles/:username", async (req): Promise<FullPublicProfile> => {
+  app.get<{ Params: { username: string }; Querystring: { preview?: string } }>("/profiles/:username", async (req): Promise<FullPublicProfile> => {
     const [row] = await db
       .select({ user: schema.users, published: schema.profiles.isPublished })
       .from(schema.users)
@@ -78,6 +79,8 @@ export async function publicRoutes(app: FastifyInstance) {
       .where(eq(schema.users.username, normalizeUsername(req.params.username)))
       .limit(1);
     if (!row || !row.published) throw notFound("Profile not found");
+    // Made ahead by the team: only the private preview link shows it until its owner signs in.
+    if (row.user.reservedFor && !isPreviewCode(row.user.username!, req.query.preview)) throw notFound("Profile not found");
     const [{ views } = { views: 0 }] = await db
       .select({ views: sql<number>`count(*)::int` })
       .from(schema.profileEvents)

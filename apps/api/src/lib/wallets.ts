@@ -20,7 +20,7 @@ export async function verifiedWallets(user: UserRow): Promise<LinkedWallet[]> {
   const linked = rows.map((r) => ({ id: r.id, chain: r.chain, address: r.address, label: r.label, source: "signature" as const }));
   // A sign-in wallet another account linked by signature belongs to that account (widgets and tier alike).
   const claimed = user.wallets.length
-    ? new Set((await db.select({ address: schema.wallets.address }).from(schema.wallets).where(and(inArray(schema.wallets.address, user.wallets), ne(schema.wallets.userId, user.id)))).map((r) => r.address))
+    ? new Set((await db.select({ address: schema.wallets.address }).from(schema.wallets).where(and(inArray(schema.wallets.address, user.wallets), ne(schema.wallets.userId, user.id), eq(schema.wallets.signed, true)))).map((r) => r.address))
     : new Set<string>();
   const login = user.wallets
     .filter((a) => !linked.some((l) => l.address === a) && !claimed.has(a))

@@ -8,6 +8,7 @@ import type { Me } from "@fl3x/shared";
 import { site } from "@/config/site";
 import { api } from "@/lib/api";
 import { DEV_KEY, devSession } from "@/lib/dev-session";
+import { teamSession } from "@/lib/team-session";
 import { AuthContext, noop, useAuth, type AuthState } from "./auth-context";
 
 export { useAuth };
@@ -54,16 +55,22 @@ function DevAuth({ children }: { children: ReactNode }) {
 
 /** Public profiles don't sign anyone in: no Privy there, the page stays light. */
 const PrivyAuth = dynamic(() => import("./PrivyAuth"));
+/** Only loaded in a tab /admin opened on a reserved profile. */
+const TeamAuth = dynamic(() => import("./TeamAuth"));
 
 export function Providers({ children }: { children: ReactNode }) {
   const queryClient = useMemo(() => new QueryClient({ defaultOptions: { queries: { staleTime: 30_000, retry: 1 } } }), []);
   const pathname = usePathname();
   const publicProfile = pathname.startsWith("/u/") || pathname.startsWith("/@");
+  const [team, setTeam] = useState<{ token: string; username: string } | null>(null);
+  useEffect(() => setTeam(teamSession.get()), []);
 
   return (
     <QueryClientProvider client={queryClient}>
       {publicProfile ? (
         children
+      ) : team && pathname.startsWith("/dashboard") ? (
+        <TeamAuth session={team}>{children}</TeamAuth>
       ) : site.privyAppId && !devSession.enabled ? (
         <PrivyAuth>{children}</PrivyAuth>
       ) : process.env.NODE_ENV !== "production" ? (

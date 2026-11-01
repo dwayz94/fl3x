@@ -64,6 +64,13 @@
       "when": 1793467746061,
       "tag": "0008_wallet_grants",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1793536475221,
+      "tag": "0009_reserved_profiles",
+      "breakpoints": true
     }
   ]
 }
