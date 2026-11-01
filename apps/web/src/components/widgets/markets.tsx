@@ -102,18 +102,18 @@ export function MoversWidget({ w }: { w: Widget }) {
   const best = moved[0]!;
   const worst = moved.length > 1 ? moved[moved.length - 1]! : null;
 
+  // Everything in one shrinking column: a long symbol or a big % gets cut, never pushes out of the card.
   const row = (label: string, h: (typeof moved)[number]) => (
-    <div className="flex min-w-0 flex-1 items-center gap-2.5 rounded-2xl bg-white/[0.05] p-2.5">
-      <Avatar src={h.iconUrl} className="size-9 rounded-full" />
+    <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden rounded-2xl bg-white/[0.05] px-2.5 py-2">
+      <Avatar src={h.iconUrl} className="size-8 shrink-0 rounded-full" />
       <div className="min-w-0 flex-1">
-        <p className="text-[10px] leading-none text-fg-2 uppercase">{label}</p>
-        <p className="mt-1 truncate font-primary text-base leading-none uppercase">{h.symbol}</p>
-      </div>
-      <div className="text-right">
-        <p className="font-primary text-base leading-none" style={{ color: tone(h.change24h!) }}>
-          {fmtPct(h.change24h!)}
+        <p className="truncate text-[10px] leading-none text-fg-2 uppercase">
+          {label} · <span className="text-fg">{h.symbol}</span>
         </p>
-        <p className="mt-1 text-[11px] leading-none text-fg-2">{signed(h.moveUsd)}</p>
+        <p className="mt-1 truncate font-primary text-base leading-none" style={{ color: tone(h.change24h!) }}>
+          {fmtPct(h.change24h!)}
+          {w.size === "large" && <span className="ml-1.5 font-secondary text-[11px] text-fg-2">{signed(h.moveUsd)}</span>}
+        </p>
       </div>
     </div>
   );
@@ -145,18 +145,22 @@ export function CalendarWidget({ w }: { w: Widget }) {
   const changes = dailyChanges(data.history);
   const byDay = new Map(changes.map((c) => [c.day, c.change]));
   const biggest = Math.max(1, ...changes.map((c) => Math.abs(c.change)));
-  const cells = w.size === "large" ? 35 : 30;
+  // Large: five weeks. Long: the last three, so the squares fit the card's height and leave room for the total.
+  const long = w.size === "long";
+  const cells = long ? 21 : 35;
   const today = new Date();
   const days = Array.from({ length: cells }, (_, i) => {
     const d = new Date(today);
     d.setUTCDate(d.getUTCDate() - (cells - 1 - i));
     return d.toISOString().slice(0, 10);
   });
-  const green = changes.filter((c) => c.change > 0).length;
-  const total = changes.reduce((a, c) => a + c.change, 0);
+  // The total and green days cover what the squares show (30 days of data at most).
+  const shown = long ? changes.filter((c) => days.includes(c.day)) : changes;
+  const green = shown.filter((c) => c.change > 0).length;
+  const total = shown.reduce((a, c) => a + c.change, 0);
 
   const grid = (
-    <div className={cn("grid gap-1", w.size === "large" ? "grid-cols-7" : "grid-flow-col grid-rows-2")}>
+    <div className={cn("grid grid-cols-7", long ? "w-[130px] shrink-0 gap-[3px]" : "gap-1")}>
       {days.map((day) => {
         const c = byDay.get(day);
         const strength = c === undefined ? 0 : 0.25 + 0.75 * Math.min(1, Math.abs(c) / biggest);
@@ -164,7 +168,7 @@ export function CalendarWidget({ w }: { w: Widget }) {
           <span
             key={day}
             title={c === undefined ? day : `${day}: ${signed(c)}`}
-            className={cn("aspect-square rounded-[4px]", w.size === "long" && "w-[18px]")}
+            className="aspect-square rounded-[4px]"
             style={{ background: c === undefined ? "rgba(255,255,255,0.06)" : `color-mix(in srgb, ${tone(c)} ${Math.round(strength * 100)}%, transparent)` }}
           />
         );
@@ -172,20 +176,20 @@ export function CalendarWidget({ w }: { w: Widget }) {
     </div>
   );
   const head = (
-    <div>
-      <p className="font-primary text-xl leading-none" style={{ color: tone(total) }}>
+    <div className="min-w-0">
+      <p className="truncate font-primary text-xl leading-none" style={{ color: tone(total) }}>
         {signed(total)}
       </p>
-      <p className="mt-1 text-[11px] text-fg-2">
-        {green} green day{green === 1 ? "" : "s"} · 30d
+      <p className="mt-1 truncate text-[11px] text-fg-2">
+        {green} green day{green === 1 ? "" : "s"} · {long ? "3 weeks" : "30d"}
       </p>
     </div>
   );
-  if (w.size === "long") {
+  if (long) {
     return (
-      <WidgetFrame size="long" opacity={opacity}>
+      <WidgetFrame size="long" opacity={opacity} className="justify-between gap-3">
         {head}
-        <div className="ml-auto">{grid}</div>
+        {grid}
       </WidgetFrame>
     );
   }
