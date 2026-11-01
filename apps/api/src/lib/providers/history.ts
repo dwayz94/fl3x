@@ -389,6 +389,11 @@ const queued = new Map<string, Promise<void>>();
 /** One rebuild at a time: each one is heavy (Helius pages, DefiLlama), and live widget reads share those APIs. */
 let chain: Promise<unknown> = Promise.resolve();
 
+/** These wallets' history was deleted (account deletion): rebuild it again next time they're shown. */
+export function forgetHistory(wallets: string[]) {
+  for (const w of wallets) settled.delete(w);
+}
+
 /** Forget a wallet's rebuilt past and redo it (from /admin, after a fix or a data issue). */
 export async function rebuildHistory(wallet: string, log: (msg: string) => void = () => {}) {
   // Let a run in progress finish first: it would mark the wallet done again after the reset.

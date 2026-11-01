@@ -3,6 +3,8 @@ import { and, eq, gt, inArray, isNull, lt, lte, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import { claimRequest, normalizeUsername, TIER_LIMITS, waitlistRequest, type WaitlistStatus } from "@fl3x/shared";
 import { db, schema } from "../db";
+import { forgetHistory } from "../lib/providers/history";
+import { verifiedWallets } from "../lib/wallets";
 import { requirePrivyId, requireUser } from "../lib/auth";
 import { getSettings } from "../lib/settings";
 import { adoptXAvatar } from "../lib/x-avatar";
@@ -38,13 +40,18 @@ export async function meRoutes(app: FastifyInstance) {
     if (!expected || confirm.trim().replace(/^@/, "").toLowerCase() !== expected.toLowerCase()) {
       throw badRequest("Type your username to confirm", "confirm_mismatch");
     }
-    const linked = await db.select({ address: schema.wallets.address }).from(schema.wallets).where(eq(schema.wallets.userId, user.id));
-    const addresses = [...new Set([...user.wallets, ...linked.map((w) => w.address)])];
+    // Only wallets that are theirs: a sign-in wallet another account linked by signature keeps its history.
+    const addresses = (await verifiedWallets(user)).map((w) => w.address);
     await db.transaction(async (tx) => {
-      if (addresses.length) await tx.delete(schema.walletSnapshots).where(inArray(schema.walletSnapshots.wallet, addresses));
+      if (addresses.length) {
+        await tx.delete(schema.walletSnapshots).where(inArray(schema.walletSnapshots.wallet, addresses));
+        // So whoever links one of these later gets its past rebuilt again.
+        await tx.delete(schema.walletBackfills).where(inArray(schema.walletBackfills.wallet, addresses));
+      }
       if (user.xHandle) await tx.delete(schema.waitlist).where(eq(schema.waitlist.xHandle, user.xHandle.toLowerCase()));
       await tx.delete(schema.users).where(eq(schema.users.id, user.id));
     });
+    forgetHistory(addresses);
     req.log.info({ userId: user.id }, "account deleted");
     return { deleted: true };
   });

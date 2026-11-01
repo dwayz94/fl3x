@@ -29,7 +29,11 @@ export async function cached<T>(key: string, ttlSeconds: number, load: () => Pro
   }
 
   const pending = inflight.get(key);
-  if (pending) return pending as Promise<T>;
+  if (pending) {
+    // Someone is already refreshing it: a recent value now beats waiting for the upstream.
+    if (stale !== undefined && recent(hit!.expiresAt, ttlSeconds)) return stale;
+    return pending as Promise<T>;
+  }
 
   const p = (async () => {
     try {
@@ -52,8 +56,14 @@ export async function cached<T>(key: string, ttlSeconds: number, load: () => Pro
     }
   })();
   inflight.set(key, p);
+  // Stale-while-revalidate: just expired, the visitor gets it at once and the refresh runs behind
+  // (it can't reject: with a stale value it falls back to it). Older than that, wait for fresh data.
+  if (stale !== undefined && recent(hit!.expiresAt, ttlSeconds)) return stale;
   return p;
 }
+
+/** Expired less than 3 lifetimes ago (and never more than an hour): still fine to show while refreshing. */
+const recent = (expiresAt: Date, ttlSeconds: number) => Date.now() - expiresAt.getTime() < Math.min(3 * ttlSeconds, 3_600) * 1000;
 
 export async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, { ...init, signal: AbortSignal.timeout(8000) });

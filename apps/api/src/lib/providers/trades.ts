@@ -119,6 +119,9 @@ function walletTrades(wallet: string, key: string) {
   });
 }
 
+/** Three significant digits. */
+const round3 = (n: number) => (n === 0 ? 0 : Number(n.toPrecision(3)));
+
 type JupToken = { id: string; symbol: string; name: string; icon?: string };
 
 /** Same cache key and shape as the portfolio's token metadata. */
@@ -161,14 +164,15 @@ export async function getTrades(wallets: string[]): Promise<TradesData> {
     items: trades.map((t) => {
       const m = meta.get(t.mint);
       const quotePrice = t.quoteMint === SOL ? sol : 1;
+      // Exact amounts and seconds would find the transaction (so the wallet) on an explorer: rounded, as the widget shows them anyway.
       return {
         id: createHash("sha256").update(t.signature).digest("hex").slice(0, 16),
-        at: t.at,
+        at: new Date(Math.floor(new Date(t.at).getTime() / 3_600_000) * 3_600_000).toISOString(),
         side: t.side,
         token: { address: t.mint, symbol: m?.symbol ?? `${t.mint.slice(0, 4)}…`, name: m?.name ?? null, iconUrl: m?.icon ?? null },
-        amount: t.amount,
-        quote: { symbol: STABLES[t.quoteMint] ?? "SOL", amount: t.quoteAmount },
-        valueUsd: quotePrice == null ? null : t.quoteAmount * quotePrice,
+        amount: round3(t.amount),
+        quote: { symbol: STABLES[t.quoteMint] ?? "SOL", amount: round3(t.quoteAmount) },
+        valueUsd: quotePrice == null ? null : round3(t.quoteAmount * quotePrice),
       };
     }),
     wallets: solana.length,
