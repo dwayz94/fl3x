@@ -39,9 +39,14 @@ type NewMedia = Omit<typeof schema.media.$inferInsert, "id" | "bytes" | "stored"
 export async function saveMedia(file: NewMedia): Promise<{ id: string; url: string }> {
   const id = randomUUID();
   if (r2) {
-    await putObject(`${id}.${extOf(file.mime)}`, file.bytes, file.mime);
-    await db.insert(schema.media).values({ ...file, id, bytes: null, stored: "r2" });
-    return { id, url: mediaUrl(id, file.mime, "r2") };
+    try {
+      await putObject(`${id}.${extOf(file.mime)}`, file.bytes, file.mime);
+      await db.insert(schema.media).values({ ...file, id, bytes: null, stored: "r2" });
+      return { id, url: mediaUrl(id, file.mime, "r2") };
+    } catch (err) {
+      // R2 down or misconfigured (keys, permissions): the upload still works, kept in Postgres until it can move.
+      console.error(`media ${id}: ${(err as Error).message}, kept in Postgres`);
+    }
   }
   await db.insert(schema.media).values({ ...file, id, stored: "db" });
   return { id, url: mediaUrl(id, file.mime, "db") };
