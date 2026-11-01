@@ -8,7 +8,9 @@ import {
   BACKGROUNDS, BADGES, CURSORS, FONTS, WIDGETS, WIDGET_TYPES,
   type EditableProfile, type ProfileTheme, type Tier, type WidgetSize, type WidgetType,
 } from "@fl3x/shared";
-import { Icon, ImageInput, VideoInput } from "@/components/ui";
+import { Icon } from "@/components/ui";
+import { ImageInput } from "@/components/ui/ImageInput";
+import { VideoInput } from "@/components/ui/VideoInput";
 import { AnimatedBackdrop } from "@/components/profile/AnimatedBackdrop";
 import { BadgeIcon } from "@/components/profile/Badges";
 import { backdrops, cursorStyle, cursorSvg, fontClass } from "@/components/profile/theme";

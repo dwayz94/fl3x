@@ -154,7 +154,7 @@ export const wallets = pgTable("wallets", {
   /** false: added by the team from /admin without a signature (founders and reserved profiles). Shows in widgets, never counts for a tier. */
   signed: boolean("signed").notNull().default(true),
   verifiedAt: timestamp("verified_at", { withTimezone: true }).notNull().defaultNow(),
-}, (t) => [uniqueIndex("wallets_chain_address_idx").on(t.chain, t.address), index("wallets_user_idx").on(t.userId)]);
+}, (t) => [uniqueIndex("wallets_chain_address_idx").on(t.chain, t.address), index("wallets_user_idx").on(t.userId), index("wallets_address_idx").on(t.address)]);
 
 /** One-time messages to sign when linking a wallet. */
 export const walletChallenges = pgTable("wallet_challenges", {

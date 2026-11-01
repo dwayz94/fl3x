@@ -52,7 +52,7 @@ function linkLabel(target: string) {
 
 const sourceIcon: Partial<Record<string, AnyIcon>> = {
   x: linkIcons.x, telegram: linkIcons.telegram, discord: linkIcons.discord, youtube: linkIcons.youtube,
-  tiktok: linkIcons.tiktok, instagram: linkIcons.instagram, twitch: linkIcons.twitch, google: linkIcons.website, other: linkIcons.website,
+  tiktok: linkIcons.tiktok, instagram: linkIcons.instagram, twitch: linkIcons.twitch, kick: linkIcons.kick, google: linkIcons.website, other: linkIcons.website,
 };
 
 /** Ranked list with a proportional bar behind each row. */
@@ -126,7 +126,7 @@ export default function AnalyticsPage() {
             <div className="flex min-h-0 flex-1 items-end [&_svg]:max-h-full">
               <LineChart
                 points={data.daily.map((d) => ({
-                  label: new Date(d.date).toLocaleDateString("en-US", { day: "numeric", month: "short" }),
+                  label: new Date(d.date + "T00:00:00Z").toLocaleDateString("en-US", { day: "numeric", month: "short", timeZone: "UTC" }),
                   value: d.views,
                 }))}
               />

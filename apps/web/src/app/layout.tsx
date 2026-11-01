@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { preconnect } from "react-dom";
 import "./globals.css";
 import { fontPrimary, fontSecondary } from "@/config/fonts";
 import { site } from "@/config/site";
@@ -23,6 +24,8 @@ export const metadata: Metadata = {
 export const viewport: Viewport = { themeColor: "#000000" };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  // Widgets, avatars and the session all talk to the API: open that connection while the page loads.
+  preconnect(site.apiUrl, { crossOrigin: "anonymous" });
   return (
     <html lang="en" data-scroll-behavior="smooth" className={`${fontPrimary.variable} ${fontSecondary.variable}`}>
       <body className="min-h-screen antialiased">

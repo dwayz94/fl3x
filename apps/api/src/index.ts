@@ -44,7 +44,8 @@ async function tierCheck() {
   checkingTiers = true;
   try {
     const paying = await db.select().from(schema.users).where(ne(schema.users.tier, "none"));
-    for (const user of paying) await refreshTier(user, true);
+    // Founders and Premium gifts stay Premium whatever they hold: nothing to re-read for them.
+    for (const user of paying) if (user.role !== "admin" && user.tierOverride !== "premium") await refreshTier(user, true);
   } catch (err) {
     app.log.error(err);
     captureError(err, { job: "tier-check" });

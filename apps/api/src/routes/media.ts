@@ -240,6 +240,9 @@ export async function mediaRoutes(app: FastifyInstance) {
         end = size - 1;
       }
       if (start >= size || start > end) return reply.status(416).header("content-range", `bytes */${size}`).send();
+      // At most 2 MB per answer: "bytes=0-" would otherwise load the whole video into memory for each viewer.
+      // Browsers ask for the next slice on their own.
+      end = Math.min(end, start + 2 * 1024 * 1024 - 1);
       // Only the asked slice leaves Postgres (substring is 1-based).
       const [part] = await db
         .select({ bytes: sql<Uint8Array>`substring(${schema.media.bytes} from ${start + 1} for ${end - start + 1})` })

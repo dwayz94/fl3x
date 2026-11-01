@@ -85,6 +85,13 @@
       "when": 1793539942952,
       "tag": "0011_rebuilt_snapshots",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1793546505935,
+      "tag": "0012_wallets_address_idx",
+      "breakpoints": true
     }
   ]
 }

@@ -15,8 +15,9 @@ const UP = "#2FE3AC";
 const DOWN = "#FF4D4D";
 const signed = (v: number) => `${v >= 0 ? "+" : "−"}${fmtUsdCompact(Math.abs(v))}`;
 const tone = (v: number) => (v >= 0 ? UP : DOWN);
-/** Prices from $0.0000181 to $98,200: tiny ones keep 3 significant digits instead of rounding to $0.00. */
-const fmtPrice = (v: number) => (v >= 1 ? fmtUsd(v) : `$${v.toPrecision(3).replace(/0+$/, "")}`);
+/** Prices from $0.0000181 to $98,200: tiny ones keep 3 significant digits instead of rounding to $0.00 (never 1.8e-7). */
+const tiny = new Intl.NumberFormat("en-US", { maximumSignificantDigits: 3, maximumFractionDigits: 20 });
+const fmtPrice = (v: number) => (v >= 1 ? fmtUsd(v) : v === 0 ? "$0" : `$${tiny.format(v)}`);
 
 function ago(iso: string) {
   const s = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000);
@@ -41,8 +42,9 @@ function slices(data: PortfolioData, count: number) {
 
 export function AllocationWidget({ w }: { w: Widget }) {
   const opacity = num(w.settings.bgOpacity, 100);
-  const { data, isLoading } = usePortfolio(w, "1d");
+  const { data, isLoading, isError } = usePortfolio(w, "1d");
   if (isLoading) return <WSkeleton size={w.size} />;
+  if (isError) return <WEmpty size={w.size} label="Unavailable right now" />;
   if (!data || data.wallets === 0) return <WEmpty size={w.size} label="Link a wallet in Settings" />;
   if (data.holdings.length === 0) return <WEmpty size={w.size} label="No tokens in these wallets yet" />;
 
@@ -59,8 +61,8 @@ export function AllocationWidget({ w }: { w: Widget }) {
   );
   const legend = (
     <ul className={cn("grid min-w-0 flex-1 gap-x-3 gap-y-1", w.size === "long" && "grid-cols-2")}>
-      {parts.map((p) => (
-        <li key={p.label} className="flex min-w-0 items-center gap-1.5">
+      {parts.map((p, i) => (
+        <li key={i} className="flex min-w-0 items-center gap-1.5">
           <span className="size-2 shrink-0 rounded-full" style={{ background: p.color }} />
           <span className="truncate font-primary text-sm leading-none uppercase">{p.label}</span>
           <span className="ml-auto font-primary text-sm leading-none text-fg-2">{Math.round(p.pct)}%</span>
@@ -90,8 +92,9 @@ export function AllocationWidget({ w }: { w: Widget }) {
 
 export function MoversWidget({ w }: { w: Widget }) {
   const opacity = num(w.settings.bgOpacity, 100);
-  const { data, isLoading } = usePortfolio(w, "1d");
+  const { data, isLoading, isError } = usePortfolio(w, "1d");
   if (isLoading) return <WSkeleton size={w.size} />;
+  if (isError) return <WEmpty size={w.size} label="Unavailable right now" />;
   if (!data || data.wallets === 0) return <WEmpty size={w.size} label="Link a wallet in Settings" />;
   // Dollar move over 24h: a small coin up 300% matters less than a big bag up 10%.
   const moved = data.holdings
@@ -128,21 +131,20 @@ export function MoversWidget({ w }: { w: Widget }) {
 
 /* ------------------------------------------------------------ P&L calendar */
 
-/** Day-by-day change from the hourly history: last value of each day minus the day before. */
-function dailyChanges(history: PortfolioData["history"]) {
-  const lastOfDay = new Map<string, number>();
-  for (const p of history) lastOfDay.set(p.at.slice(0, 10), p.valueUsd);
-  const days = [...lastOfDay.entries()].sort(([a], [b]) => a.localeCompare(b));
-  return days.slice(1).map(([day, v], i) => ({ day, change: v - days[i]![1] }));
+/** Day-by-day change from the daily closes (UTC): close of each day minus the day before. */
+function dailyChanges(daily: PortfolioData["daily"]) {
+  const days = [...daily].sort((a, b) => a.day.localeCompare(b.day));
+  return days.slice(1).map((d, i) => ({ day: d.day, change: d.valueUsd - days[i]!.valueUsd }));
 }
 
 export function CalendarWidget({ w }: { w: Widget }) {
   const opacity = num(w.settings.bgOpacity, 100);
-  const { data, isLoading } = usePortfolio(w, "1m");
+  const { data, isLoading, isError } = usePortfolio(w, "1m");
   if (isLoading) return <WSkeleton size={w.size} />;
+  if (isError) return <WEmpty size={w.size} label="Unavailable right now" />;
   if (!data || data.wallets === 0) return <WEmpty size={w.size} label="Link a wallet in Settings" />;
 
-  const changes = dailyChanges(data.history);
+  const changes = dailyChanges(data.daily ?? []);
   const byDay = new Map(changes.map((c) => [c.day, c.change]));
   const biggest = Math.max(1, ...changes.map((c) => Math.abs(c.change)));
   // Large: five weeks. Long: the last three, so the squares fit the card's height and leave room for the total.
@@ -318,21 +320,21 @@ export function HyperliquidWidget({ w }: { w: Widget }) {
   const pnl = data.pnl[period];
   const head = (
     <div className="min-w-0">
-      <p className="flex items-center gap-1.5 font-primary text-xs leading-none" style={{ color: HL }}>
-        <span className="size-2 rounded-full" style={{ background: HL }} />
-        HYPERLIQUID · {HL_LABEL[period]}
+      <p className="flex min-w-0 items-center gap-1.5 font-primary text-xs leading-none" style={{ color: HL }}>
+        <span className="size-2 shrink-0 rounded-full" style={{ background: HL }} />
+        <span className="truncate">HYPERLIQUID · {HL_LABEL[period]}</span>
       </p>
-      <p className="mt-1.5 font-primary text-[26px] leading-none" style={{ color: pnl == null ? undefined : tone(pnl) }}>
+      <p className="mt-1.5 truncate font-primary text-[26px] leading-none" style={{ color: pnl == null ? undefined : tone(pnl) }}>
         {pnl == null ? "—" : signed(pnl)}
       </p>
-      <p className="mt-1 text-[11px] text-fg-2">Account {fmtUsdCompact(data.accountValue)}</p>
+      <p className="mt-1 truncate text-[11px] text-fg-2">Account {fmtUsdCompact(data.accountValue)}</p>
     </div>
   );
   const positions = data.positions.slice(0, w.size === "large" ? 3 : 2);
   const list = positions.length ? (
     <ul className="flex min-w-0 flex-1 flex-col gap-1.5">
-      {positions.map((p) => (
-        <li key={p.coin} className="flex items-center gap-2 text-sm">
+      {positions.map((p, i) => (
+        <li key={`${p.coin}-${p.side}-${i}`} className="flex items-center gap-2 text-sm">
           <span className="font-primary leading-none">{p.coin}</span>
           <span className="rounded-md px-1.5 py-0.5 text-[10px] leading-none text-bg" style={{ background: p.side === "long" ? UP : DOWN }}>
             {p.side.toUpperCase()}
@@ -352,7 +354,7 @@ export function HyperliquidWidget({ w }: { w: Widget }) {
     return (
       <WidgetFrame size="long" opacity={opacity} className="gap-4">
         {head}
-        <div className="ml-auto w-40">{list}</div>
+        <div className="ml-auto w-1/2 max-w-40 min-w-0">{list}</div>
       </WidgetFrame>
     );
   }

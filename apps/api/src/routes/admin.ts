@@ -293,7 +293,10 @@ export async function adminRoutes(app: FastifyInstance) {
     return grants.map((g) => ({ address: g.address, tier: g.tier, note: g.note, createdAt: g.createdAt, member: holder.get(g.address) ?? null }));
   });
 
-  /** Paste many addresses at once: deduped, invalid ones reported. Members already holding one get the tier now. */
+  /**
+   * Paste many addresses at once: deduped, invalid ones reported. Members already holding one get the tier now.
+   * Re-pasting a granted address with another tier / note updates it (an empty note keeps the old one).
+   */
   app.post("/admin/wallet-grants", async (req) => {
     const body = addGrants.parse(req.body);
     const raw = (Array.isArray(body.addresses) ? body.addresses : body.addresses.split(/[\s,;]+/)).map((a) => a.trim()).filter(Boolean);
@@ -301,15 +304,23 @@ export async function adminRoutes(app: FastifyInstance) {
     const valid = unique.filter(isSolanaKey);
     const invalid = unique.filter((a) => !isSolanaKey(a));
     if (valid.length > 2000) throw badRequest("At most 2000 addresses at once");
-    const added = valid.length
-      ? (await db
-          .insert(schema.walletGrants)
+    const g = schema.walletGrants;
+    // Only rows that change come back; `xmax = 0` tells a fresh insert from an update.
+    const changed = valid.length
+      ? await db
+          .insert(g)
           .values(valid.map((address) => ({ address, tier: body.tier, note: body.note || null })))
-          .onConflictDoNothing()
-          .returning({ address: schema.walletGrants.address })).map((r) => r.address)
+          .onConflictDoUpdate({
+            target: g.address,
+            set: { tier: sql`excluded.tier`, note: sql`coalesce(excluded.note, ${g.note})` },
+            setWhere: sql`(${g.tier}, ${g.note}) is distinct from (excluded.tier, coalesce(excluded.note, ${g.note}))`,
+          })
+          .returning({ address: g.address, inserted: sql<boolean>`(xmax = 0)` })
       : [];
-    await refreshTiersForWallets(added);
-    return { added: added.length, existing: valid.length - added.length, invalid: invalid.length, invalidSamples: invalid.slice(0, 200) };
+    await refreshTiersForWallets(changed.map((r) => r.address));
+    const added = changed.filter((r) => r.inserted).length;
+    const updated = changed.length - added;
+    return { added, updated, existing: valid.length - changed.length, invalid: invalid.length, invalidSamples: invalid.slice(0, 200) };
   });
 
   /** Take a grant back; whoever holds the wallet falls back to their own tier now. */

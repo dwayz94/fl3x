@@ -1,14 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { AnimatePresence, motion } from "motion/react";
 import { Add01Icon } from "@hugeicons/core-free-icons";
 import { Icon } from "@/components/ui";
 import { cn } from "@/lib/cn";
 
-const EASE = [0.22, 1, 0.36, 1] as const;
+const EASE = "ease-[cubic-bezier(0.22,1,0.36,1)]";
 
-/** One answer open at a time; it unfolds (height + fade) instead of jumping open. */
+/**
+ * One answer open at a time; it unfolds (height + fade) instead of jumping
+ * open. CSS only (a grid row from 0fr to 1fr): no animation library on the landing.
+ */
 export function Faq({ items }: { items: { q: string; a: string }[] }) {
   const [open, setOpen] = useState<number | null>(0);
   return (
@@ -24,25 +26,15 @@ export function Faq({ items }: { items: { q: string; a: string }[] }) {
               className="flex w-full items-center justify-between gap-4 p-4 pl-6 text-left"
             >
               <span className="font-primary text-2xl">{f.q}</span>
-              <motion.span animate={{ rotate: isOpen ? 45 : 0 }} transition={{ duration: 0.3, ease: EASE }} className={cn("shrink-0", isOpen ? "text-brand" : "text-fg-2")}>
+              <span className={cn("shrink-0 transition-transform duration-300", EASE, isOpen ? "rotate-45 text-brand" : "text-fg-2")}>
                 <Icon icon={Add01Icon} />
-              </motion.span>
+              </span>
             </button>
-            <AnimatePresence initial={false}>
-              {isOpen && (
-                <motion.div
-                  key="answer"
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: "auto", opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  transition={{ height: { duration: 0.35, ease: EASE }, opacity: { duration: 0.25 } }}
-                >
-                  <motion.p initial={{ y: -6 }} animate={{ y: 0 }} exit={{ y: -6 }} transition={{ duration: 0.35, ease: EASE }} className="px-6 pb-5 text-sm leading-relaxed text-fg-2">
-                    {f.a}
-                  </motion.p>
-                </motion.div>
-              )}
-            </AnimatePresence>
+            <div className={cn("grid transition-[grid-template-rows,opacity] duration-[350ms]", EASE, isOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0")}>
+              <div className="overflow-hidden" aria-hidden={!isOpen}>
+                <p className={cn("px-6 pb-5 text-sm leading-relaxed text-fg-2 transition-transform duration-[350ms]", EASE, isOpen ? "translate-y-0" : "-translate-y-1.5")}>{f.a}</p>
+              </div>
+            </div>
           </div>
         );
       })}

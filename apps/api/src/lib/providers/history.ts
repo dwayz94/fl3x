@@ -4,7 +4,7 @@ import { fetchJson } from "../cache";
 import { isEvmAddress } from "../wallets";
 import { archiveEndpoints, balancesOn, EVM_NETWORKS, units, type Network } from "./evm";
 import { heliusKey, type HeliusTx } from "./trades";
-import { currentValue, prices as jupiterPrices, rpc, SOL_MINT, solanaBalances } from "./wallet";
+import { currentValue, prices as jupiterPrices, rpc, SOL_MINT, solanaAccounts } from "./wallet";
 
 /**
  * Rebuilds a wallet's past value from the chain, once, so a P&L or portfolio
@@ -55,8 +55,9 @@ async function llamaHistory(keys: string[], nowSec: number): Promise<Map<string,
   const out = new Map<string, Series>();
   let prev = 0;
   for (const [maxAge, step] of SEGMENTS) {
-    const start = nowSec - maxAge;
-    const span = Math.ceil((maxAge - prev) / step) + 1;
+    // On the grid's own steps (multiples of `step`), so each point finds its price.
+    const start = Math.floor((nowSec - maxAge) / step) * step;
+    const span = Math.ceil((maxAge - prev) / step) + 2;
     prev = maxAge;
     const period = step >= DAY ? `${step / DAY}d` : `${step / HOUR}h`;
     // DefiLlama answers at most 500 points per request (coins × span).
@@ -112,15 +113,19 @@ function interpolate(series: Series | undefined, t: number): number | null {
 /* ------------------------------------------------------------------ solana */
 
 /** One transaction's effect on the wallet: amount change per mint (SOL and wrapped SOL under SOL_MINT). */
-type Move = { t: number; deltas: Map<string, number> };
+type Move = { sig: string; t: number; deltas: Map<string, number> };
 
 const add = (m: Map<string, number>, mint: string, n: number) => n && m.set(mint, (m.get(mint) ?? 0) + n);
 
-async function heliusMoves(wallet: string, key: string, since: number): Promise<{ moves: Move[]; reached: number }> {
+/**
+ * Transactions of `address` (the wallet, or one of its token accounts: a transfer in only
+ * names the token account), read as changes to `wallet`'s balances.
+ */
+async function heliusMoves(address: string, wallet: string, key: string, since: number, maxPages = MAX_HELIUS_PAGES): Promise<{ moves: Move[]; reached: number }> {
   const moves: Move[] = [];
   let before: string | undefined;
-  for (let page = 0; page < MAX_HELIUS_PAGES; page++) {
-    const url = `https://api.helius.xyz/v0/addresses/${wallet}/transactions?api-key=${encodeURIComponent(key)}&limit=100${before ? `&before=${before}` : ""}`;
+  for (let page = 0; page < maxPages; page++) {
+    const url = `https://api.helius.xyz/v0/addresses/${address}/transactions?api-key=${encodeURIComponent(key)}&limit=100${before ? `&before=${before}` : ""}`;
     let txs: HeliusTx[] | null = null;
     for (let attempt = 0; attempt < 4 && !txs; attempt++) txs = await fetchJson<HeliusTx[]>(url).catch(async () => (await sleep(1_500 * (attempt + 1)), null));
     // A page that won't load: the history starts after the last transaction read.
@@ -136,7 +141,7 @@ async function heliusMoves(wallet: string, key: string, since: number): Promise<
         if (a.account === wallet) add(deltas, SOL_MINT, a.nativeBalanceChange / 1e9);
         for (const c of a.tokenBalanceChanges ?? []) if (c.userAccount === wallet) add(deltas, c.mint, Number(c.rawTokenAmount.tokenAmount) / 10 ** c.rawTokenAmount.decimals);
       }
-      if (deltas.size) moves.push({ t: tx.timestamp, deltas });
+      if (deltas.size) moves.push({ sig: tx.signature, t: tx.timestamp, deltas });
     }
     before = txs[txs.length - 1]!.signature;
   }
@@ -169,17 +174,17 @@ async function patientRpc<T>(method: string, params: unknown[]): Promise<T> {
   }
 }
 
-async function rpcMoves(wallet: string, since: number): Promise<{ moves: Move[]; reached: number }> {
+async function rpcMoves(address: string, wallet: string, since: number, cap = MAX_RPC_TRANSACTIONS): Promise<{ moves: Move[]; reached: number }> {
   const sigs: { signature: string; blockTime: number | null }[] = [];
   let before: string | undefined;
   let capped = false;
   for (;;) {
-    const page = await patientRpc<{ signature: string; blockTime: number | null }[]>("getSignaturesForAddress", [wallet, { limit: 1000, ...(before && { before }) }]);
+    const page = await patientRpc<{ signature: string; blockTime: number | null }[]>("getSignaturesForAddress", [address, { limit: 1000, ...(before && { before }) }]);
     const recent = page.filter((s) => (s.blockTime ?? 0) >= since);
     sigs.push(...recent);
-    if (sigs.length >= MAX_RPC_TRANSACTIONS) {
+    if (sigs.length >= cap) {
       capped = true;
-      sigs.length = MAX_RPC_TRANSACTIONS;
+      sigs.length = cap;
       break;
     }
     if (page.length < 1000 || recent.length < page.length) break;
@@ -202,7 +207,7 @@ async function rpcMoves(wallet: string, since: number): Promise<{ moves: Move[];
       if (k >= 0) add(deltas, SOL_MINT, ((tx.meta.postBalances[k] ?? 0) - (tx.meta.preBalances[k] ?? 0)) / 1e9);
       for (const b of tx.meta.postTokenBalances ?? []) if (b.owner === wallet) add(deltas, b.mint, Number(b.uiTokenAmount.uiAmountString ?? 0));
       for (const b of tx.meta.preTokenBalances ?? []) if (b.owner === wallet) add(deltas, b.mint, -Number(b.uiTokenAmount.uiAmountString ?? 0));
-      if (deltas.size) moves.push({ t: tx.blockTime, deltas });
+      if (deltas.size) moves.push({ sig: window[j]!.signature, t: tx.blockTime, deltas });
     });
     if (broken >= 0) return { moves, reached: (window[broken]!.blockTime ?? since) + 1 };
     await sleep(250);
@@ -237,9 +242,27 @@ function swapPrices(moves: Move[], sol: Series | undefined): Map<string, Series>
 
 async function solanaHistory(wallet: string, grid: number[], nowSec: number): Promise<{ values: Map<number, number>; from: number }> {
   const since = grid[grid.length - 1]!;
-  const balances = await solanaBalances(wallet);
+  const { balances, accounts } = await solanaAccounts(wallet);
+  const today = await jupiterPrices([SOL_MINT, ...[...balances.keys()].filter((m) => m !== SOL_MINT)]).catch(() => ({ prices: {} as Record<string, number> }));
   const key = heliusKey();
-  const { moves, reached } = key ? await heliusMoves(wallet, key, since) : await rpcMoves(wallet, since);
+  const read = (address: string, small: boolean) =>
+    key ? heliusMoves(address, wallet, key, since, small ? 10 : MAX_HELIUS_PAGES) : rpcMoves(address, wallet, since, small ? 300 : MAX_RPC_TRANSACTIONS);
+  // Tokens received by transfer only show up on the token account: read the ones worth something today.
+  const valued = accounts
+    .map((a) => ({ ...a, usd: a.amount * (today.prices[a.mint] ?? 0) }))
+    .filter((a) => a.mint !== SOL_MINT && a.usd >= 10)
+    .sort((a, b) => b.usd - a.usd)
+    .slice(0, 8);
+  const own = await read(wallet, false);
+  const extra = [];
+  for (const a of valued) extra.push(await read(a.pubkey, true));
+  // The same transaction can come from several addresses: once each.
+  const seen = new Set<string>();
+  const moves = [own, ...extra]
+    .flatMap((r) => r.moves)
+    .filter((m) => !seen.has(m.sig) && seen.add(m.sig))
+    .sort((a, b) => b.t - a.t);
+  const reached = Math.max(own.reached, ...extra.map((r) => r.reached));
 
   // Walk back in time: before each transaction, the wallet held its balance minus what the transaction brought.
   const held = new Map<number, Map<string, number>>();
@@ -251,12 +274,13 @@ async function solanaHistory(wallet: string, grid: number[], nowSec: number): Pr
     held.set(t, new Map([...now].filter(([, n]) => n > 1e-9)));
   }
 
-  const mints = [...new Set([...held.values()].flatMap((m) => [...m.keys()]))];
-  const [llama, today] = await Promise.all([
-    llamaHistory([`solana:${SOL_MINT}`, ...mints.filter((m) => m !== SOL_MINT).map((m) => `solana:${m}`)].slice(0, 300), nowSec),
-    jupiterPrices([SOL_MINT, ...mints.filter((m) => m !== SOL_MINT)]).catch(() => ({ prices: {} as Record<string, number> })),
-  ]);
+  // Only tokens with a price somewhere (today, or in the wallet's swaps): spam airdrops stay out of DefiLlama.
+  const traded = new Set(moves.flatMap((m) => [...m.deltas.keys()]));
+  const mints = [...new Set([...held.values()].flatMap((m) => [...m.keys()]))].filter((m) => m !== SOL_MINT && (today.prices[m] || traded.has(m)));
+  const llama = await llamaHistory([`solana:${SOL_MINT}`, ...mints.slice(0, 300).map((m) => `solana:${m}`)], nowSec);
   const sol = llama.get(`solana:${SOL_MINT}`);
+  // Without SOL's past price every point would be off: fail, and retry later rather than store zeros.
+  if (!sol?.length) throw new Error("No SOL price history");
   const swaps = swapPrices(moves, sol);
   // Today's price closes each swap series, so a token still held joins its current value.
   for (const [mint, s] of swaps) if (today.prices[mint]) s.push({ t: nowSec, price: today.prices[mint]! });
@@ -358,38 +382,57 @@ async function evmHistory(wallet: string, grid: number[], nowSec: number, live: 
 /** EVM rebuilds are off until they're reliable (the archive reads stall on busy wallets): EVM history starts at the first snapshot. */
 const EVM_HISTORY = false;
 
-const running = new Map<string, Promise<void>>();
 const RETRY_FAILED_MS = 6 * 3_600_000;
+/** Wallets settled in this process (done, or failed recently): no database read on every widget view. */
+const settled = new Set<string>();
+const queued = new Map<string, Promise<void>>();
+/** One rebuild at a time: each one is heavy (Helius pages, DefiLlama), and live widget reads share those APIs. */
+let chain: Promise<unknown> = Promise.resolve();
 
 /** Forget a wallet's rebuilt past and redo it (from /admin, after a fix or a data issue). */
 export async function rebuildHistory(wallet: string, log: (msg: string) => void = () => {}) {
+  // Let a run in progress finish first: it would mark the wallet done again after the reset.
+  await queued.get(wallet);
   await db.delete(schema.walletBackfills).where(eq(schema.walletBackfills.wallet, wallet));
-  await running.get(wallet);
+  settled.delete(wallet);
   void ensureHistory(wallet, log);
 }
 
-/** Rebuild this wallet's past once (in the background). Safe to call on every widget read. */
+/**
+ * Rebuild this wallet's past once, queued behind the others. Safe to call on
+ * every widget read; never throws (it runs detached).
+ */
 export function ensureHistory(wallet: string, log: (msg: string) => void = () => {}): Promise<void> {
-  if (!EVM_HISTORY && isEvmAddress(wallet)) return Promise.resolve();
-  const pending = running.get(wallet);
+  if ((!EVM_HISTORY && isEvmAddress(wallet)) || settled.has(wallet)) return Promise.resolve();
+  const pending = queued.get(wallet);
   if (pending) return pending;
-  const job = (async () => {
-    const [done] = await db.select().from(schema.walletBackfills).where(eq(schema.walletBackfills.wallet, wallet)).limit(1);
-    if (done && (done.status === "done" || Date.now() - done.finishedAt.getTime() < RETRY_FAILED_MS)) return;
-    try {
-      const started = Date.now();
-      const points = await backfill(wallet);
-      log(`history ${wallet}: ${points} points in ${Math.round((Date.now() - started) / 1000)}s`);
-    } catch (err) {
-      log(`history ${wallet} failed: ${(err as Error).message}`);
-      await db
-        .insert(schema.walletBackfills)
-        .values({ wallet, status: "failed" })
-        .onConflictDoUpdate({ target: schema.walletBackfills.wallet, set: { status: "failed", finishedAt: new Date() } });
-    }
-  })().finally(() => running.delete(wallet));
-  running.set(wallet, job);
+  const job = chain
+    .then(() => runOnce(wallet, log))
+    .catch((err) => log(`history ${wallet} failed: ${(err as Error).message}`))
+    .finally(() => queued.delete(wallet));
+  chain = job;
+  queued.set(wallet, job);
   return job;
+}
+
+async function runOnce(wallet: string, log: (msg: string) => void) {
+  const [done] = await db.select().from(schema.walletBackfills).where(eq(schema.walletBackfills.wallet, wallet)).limit(1);
+  if (done && (done.status === "done" || Date.now() - done.finishedAt.getTime() < RETRY_FAILED_MS)) {
+    if (done.status === "done") settled.add(wallet);
+    return;
+  }
+  try {
+    const started = Date.now();
+    const points = await backfill(wallet);
+    settled.add(wallet);
+    log(`history ${wallet}: ${points} points in ${Math.round((Date.now() - started) / 1000)}s`);
+  } catch (err) {
+    log(`history ${wallet} failed: ${(err as Error).message}`);
+    await db
+      .insert(schema.walletBackfills)
+      .values({ wallet, status: "failed" })
+      .onConflictDoUpdate({ target: schema.walletBackfills.wallet, set: { status: "failed", finishedAt: new Date() } });
+  }
 }
 
 async function backfill(wallet: string) {

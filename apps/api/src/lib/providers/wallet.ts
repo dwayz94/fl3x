@@ -20,7 +20,7 @@ export async function rpc<T>(method: string, params: unknown[]): Promise<T> {
   return json.result as T;
 }
 
-type TokenAccounts = { value: { account: { data: { parsed: { info: { mint: string; tokenAmount: { uiAmount: number | null } } } } } }[] };
+type TokenAccounts = { value: { pubkey: string; account: { data: { parsed: { info: { mint: string; tokenAmount: { uiAmount: number | null } } } } } }[] };
 
 // Jupiter Price API v3 / Tokens API v2. Free host without a key; api.jup.ag with JUPITER_API_KEY.
 export const JUP = env.JUPITER_API_KEY ? "https://api.jup.ag" : "https://lite-api.jup.ag";
@@ -68,18 +68,26 @@ const TOP_POSITIONS = 8;
 
 /** Every balance of a Solana wallet right now, by mint (SOL and wrapped SOL under SOL_MINT). */
 export async function solanaBalances(wallet: string): Promise<Map<string, number>> {
+  return (await solanaAccounts(wallet)).balances;
+}
+
+/** Balances by mint, plus the token accounts behind them (the history reads their transfers too). */
+export async function solanaAccounts(wallet: string): Promise<{ balances: Map<string, number>; accounts: { pubkey: string; mint: string; amount: number }[] }> {
   const [lamports, ...accounts] = await Promise.all([
     rpc<{ value: number }>("getBalance", [wallet]),
     ...TOKEN_PROGRAMS.map((programId) => rpc<TokenAccounts>("getTokenAccountsByOwner", [wallet, { programId }, { encoding: "jsonParsed" }])),
   ]);
   const balances = new Map<string, number>([[SOL_MINT, lamports.value / 1e9]]);
+  const held: { pubkey: string; mint: string; amount: number }[] = [];
   for (const list of accounts) {
     for (const a of list.value) {
       const { mint, tokenAmount } = a.account.data.parsed.info;
-      if (tokenAmount.uiAmount) balances.set(mint, (balances.get(mint) ?? 0) + tokenAmount.uiAmount);
+      if (!tokenAmount.uiAmount) continue;
+      balances.set(mint, (balances.get(mint) ?? 0) + tokenAmount.uiAmount);
+      held.push({ pubkey: a.pubkey, mint, amount: tokenAmount.uiAmount });
     }
   }
-  return balances;
+  return { balances, accounts: held };
 }
 
 async function solanaValuation(wallet: string): Promise<Valuation> {
@@ -176,6 +184,11 @@ function combineHistory(rows: { wallet: string; at: Date; valueUsd: number }[], 
 export async function getPortfolio(wallets: string[], period: PeriodId): Promise<PortfolioData> {
   // First time a wallet is shown: its past is rebuilt from the chain in the background.
   for (const w of wallets) void ensureHistory(w, (m) => console.warn(m));
+  // A minute of cache: a busy profile would otherwise re-read and re-add thousands of snapshots on every view.
+  return cached<PortfolioData>(`portfolio:${period}:${[...wallets].sort().join(",")}`, 60, () => buildPortfolio(wallets, period));
+}
+
+async function buildPortfolio(wallets: string[], period: PeriodId): Promise<PortfolioData> {
   const settled = await Promise.allSettled(wallets.map((w) => currentValue(w)));
   const valuations = settled.flatMap((r) => (r.status === "fulfilled" ? [r.value] : []));
   if (wallets.length > 0 && valuations.length === 0) throw (settled[0] as PromiseRejectedResult).reason;
@@ -242,6 +255,12 @@ export async function getPortfolio(wallets: string[], period: PeriodId): Promise
   const history = combined.filter((_, i) => i % step === 0).map((r) => ({ at: r.at.toISOString(), valueUsd: r.valueUsd }));
   history.push({ at: new Date().toISOString(), valueUsd });
 
+  // Daily closes from the full-resolution series, not the chart's downsampled points.
+  const closes = new Map<string, number>();
+  for (const r of combined) closes.set(r.at.toISOString().slice(0, 10), r.valueUsd);
+  closes.set(new Date().toISOString().slice(0, 10), valueUsd);
+  const daily = [...closes].sort(([a], [b]) => a.localeCompare(b)).map(([day, v]) => ({ day, valueUsd: v }));
+
   const first = combined[0];
   const changeUsd = first ? valueUsd - first.valueUsd : null;
   return {
@@ -251,6 +270,7 @@ export async function getPortfolio(wallets: string[], period: PeriodId): Promise
     changeUsd,
     changePct: first && first.valueUsd > 0 ? (changeUsd! / first.valueUsd) * 100 : null,
     history,
+    daily,
     holdings,
     networks,
     wallets: wallets.length,
@@ -261,11 +281,14 @@ export async function getPortfolio(wallets: string[], period: PeriodId): Promise
 export async function snapshotWallets(wallets: string[], log: (msg: string) => void) {
   for (const w of wallets) {
     try {
-      await snapshot(w, (await valuate(w)).total);
+      // A half-failed read (a price batch, a network) is shown but never recorded: it would be a fake loss.
+      const v = await valuate(w);
+      if (v.complete) await snapshot(w, v.total);
+      else log(`snapshot ${w} skipped: incomplete read`);
     } catch (err) {
       log(`snapshot ${w} failed: ${(err as Error).message}`);
     }
   }
-  // Then the past of wallets nobody opened since it was added (one at a time, it's heavy; done once each).
-  for (const w of wallets) await ensureHistory(w, log);
+  // The past of wallets nobody opened since they were added: queued, one at a time, without holding this job.
+  for (const w of wallets) void ensureHistory(w, log);
 }

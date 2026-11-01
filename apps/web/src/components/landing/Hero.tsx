@@ -29,7 +29,7 @@ export function Hero() {
 
   return (
     <section className="relative min-h-[calc(100svh-75px)]">
-      <Image src="/images/backgrounds/hero-bg.png" alt="" fill priority className="object-cover object-center" />
+      <Image src="/images/backgrounds/hero-bg.png" alt="" fill priority sizes="100vw" quality={75} className="object-cover object-center" />
       <div className="px-gutter relative grid min-h-[calc(100svh-75px)] items-center gap-12 py-16 xl:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
         <div className="flex min-w-0 flex-col">
         <h1 className="mb-6 text-5xl md:text-6xl lg:text-7xl">PRove eveRythInG.</h1>

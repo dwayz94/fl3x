@@ -10,7 +10,7 @@ import { SocialLinks } from "./SocialLinks";
 export function AuthShell({ children }: { children: ReactNode }) {
   return (
     <main className="relative flex min-h-svh flex-col bg-bg">
-      <Image src="/images/backgrounds/sign-bg.png" alt="" fill priority className="object-cover opacity-80" />
+      <Image src="/images/backgrounds/sign-bg.png" alt="" fill sizes="100vw" priority className="object-cover opacity-80" />
       <nav className="relative flex h-[75px] items-center justify-between px-4 md:px-20">
         <Link href="/" aria-label="FL3X home">
           <Image src="/images/fl3x-logo.svg" alt="FL3X" width={88} height={31} />

@@ -50,13 +50,19 @@ export async function walletRoutes(app: FastifyInstance) {
     const ok = await verifyWalletSignature(chain, body.address, challengeMessage(addr, body.nonce, expiresAt), body.signature);
     if (!ok) throw badRequest("The signature doesn't match this wallet", "bad_signature");
 
-    // A signature beats an address the team added by hand: the row moves to the signer, signed.
-    if (teamAdded) await db.delete(schema.wallets).where(eq(schema.wallets.id, teamAdded.id));
-    const [taken] = await db.select().from(schema.wallets).where(and(eq(schema.wallets.chain, chain), eq(schema.wallets.address, addr))).limit(1);
+    // An address the team added by hand doesn't count as taken: a signature beats it (checked first, replaced below).
+    const [taken] = await db
+      .select()
+      .from(schema.wallets)
+      .where(and(eq(schema.wallets.chain, chain), eq(schema.wallets.address, addr), eq(schema.wallets.signed, true)))
+      .limit(1);
     // Also someone else's sign-in wallet: the same tokens must not give two accounts a tier.
     const [login] = taken ? [] : await db.select({ id: schema.users.id }).from(schema.users).where(and(arrayContains(schema.users.wallets, [body.address]), ne(schema.users.id, user.id))).limit(1);
     if (taken || login) throw conflict("This wallet is linked to another FL3X account", "wallet_taken");
-    await db.insert(schema.wallets).values({ userId: user.id, chain, address: addr });
+    await db.transaction(async (tx) => {
+      if (teamAdded) await tx.delete(schema.wallets).where(eq(schema.wallets.id, teamAdded.id));
+      await tx.insert(schema.wallets).values({ userId: user.id, chain, address: addr });
+    });
     return toMe(await refreshTier(user, true));
   });
 

@@ -17,6 +17,8 @@ export const wantsWaitlist = () => {
 const setIntent = (on: boolean) => {
   try { if (on) localStorage.setItem(INTENT_KEY, "waitlist"); else localStorage.removeItem(INTENT_KEY); } catch {}
 };
+/** An invite link wins over a waitlist visit left over from before. */
+export const clearWaitlistIntent = () => setIntent(false);
 
 /** Waitlist = sign in with X. No form: the handle comes from the linked account. */
 export function WaitlistForm({ desiredUsername, onBack }: { desiredUsername: string; onBack: () => void }) {

@@ -9,6 +9,7 @@ import { site } from "@/config/site";
 import { api } from "@/lib/api";
 import { DEV_KEY, devSession } from "@/lib/dev-session";
 import { teamSession } from "@/lib/team-session";
+import { storedToken } from "@/lib/use-owner";
 import { AuthContext, noop, useAuth, type AuthState } from "./auth-context";
 
 export { useAuth };
@@ -53,6 +54,40 @@ function DevAuth({ children }: { children: ReactNode }) {
 }
 
 
+/**
+ * Marketing pages (landing, blog, help…) only need to know if someone is
+ * signed in, for the navbar: the session already stored in this browser,
+ * without loading Privy (its SDK is most of the JS). Signing in happens on
+ * /join, the dashboard loads Privy and refreshes the token.
+ */
+function StoredAuth({ children }: { children: ReactNode }) {
+  const [token, setToken] = useState<string | null>(null);
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    setToken(storedToken());
+    setReady(true);
+  }, []);
+  const value = useMemo<AuthState>(
+    () => ({
+      configured: true,
+      ready,
+      authenticated: Boolean(token),
+      pending: false,
+      login: () => {
+        window.location.href = "/join";
+      },
+      logout: async () => {},
+      linkTwitter: noop,
+      getToken: async () => token,
+    }),
+    [ready, token],
+  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
+
+/** Where signing in or the member's own data is needed: Privy loads only there. */
+const needsPrivy = (path: string) => path.startsWith("/dashboard") || path.startsWith("/join");
+
 /** Public profiles don't sign anyone in: no Privy there, the page stays light. */
 const PrivyAuth = dynamic(() => import("./PrivyAuth"));
 /** Only loaded in a tab /admin opened on a reserved profile. */
@@ -72,7 +107,7 @@ export function Providers({ children }: { children: ReactNode }) {
       ) : team && pathname.startsWith("/dashboard") ? (
         <TeamAuth session={team}>{children}</TeamAuth>
       ) : site.privyAppId && !devSession.enabled ? (
-        <PrivyAuth>{children}</PrivyAuth>
+        needsPrivy(pathname) ? <PrivyAuth>{children}</PrivyAuth> : <StoredAuth>{children}</StoredAuth>
       ) : process.env.NODE_ENV !== "production" ? (
         <DevAuth>{children}</DevAuth>
       ) : (

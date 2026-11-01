@@ -108,8 +108,9 @@ function ChangePill({ usd, pct }: { usd: number; pct: number | null }) {
 export function PortfolioWidgetV2({ w }: { w: Widget }) {
   const period = str(w.settings.period) || "7d";
   const opacity = num(w.settings.bgOpacity, 100);
-  const { data, isLoading } = usePortfolio(w, period);
+  const { data, isLoading, isError } = usePortfolio(w, period);
   if (isLoading) return <WSkeleton size={w.size} />;
+  if (isError) return <WEmpty size={w.size} label="Unavailable right now" />;
   if (!data || data.wallets === 0) return <WEmpty size={w.size} label="Link a wallet in Settings" />;
 
   const [whole, cents] = splitUsd(data.valueUsd);
@@ -590,9 +591,9 @@ export function CountdownWidgetV2({ w }: { w: Widget }) {
         <div className="min-w-0 flex-1">
           <WTitle className="line-clamp-2 text-lg leading-tight whitespace-normal uppercase">{heading}</WTitle>
           {date}
-          {cta && <div className="mt-1.5 w-28">{cta}</div>}
+          {cta && <div className="mt-1.5 w-full max-w-28">{cta}</div>}
         </div>
-        <div className="w-[176px] shrink-0">{cells}</div>
+        <div className="w-[148px] shrink-0 sm:w-[176px]">{cells}</div>
       </WidgetFrame>
     );
   }

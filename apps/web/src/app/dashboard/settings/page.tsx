@@ -12,7 +12,8 @@ import { CopyField } from "@/components/dashboard/CopyField";
 import { UnsavedBar } from "@/components/dashboard/UnsavedBar";
 import { WalletsPanel } from "@/components/dashboard/WalletsPanel";
 import { inputClass } from "@/components/editor/Field";
-import { FieldError, Icon, ImageInput, Verified } from "@/components/ui";
+import { FieldError, Icon, Verified } from "@/components/ui";
+import { ImageInput } from "@/components/ui/ImageInput";
 import { site } from "@/config/site";
 import { api, ApiRequestError } from "@/lib/api";
 import { useEditorProfile, type EditorPayload } from "@/lib/use-profile";
@@ -184,6 +185,9 @@ function IdentityForm({ me }: { me: Me }) {
     try {
       const profile = await api<EditableProfile>("/me/identity", { method: "PATCH", token: await getToken(), json: body });
       qc.setQueryData<EditorPayload>(["profile"], (old) => (old ? { ...old, profile } : old));
+      // Take what the API kept (trimmed): otherwise "name " ≠ "name" leaves the unsaved bar up. An avatar upload keeps what's being typed.
+      if ("displayName" in body) setName(profile.displayName ?? "");
+      if ("bio" in body) setBio(profile.bio ?? "");
       setSavedFlash(true);
       setTimeout(() => setSavedFlash(false), 1800);
     } catch (err) {

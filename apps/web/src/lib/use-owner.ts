@@ -10,7 +10,7 @@ import { devSession } from "./dev-session";
  * profiles skip it to stay light): Privy keeps its access token in local
  * storage, the dev login keeps a name.
  */
-function storedToken(): string | null {
+export function storedToken(): string | null {
   try {
     if (devSession.enabled) {
       const dev = devSession.current();

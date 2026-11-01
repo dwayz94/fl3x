@@ -37,16 +37,36 @@ export async function syncUser(privyId: string): Promise<UserRow> {
  */
 async function takeOverReserved(privyId: string, xHandle: string | null, identity: Partial<UserRow>): Promise<UserRow | null> {
   if (!xHandle) return null;
-  const [known] = await db.select({ id: schema.users.id }).from(schema.users).where(eq(schema.users.privyId, privyId)).limit(1);
-  if (known) return null;
-  const [row] = await db
-    .update(schema.users)
-    .set({ ...identity, privyId, reservedFor: null })
+  const [reserved] = await db
+    .select({ id: schema.users.id, username: schema.users.username })
+    .from(schema.users)
     .where(and(eq(schema.users.reservedFor, xHandle.toLowerCase()), sql`${schema.users.privyId} like 'reserved:%'`))
-    .returning();
-  // Their own invite code starts now: before, /invite/<handle> would have shown the profile exists.
-  if (row) await db.insert(schema.inviteCodes).values({ code: generateCode(), ownerId: row.id, maxUses: TIER_LIMITS[row.tier].invites });
-  return row ?? null;
+    .limit(1);
+  if (!reserved) return null;
+  const [known] = await db.select({ id: schema.users.id, username: schema.users.username }).from(schema.users).where(eq(schema.users.privyId, privyId)).limit(1);
+  // Someone who already claimed a name keeps their account; the reservation stays for the team to sort out.
+  if (known?.username) return null;
+
+  const row = await db.transaction(async (tx) => {
+    if (known) {
+      // Signed in with a wallet first, X linked later: their linked wallets move to the reserved profile, the empty account goes.
+      const theirs = await tx.select({ address: schema.wallets.address }).from(schema.wallets).where(eq(schema.wallets.userId, known.id));
+      if (theirs.length) await tx.delete(schema.wallets).where(and(eq(schema.wallets.userId, reserved.id), inArray(schema.wallets.address, theirs.map((w) => w.address))));
+      await tx.update(schema.wallets).set({ userId: reserved.id }).where(eq(schema.wallets.userId, known.id));
+      await tx.delete(schema.users).where(eq(schema.users.id, known.id));
+    }
+    const [taken] = await tx
+      .update(schema.users)
+      .set({ ...identity, privyId, reservedFor: null })
+      .where(and(eq(schema.users.id, reserved.id), sql`${schema.users.privyId} like 'reserved:%'`))
+      .returning();
+    // Their own invite code starts now: before, /invite/<handle> would have shown the profile exists.
+    if (taken) await tx.insert(schema.inviteCodes).values({ code: generateCode(), ownerId: taken.id, maxUses: TIER_LIMITS[taken.tier].invites });
+    return taken ?? null;
+  });
+  // Rare and worth a look: who took which reserved profile.
+  if (row) console.warn(`reserved profile @${row.username} taken over by X @${xHandle} (${privyId})`);
+  return row;
 }
 
 const RANK = { none: 0, starter: 1, premium: 2 } as const;

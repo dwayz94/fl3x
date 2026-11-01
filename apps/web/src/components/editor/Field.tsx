@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { addressNetwork, premiumLocked, type FieldDef, type LinkedWallet } from "@fl3x/shared";
-import { ImageInput } from "@/components/ui";
+import { ImageInput } from "@/components/ui/ImageInput";
 import { CityInput, CountryPicker, ZonePicker } from "./ClockPlace";
 import { shortAddress } from "@/lib/format";
 import { cn } from "@/lib/cn";

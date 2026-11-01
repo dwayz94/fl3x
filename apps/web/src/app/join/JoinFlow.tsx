@@ -17,7 +17,7 @@ import {
 } from "@/lib/pending-invite";
 import { useConfig } from "@/lib/use-config";
 import { useEditorProfile } from "@/lib/use-profile";
-import { WaitlistForm, wantsWaitlist } from "./WaitlistForm";
+import { clearWaitlistIntent, WaitlistForm, wantsWaitlist } from "./WaitlistForm";
 import { useAvailability } from "@/lib/use-availability";
 
 /** `error`: the API couldn't be reached, which says nothing about the code. */
@@ -174,7 +174,9 @@ export function JoinFlow() {
     if (fromUrl) savePendingInvite(fromUrl);
     setCode(fromUrl?.toUpperCase() ?? readPendingInvite());
     setUsername(params.get("username")?.toLowerCase() ?? readPendingUsername());
-    if (wantsWaitlist() || params.get("waitlist") !== null) setShowWaitlist(true);
+    // An invite link means joining: a stored waitlist intent from an earlier visit must not take over.
+    if (fromUrl) clearWaitlistIntent();
+    else if (wantsWaitlist() || params.get("waitlist") !== null) setShowWaitlist(true);
   }, [params]);
 
   // Where to start: signed out → X, signed in without a name → handle.
@@ -331,7 +333,8 @@ function HandleStep(props: {
     try {
       const me = await api<Me>("/onboarding/claim", {
         token: await getToken(),
-        json: { username: props.username, inviteCode: props.code || undefined },
+        // Outside invite-only the code is optional: one the API already said is invalid (stale link) isn't sent, so it can't block sign-up.
+        json: { username: props.username, inviteCode: props.code && !(!props.inviteOnly && invite !== "checking" && invite && !invite.valid && !invite.error) ? props.code : undefined },
       });
       clearPendingInvite();
       clearPendingUsername();

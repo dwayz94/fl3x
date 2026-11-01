@@ -12,9 +12,8 @@ import { shareMetadata } from "@/lib/seo";
  * The internal key lets these server calls past the API's per-IP limit
  * (every render comes from Vercel's shared IPs).
  */
-async function getProfile(username: string, preview?: string): Promise<FullPublicProfile | null> {
-  const query = preview ? `?preview=${encodeURIComponent(preview)}` : "";
-  const res = await fetch(`${site.apiUrl}/profiles/${encodeURIComponent(username)}${query}`, {
+async function getProfile(username: string): Promise<FullPublicProfile | null> {
+  const res = await fetch(`${site.apiUrl}/profiles/${encodeURIComponent(username)}`, {
     next: { revalidate: 30 },
     headers: process.env.INTERNAL_API_KEY ? { "x-internal-key": process.env.INTERNAL_API_KEY } : undefined,
   });
@@ -43,24 +42,26 @@ function handleOf(raw: string) {
   }
 }
 
-/** `preview`: the private link to a profile the team made ahead for someone (shown before they take it over). */
-type Props = { params: Promise<{ username: string }>; searchParams: Promise<{ preview?: string }> };
+type Props = { params: Promise<{ username: string }> };
 
-const previewOf = async (sp: Props["searchParams"]) => {
-  const p = (await sp).preview;
-  return typeof p === "string" && /^[A-Za-z0-9_-]{16}$/.test(p) ? p : undefined;
-};
+/**
+ * Rendered once, then served from Vercel's cache and refreshed every 30 s
+ * (the same rhythm as the profile fetch): no server work per visit. Live
+ * widget values load in the browser.
+ */
+export const revalidate = 30;
+export function generateStaticParams() {
+  return [];
+}
 
-export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const username = handleOf((await params).username);
   if (JOIN_HANDLES.has(username)) return { title: "Claim your name", robots: { index: false } };
-  const preview = await previewOf(searchParams);
-  const profile = await getProfile(username, preview);
+  const profile = await getProfile(username);
   if (!profile) return { title: `@${username}`, description: `fl3x.lol/@${username} on FL3X`, robots: { index: false } };
   const name = profile.displayName ?? profile.username;
   return {
     title: `${name} (@${profile.username})`,
-    ...(preview && { robots: { index: false } }),
     description: profile.bio ?? `${name} on FL3X`,
     alternates: { canonical: `/@${profile.username}` },
     // Images come from opengraph-image.tsx / twitter-image.tsx (large card with the profile).
@@ -68,11 +69,10 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
   };
 }
 
-export default async function ProfilePage({ params, searchParams }: Props) {
+export default async function ProfilePage({ params }: Props) {
   const username = handleOf((await params).username);
   if (JOIN_HANDLES.has(username)) redirect("/join");
-  const preview = await previewOf(searchParams);
-  const profile = await getProfile(username, preview);
+  const profile = await getProfile(username);
   if (!profile) return <MissingProfile handle={username} {...await getAvailability(username)} />;
   const name = profile.displayName ?? profile.username;
   // Tells search engines this page is a person's profile (name, handle, avatar, their links).

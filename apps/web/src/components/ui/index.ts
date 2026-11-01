@@ -5,5 +5,4 @@ export * from "./Brand";
 export * from "./Sparkline";
 export * from "./Flag";
 export * from "./Verified";
-export * from "./ImageInput";
-export * from "./VideoInput";
+// ImageInput / VideoInput are imported from their files: they pull the upload code, which most pages never need.

@@ -52,6 +52,7 @@ const wallet: PortfolioData = {
   changeUsd: 12_276.34,
   changePct: 49.4,
   history: history(40, 91_000, 134_548.73, 7),
+  daily: [],
   holdings: [
     { id: "So11111111111111111111111111111111111111112", chain: "solana", symbol: "SOL", name: "Solana", iconUrl: "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png", amount: 412.8, valueUsd: 71_100, change24h: 7.3 },
     { id: "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263", chain: "solana", symbol: "BONK", name: "Bonk", iconUrl: "https://arweave.net/hQiPZOsRZXGXBJd_82PhVdlM_hACsT_q6wqwf5cSY7I", amount: 1_118_903_310, valueUsd: 31_420, change24h: 12.1 },
@@ -179,7 +180,7 @@ export function resolveDemo(path: string, params: Record<string, string | undefi
       return polymarket;
     case "portfolio":
       // The calendar reads a month: daily points instead of the hourly ones.
-      if (params.period === "1m") return { ...wallet, history: monthly };
+      if (params.period === "1m") return { ...wallet, history: monthly, daily: monthly.map((p) => ({ day: p.at.slice(0, 10), valueUsd: p.valueUsd })) };
       return wallet;
     case "token":
       return tokens[params.address?.replace("demo:", "") ?? ""];

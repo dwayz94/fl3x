@@ -82,6 +82,8 @@ export interface PortfolioData {
   changeUsd: number | null;
   changePct: number | null;
   history: { at: string; valueUsd: number }[];
+  /** Value at the end of each UTC day of the period (the last point of the day; today = now), for the P&L calendar. */
+  daily: { day: string; valueUsd: number }[];
   holdings: {
     id: string;
     chain: string;

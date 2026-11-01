@@ -21,8 +21,9 @@ export function PnlWidget({ w }: { w: Widget }) {
   const period = str(w.settings.period) || "1m";
   const network = w.settings.network === "evm" ? "evm" : "solana";
   const opacity = num(w.settings.bgOpacity, 100);
-  const { data, isLoading } = usePortfolio(w, period);
+  const { data, isLoading, isError } = usePortfolio(w, period);
   if (isLoading) return <WSkeleton size={w.size} />;
+  if (isError) return <WEmpty size={w.size} label="Unavailable right now" />;
   if (!data || data.wallets === 0) return <WEmpty size={w.size} label={network === "evm" ? "Link an EVM wallet" : "Link a Solana wallet"} />;
 
   // Green when up, red when down: the color is the information, not a setting.
@@ -34,7 +35,8 @@ export function PnlWidget({ w }: { w: Widget }) {
       <Icon icon={CHAINS[network].icon} size={18} />
       <span className="font-primary text-2xl leading-none whitespace-nowrap">
         {positive ? "+" : "−"}
-        {fmtUsd(Math.abs(change)).replace("$", "")}
+        {/* Compact above 10K so big moves stay inside the badge. */}
+        {(Math.abs(change) >= 10_000 ? fmtUsdCompact : fmtUsd)(Math.abs(change)).replace("$", "")}
       </span>
     </div>
   );
@@ -132,8 +134,9 @@ const amount = new Intl.NumberFormat("en-US", { notation: "compact", maximumFrac
 
 export function HoldingsWidget({ w }: { w: Widget }) {
   const opacity = num(w.settings.bgOpacity, 100);
-  const { data, isLoading } = usePortfolio(w, "1d");
+  const { data, isLoading, isError } = usePortfolio(w, "1d");
   if (isLoading) return <WSkeleton size={w.size} />;
+  if (isError) return <WEmpty size={w.size} label="Unavailable right now" />;
   if (!data || data.wallets === 0) return <WEmpty size={w.size} label="Link a wallet in Settings" />;
 
   const [whole, cents] = splitUsd(data.valueUsd);

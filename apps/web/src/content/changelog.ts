@@ -10,6 +10,16 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: "2026-11-01",
+    title: "Your wallet's past, right away",
+    items: [
+      "Add Kick to your profile links.",
+      "P&L and portfolio widgets show a Solana wallet's past year from day one, rebuilt from its transactions.",
+      "The P&L Calendar fits its card and counts each day from its close.",
+      "Best & Worst cuts long values instead of overflowing.",
+    ],
+  },
+  {
     date: "2026-10-31",
     title: "Claim a name from its link",
     items: [

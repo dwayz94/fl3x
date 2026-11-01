@@ -8,8 +8,9 @@ import { buttonClass, Icon } from "@/components/ui";
 
 export function Navbar() {
   const { authenticated } = useAuth();
-  const { data: me } = useMe();
-  const member = authenticated && me?.username;
+  const { data: me, isError } = useMe();
+  // A stored session whose token expired can't load /me here: Dashboard still, it refreshes the session there.
+  const member = authenticated && (me ? Boolean(me.username) : isError);
 
   return (
     <nav className="flex h-[75px] w-full items-center justify-between px-4 md:px-20">

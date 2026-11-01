@@ -1,6 +1,7 @@
 "use client";
 
 import { EyeIcon, PencilEdit02Icon } from "@hugeicons/core-free-icons";
+import dynamic from "next/dynamic";
 import { useEffect, useRef, useState } from "react";
 import type { EditableProfile, FullPublicProfile, Tier, Widget } from "@fl3x/shared";
 import { Icon, Verified } from "@/components/ui";
@@ -9,9 +10,12 @@ import { fmtNumber } from "@/lib/format";
 import { WidgetHost } from "@/lib/use-portfolio";
 import { cn } from "@/lib/cn";
 import { BadgeStrip } from "./Badges";
-import { EditableGrid, type EditorHooks } from "./EditableGrid";
+import type { EditorHooks } from "./EditableGrid";
 import { linkIcons } from "./links";
 import { fontClass } from "./theme";
+
+/** Only Customize drags widgets: public profiles and the landing don't load it (nor motion, behind it). */
+const EditableGrid = dynamic(() => import("./EditableGrid").then((m) => m.EditableGrid));
 
 const GRID = "mt-7 grid auto-rows-[96px] grid-flow-dense grid-cols-4 gap-3 md:grid-cols-[repeat(var(--cols),minmax(0,1fr))]";
 

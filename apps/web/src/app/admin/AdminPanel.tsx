@@ -456,13 +456,16 @@ function ReservedProfiles({ adminKey }: { adminKey: string }) {
   }, []);
 
   const create = async () => {
+    // The X handle defaults to the username only when that's a possible X handle (no dots or dashes, 15 chars at most).
+    const x = (xHandle.trim() || (/^[A-Za-z0-9_]{1,15}$/.test(username.trim()) ? username.trim() : "")).replace(/^@/, "");
+    if (!x) return setError("This username can't be an X handle: enter their X handle");
     setBusy(true);
     setError(null);
     try {
       await api<Member>("/admin/reserved", {
         method: "POST",
         headers,
-        json: { username: username.trim(), xHandle: (xHandle.trim() || username.trim()).replace(/^@/, ""), displayName: displayName.trim() || undefined, tier: "premium" },
+        json: { username: username.trim(), xHandle: x, displayName: displayName.trim() || undefined, tier: "premium" },
       });
       setUsername("");
       setXHandle("");
@@ -488,7 +491,7 @@ function ReservedProfiles({ adminKey }: { adminKey: string }) {
         }}
       >
         <input className={inputClass} placeholder="FL3X username" value={username} onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/\s/g, ""))} spellCheck={false} />
-        <input className={inputClass} placeholder="X handle (same if empty)" value={xHandle} onChange={(e) => setXHandle(e.target.value.replace(/\s/g, ""))} spellCheck={false} />
+        <input className={inputClass} placeholder="X handle (username if empty)" value={xHandle} onChange={(e) => setXHandle(e.target.value.replace(/\s/g, ""))} spellCheck={false} />
         <input className={inputClass} placeholder="Display name" value={displayName} maxLength={40} onChange={(e) => setDisplayName(e.target.value)} />
         <Button type="submit" size="md" disabled={busy || !username.trim()}>
           Reserve
@@ -615,7 +618,7 @@ type Grant = {
   createdAt: string;
   member: { id: string; username: string | null; tier: Tier } | null;
 };
-type GrantResult = { added: number; existing: number; invalid: number; invalidSamples: string[] };
+type GrantResult = { added: number; updated: number; existing: number; invalid: number; invalidSamples: string[] };
 const TIER_LABEL = { starter: "Starter", premium: "Premium" } as const;
 
 /**
@@ -694,7 +697,8 @@ function WalletGrants({ adminKey }: { adminKey: string }) {
         <div className="mt-3 rounded-xl bg-white/[0.04] p-3 text-sm">
           <p>
             <span className="text-success">{result.added} added</span>
-            <span className="text-fg-3"> · {result.existing} already there</span>
+            {result.updated > 0 && <span className="text-success"> · {result.updated} updated</span>}
+            <span className="text-fg-3"> · {result.existing} unchanged</span>
             <span className={result.invalid ? "text-danger" : "text-fg-3"}> · {result.invalid} invalid</span>
           </p>
           {result.invalidSamples.length > 0 && (

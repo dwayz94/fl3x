@@ -30,7 +30,7 @@ const columns = [
 export function Footer() {
   return (
     <footer className="relative w-full overflow-hidden">
-      <Image src="/images/backgrounds/footer-bg.png" alt="" fill className="object-cover object-top" />
+      <Image src="/images/backgrounds/footer-bg.png" alt="" fill sizes="100vw" className="object-cover object-top" />
       <div className="px-gutter relative flex flex-col gap-12 pt-48 pb-16 md:pt-72 lg:flex-row lg:justify-between">
         <div className="flex flex-col">
           <Image src="/images/fl3x-logo.svg" alt="FL3X" width={180} height={60} className="mb-4" />
